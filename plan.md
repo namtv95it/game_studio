@@ -34,6 +34,9 @@ Dự án phát triển Web App React + Vite tích hợp 2 chức năng tương t
 ---
 
 ## 📌 GHI CHÚ
-1. Giao diện thiết kế theo phong cách Dark Mode hiện đại, linh hoạt cho người sáng tạo nội dung.
-2. 1-Click xem kết quả trực tiếp trên trình duyệt Web!
+1. Giao diện luôn luôn hiển thị ở trạng thái sân khấu nằm ngang xoay 90° cùng nền kẻ ô grid chuẩn (40px x 40px) & bàn tay 👆 đồng bộ 100%.
+2. Có 2 trạng thái hiển thị:
+   - **Trạng thái 1 (Ẩn hết giao diện)**: Phục vụ quay màn hình video 9:16 (Ẩn Header, Sidebar, viền khung shadow). Nhấn `ESC` để thoát.
+   - **Trạng thái 2 (Giữ nguyên Sidebar)**: Cho phép tinh chỉnh thông số (Bán kính vệt sáng, kích thước bàn tay 👆, góc chiếu nón, tải ảnh PNG, v.v.).
+
 
