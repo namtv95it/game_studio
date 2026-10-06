@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, RefreshCw, Play, Move, Maximize2 } from 'lucide-react';
+import { Upload, RefreshCw, Play } from 'lucide-react';
 
 const DEFAULT_IMAGES = [
   'https://images.unsplash.com/photo-1563089145-599997674d42?w=400&auto=format&fit=crop&q=80',
@@ -93,30 +93,35 @@ export default function ShadowMatch() {
   };
 
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100vh', background: '#0f172a' }}>
-      {/* SIDEBAR SETTINGS */}
-      <div style={{ width: '320px', background: '#1e293b', padding: '20px', borderRight: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#a855f7', display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="flex w-full h-[calc(100vh-56px)] bg-slate-900">
+      {/* SIDEBAR SETTINGS WITH TAILWIND */}
+      <div className="w-80 bg-slate-800 p-5 border-r border-slate-700 flex flex-col gap-5 overflow-y-auto">
+        <h2 className="text-lg font-bold text-purple-400 flex items-center gap-2">
           👻 CÀI ĐẶT GHÉP BÓNG
         </h2>
 
         {/* Upload 3 Images */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Tải Lên 3 Hình Ảnh PNG:</label>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex flex-col gap-2.5">
+          <label className="text-xs text-slate-400 font-medium">Tải Lên 3 Hình Ảnh PNG:</label>
+          <div className="flex gap-2">
             {images.map((src, i) => (
-              <label key={i} style={{ flex: 1, height: '60px', background: '#334155', borderRadius: '8px', cursor: 'pointer', overflow: 'hidden', border: i === targetIndex ? '2px solid #a855f7' : '1px solid #475569', position: 'relative' }}>
-                <img src={src} alt={`Upload ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, i)} style={{ display: 'none' }} />
+              <label 
+                key={i} 
+                className={`flex-1 h-15 bg-slate-700 rounded-lg cursor-pointer overflow-hidden relative border transition-all ${
+                  i === targetIndex ? 'border-purple-400 ring-2 ring-purple-400/50' : 'border-slate-600 hover:border-slate-400'
+                }`}
+              >
+                <img src={src} alt={`Upload ${i}`} className="w-full h-full object-cover" />
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, i)} className="hidden" />
               </label>
             ))}
           </div>
         </div>
 
         {/* Select Target Silhouette */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Chọn Ảnh Làm Bóng Đen Mục Tiêu:</label>
-          <select value={targetIndex} onChange={(e) => setTargetIndex(Number(e.target.value))} style={{ padding: '10px', background: '#334155', color: 'white', borderRadius: '8px', border: 'none' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Chọn Ảnh Làm Bóng Đen Mục Tiêu:</label>
+          <select value={targetIndex} onChange={(e) => setTargetIndex(Number(e.target.value))} className="p-2.5 bg-slate-700 text-white rounded-lg border-none focus:ring-2 focus:ring-purple-400 outline-none">
             <option value={0}>Thẻ Ảnh Số 1 (Mặc định)</option>
             <option value={1}>Thẻ Ảnh Số 2</option>
             <option value={2}>Thẻ Ảnh Số 3</option>
@@ -124,27 +129,27 @@ export default function ShadowMatch() {
         </div>
 
         {/* Hand Size */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Kích Thước Bàn Tay 👆 ({handSize}px):</label>
-          <input type="range" min="24" max="100" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} style={{ accentColor: '#a855f7' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Kích Thước Bàn Tay 👆 ({handSize}px):</label>
+          <input type="range" min="24" max="100" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-purple-400" />
         </div>
 
         {/* Target Scale */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Tỉ Lệ Bóng Đen ({targetScale}%):</label>
-          <input type="range" min="50" max="200" value={targetScale} onChange={(e) => setTargetScale(Number(e.target.value))} style={{ accentColor: '#a855f7' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Bóng Đen ({targetScale}%):</label>
+          <input type="range" min="50" max="200" value={targetScale} onChange={(e) => setTargetScale(Number(e.target.value))} className="accent-purple-400" />
         </div>
 
         {/* Target OffsetY */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Vị Trí Bóng Đen Lên/Xuống ({targetOffsetY}px):</label>
-          <input type="range" min="-300" max="300" value={targetOffsetY} onChange={(e) => setTargetOffsetY(Number(e.target.value))} style={{ accentColor: '#a855f7' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Vị Trí Bóng Đen Lên/Xuống ({targetOffsetY}px):</label>
+          <input type="range" min="-300" max="300" value={targetOffsetY} onChange={(e) => setTargetOffsetY(Number(e.target.value))} className="accent-purple-400" />
         </div>
 
         {/* Reset Button */}
         <button 
           onClick={resetGame} 
-          style={{ padding: '10px', background: '#475569', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          className="p-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-sm cursor-pointer"
         >
           <RefreshCw size={16} /> Reset Vị Trí (Spacebar)
         </button>
@@ -152,76 +157,49 @@ export default function ShadowMatch() {
         {/* 9:16 Run Button */}
         <button 
           onClick={() => setIs916Mode(!is916Mode)} 
-          style={{ marginTop: 'auto', padding: '12px', background: is916Mode ? '#ef4444' : '#9333ea', color: 'white', fontWeight: 'bold', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          className={`mt-auto p-3 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+            is916Mode ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-purple-600 hover:bg-purple-500 text-white'
+          }`}
         >
           <Play size={18} /> {is916Mode ? 'Thoát Chế Độ 9:16' : 'Chạy Tìm Ảnh Theo Bóng (9:16)'}
         </button>
+
       </div>
 
-      {/* STAGE DISPLAY AREA */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617', position: 'relative', overflow: 'hidden' }}>
+      {/* STAGE DISPLAY AREA WITH TAILWIND */}
+      <div className="flex-1 flex items-center justify-center bg-slate-950 relative overflow-hidden">
         <div 
           ref={stageRef}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
-          style={{ 
-            width: is916Mode ? '450px' : '650px', 
-            height: is916Mode ? '800px' : '650px', 
-            position: 'relative', 
-            background: '#0f172a',
-            borderRadius: '16px', 
-            overflow: 'hidden', 
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            cursor: 'none',
-            border: '2px solid #334155'
-          }}
+          className={`relative bg-slate-900 rounded-2xl overflow-hidden shadow-2xl cursor-none border-2 border-slate-700 transition-all ${
+            is916Mode ? 'w-[450px] h-[800px]' : 'w-[650px] h-[650px]'
+          }`}
         >
           {/* TOP ROW: 3 SMALL CARDS */}
-          <div style={{ position: 'absolute', top: '20px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '20px', zIndex: 10 }}>
+          <div className="absolute top-5 left-0 right-0 flex justify-center gap-5 z-10">
             {images.map((src, i) => (
               <div 
                 key={i} 
                 onClick={(e) => { e.stopPropagation(); handlePickItem(i, src); }}
-                style={{ 
-                  width: '90px', 
-                  height: '90px', 
-                  borderRadius: '12px', 
-                  overflow: 'hidden', 
-                  border: '3px solid #38bdf8', 
-                  cursor: 'pointer', 
-                  transform: 'scale(1)', 
-                  transition: 'transform 0.2s',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
-                }}
+                className="w-22 h-22 rounded-xl overflow-hidden border-3 border-sky-400 cursor-pointer shadow-xl hover:scale-105 transition-transform"
               >
-                <img src={src} alt={`Card ${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={src} alt={`Card ${i}`} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>
 
           {/* CENTER STAGE: TARGET SILHOUETTE #000000 */}
           <div 
+            className="absolute top-[55%] left-1/2 flex items-center justify-center w-64 h-64 -translate-x-1/2 -translate-y-1/2"
             style={{ 
-              position: 'absolute', 
-              top: '55%', 
-              left: '50%', 
-              transform: `translate(-50%, -50%) scale(${targetScale / 100}) translateY(${targetOffsetY}px)`,
-              width: '260px', 
-              height: '260px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyInContent: 'center'
+              transform: `translate(-50%, -50%) scale(${targetScale / 100}) translateY(${targetOffsetY}px)`
             }}
           >
             <img 
               src={images[targetIndex]} 
               alt="Target Silhouette" 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'contain',
-                filter: 'brightness(0) contrast(100%)' // Chuyển thành Bóng Đen đặc màu #000000
-              }} 
+              className="w-full h-full object-contain brightness-0 contrast-100"
             />
           </div>
 
@@ -230,25 +208,23 @@ export default function ShadowMatch() {
             <div 
               key={item.id}
               onClick={(e) => { e.stopPropagation(); setSelectedPlacedIndex(idx); }}
+              className={`absolute rounded-xl ${selectedPlacedIndex === idx ? 'border-2 border-dashed border-sky-400' : ''}`}
               style={{ 
-                position: 'absolute', 
                 left: `${item.x}px`, 
                 top: `${item.y}px`, 
                 width: `${item.width}px`, 
-                height: `${item.height}px`,
-                border: selectedPlacedIndex === idx ? '2px dashed #38bdf8' : 'none',
-                borderRadius: '12px'
+                height: `${item.height}px`
               }}
             >
-              <img src={item.src} alt="Placed" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src={item.src} alt="Placed" className="w-full h-full object-contain" />
               
               {/* 4 Corner Resize Handles */}
               {selectedPlacedIndex === idx && (
                 <>
-                  <div style={{ position: 'absolute', top: '-6px', left: '-6px', width: '14px', height: '14px', background: '#38bdf8', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '14px', height: '14px', background: '#38bdf8', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', bottom: '-6px', left: '-6px', width: '14px', height: '14px', background: '#38bdf8', borderRadius: '50%' }} />
-                  <div style={{ position: 'absolute', bottom: '-6px', right: '-6px', width: '14px', height: '14px', background: '#38bdf8', borderRadius: '50%' }} />
+                  <div className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-sky-400 rounded-full" />
+                  <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-sky-400 rounded-full" />
+                  <div className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-sky-400 rounded-full" />
+                  <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-sky-400 rounded-full" />
                 </>
               )}
             </div>
@@ -257,34 +233,25 @@ export default function ShadowMatch() {
           {/* PICKED FOLLOWING ITEM */}
           {pickedItem && (
             <div 
+              className="absolute w-64 h-64 pointer-events-none -translate-x-1/2 -translate-y-1/2 opacity-90 z-20"
               style={{ 
-                position: 'absolute', 
                 left: `${cursorPos.x}px`, 
                 top: `${cursorPos.y}px`, 
-                width: `${260 * (targetScale / 100)}px`, 
-                height: `${260 * (targetScale / 100)}px`, 
-                pointerEvents: 'none',
-                transform: 'translate(-50%, -50%)',
-                opacity: 0.9,
-                zIndex: 20
+                transform: `translate(-50%, -50%) scale(${targetScale / 100})`
               }}
             >
-              <img src={pickedItem.src} alt="Following" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src={pickedItem.src} alt="Following" className="w-full h-full object-contain" />
             </div>
           )}
 
           {/* HAND CURSOR 👆 */}
           <div 
+            className="absolute pointer-events-none select-none drop-shadow-2xl z-30"
             style={{ 
-              position: 'absolute', 
               left: `${cursorPos.x}px`, 
               top: `${cursorPos.y}px`, 
               fontSize: `${handSize}px`, 
-              pointerEvents: 'none',
-              transform: 'translate(-30%, -20%)',
-              userSelect: 'none',
-              zIndex: 30,
-              filter: 'drop-shadow(0px 4px 8px rgba(0,0,0,0.5))'
+              transform: 'translate(-30%, -20%)'
             }}
           >
             👆

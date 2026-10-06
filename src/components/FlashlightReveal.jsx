@@ -97,99 +97,94 @@ export default function FlashlightReveal() {
   };
 
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100vh', background: '#0f172a' }}>
-      {/* SIDEBAR SETTINGS */}
-      <div style={{ width: '320px', background: '#1e293b', padding: '20px', borderRight: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="flex w-full h-[calc(100vh-56px)] bg-slate-900">
+      {/* SIDEBAR SETTINGS WITH TAILWIND */}
+      <div className="w-80 bg-slate-800 p-5 border-r border-slate-700 flex flex-col gap-5 overflow-y-auto">
+        <h2 className="text-lg font-bold text-sky-400 flex items-center gap-2">
           🔦 CÀI ĐẶT SOI ĐÈN PIN
         </h2>
 
         {/* Upload Image */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Tải Ảnh Gốc (PNG/JPG):</label>
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', background: '#334155', borderRadius: '8px', cursor: 'pointer', border: '1px dashed #64748b' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Tải Ảnh Gốc (PNG/JPG):</label>
+          <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 transition-colors">
             <Upload size={16} /> Chọn Ảnh Tải Lên
-            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
           </label>
         </div>
 
         {/* Radius */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Bán Kính Quầng Sáng ({radius}px):</label>
-          <input type="range" min="50" max="300" value={radius} onChange={(e) => setRadius(Number(e.target.value))} style={{ accentColor: '#38bdf8' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Bán Kính Quầng Sáng ({radius}px):</label>
+          <input type="range" min="50" max="300" value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="accent-sky-400" />
         </div>
 
         {/* Spotlight Type */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Kiểu Chiếu Đèn Pin:</label>
-          <select value={spotlightType} onChange={(e) => setSpotlightType(e.target.value)} style={{ padding: '10px', background: '#334155', color: 'white', borderRadius: '8px', border: 'none' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Kiểu Chiếu Đèn Pin:</label>
+          <select value={spotlightType} onChange={(e) => setSpotlightType(e.target.value)} className="p-2.5 bg-slate-700 text-white rounded-lg border-none focus:ring-2 focus:ring-sky-400 outline-none">
             <option value="circle">🔵 Quầng Sáng Tròn (Circle)</option>
             <option value="cone">📐 Vệt Nón Chiếu Chéo (Cone Beam)</option>
           </select>
         </div>
 
         {/* Hand Size */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Kích Thước Bàn Tay 👆 ({handSize}px):</label>
-          <input type="range" min="24" max="100" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} style={{ accentColor: '#38bdf8' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Kích Thước Bàn Tay 👆 ({handSize}px):</label>
+          <input type="range" min="24" max="100" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-sky-400" />
         </div>
 
         {/* Scale */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Tỉ Lệ Phóng To ({scale}%):</label>
-          <input type="range" min="50" max="200" value={scale} onChange={(e) => setScale(Number(e.target.value))} style={{ accentColor: '#38bdf8' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To ({scale}%):</label>
+          <input type="range" min="50" max="200" value={scale} onChange={(e) => setScale(Number(e.target.value))} className="accent-sky-400" />
         </div>
 
         {/* Offset Y */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{ fontSize: '13px', color: '#94a3b8' }}>Vị Trí Lên/Xuống ({offsetY}px):</label>
-          <input type="range" min="-300" max="300" value={offsetY} onChange={(e) => setOffsetY(Number(e.target.value))} style={{ accentColor: '#38bdf8' }} />
+        <div className="flex flex-col gap-2">
+          <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống ({offsetY}px):</label>
+          <input type="range" min="-300" max="300" value={offsetY} onChange={(e) => setOffsetY(Number(e.target.value))} className="accent-sky-400" />
         </div>
 
         {/* 9:16 Run Mode Button */}
         <button 
           onClick={() => setIs916Mode(!is916Mode)} 
-          style={{ marginTop: 'auto', padding: '12px', background: is916Mode ? '#ef4444' : '#0284c7', color: 'white', fontWeight: 'bold', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          className={`mt-auto p-3 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+            is916Mode ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'
+          }`}
         >
           <Play size={18} /> {is916Mode ? 'Thoát Chế Độ 9:16' : 'Khởi Chạy Soi Đèn Pin (9:16)'}
         </button>
+
       </div>
 
-      {/* STAGE DISPLAY AREA */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617', position: 'relative', overflow: 'hidden' }}>
+      {/* STAGE DISPLAY AREA WITH TAILWIND */}
+      <div className="flex-1 flex items-center justify-center bg-slate-950 relative overflow-hidden">
         <div 
           ref={containerRef}
           onMouseMove={handleMouseMove}
+          className={`relative rounded-2xl overflow-hidden shadow-2xl cursor-none transition-transform duration-100 ${
+            is916Mode ? 'w-[450px] h-[800px]' : 'w-[600px] h-[600px]'
+          }`}
           style={{ 
-            width: is916Mode ? '450px' : '600px', 
-            height: is916Mode ? '800px' : '600px', 
-            position: 'relative', 
-            borderRadius: '16px', 
-            overflow: 'hidden', 
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-            cursor: 'none',
-            transform: `scale(${scale / 100}) translateY(${offsetY}px)`,
-            transition: 'transform 0.1s ease-out'
+            transform: `scale(${scale / 100}) translateY(${offsetY}px)`
           }}
         >
           <canvas 
             ref={canvasRef} 
             width={is916Mode ? 450 : 600} 
             height={is916Mode ? 800 : 600} 
-            style={{ width: '100%', height: '100%' }}
+            className="w-full h-full"
           />
 
           {/* HAND CURSOR OVERLAY 👆 */}
           <div 
+            className="absolute pointer-events-none select-none drop-shadow-2xl transition-transform"
             style={{ 
-              position: 'absolute', 
               left: `${cursorPos.x}px`, 
               top: `${cursorPos.y}px`, 
               fontSize: `${handSize}px`, 
-              pointerEvents: 'none',
-              transform: 'translate(-30%, -20%)',
-              userSelect: 'none',
-              filter: 'drop-shadow(0px 4px 8px rgba(0,0,0,0.5))'
+              transform: 'translate(-30%, -20%)'
             }}
           >
             👆
