@@ -1,16 +1,28 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Upload, Play } from 'lucide-react';
 
+const STORAGE_KEY = 'flashlight_game_settings';
+
 export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
-  const [imageSrc, setImageSrc] = useState('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'); // Ảnh 1
-  const [imageSrc2, setImageSrc2] = useState(null); // Ảnh 2
-  const [targetSlot, setTargetSlot] = useState(1); // 1 | 2
-  const [radius, setRadius] = useState(80);
-  const [spotlightType, setSpotlightType] = useState('circle'); // 'circle' | 'cone'
-  const [beamAngle, setBeamAngle] = useState(-135); // Góc chiếu vệt nón chéo
-  const [handSize, setHandSize] = useState(48);
-  const [scale, setScale] = useState(100);
-  const [offsetY, setOffsetY] = useState(0);
+  const getSavedSettings = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const initialSettings = getSavedSettings();
+
+  const [imageSrc, setImageSrc] = useState(initialSettings.imageSrc || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png');
+  const [radius, setRadius] = useState(initialSettings.radius ?? 80);
+  const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
+  const [beamAngle, setBeamAngle] = useState(initialSettings.beamAngle ?? -135);
+  const [coneSpread, setConeSpread] = useState(initialSettings.coneSpread ?? 45);
+  const [handSize, setHandSize] = useState(initialSettings.handSize ?? 48);
+  const [scale, setScale] = useState(initialSettings.scale ?? 100);
+  const [offsetY, setOffsetY] = useState(initialSettings.offsetY ?? 0);
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
   const [internalIs916Mode, setInternalIs916Mode] = useState(false);
 
@@ -19,8 +31,25 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const imgRef1 = useRef(null);
-  const imgRef2 = useRef(null);
+  const imgRef = useRef(null);
+
+  // Tự động lưu cài đặt vào localStorage khi thay đổi
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        radius,
+        spotlightType,
+        beamAngle,
+        coneSpread,
+        handSize,
+        scale,
+        offsetY,
+        imageSrc
+      }));
+    } catch (e) {
+      console.error('Không thể lưu cài đặt:', e);
+    }
+  }, [radius, spotlightType, beamAngle, coneSpread, handSize, scale, offsetY, imageSrc]);
 
   // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -33,26 +62,16 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setIs916Mode]);
 
-  // Load Images
+  // Load Image
   useEffect(() => {
-    const img1 = new Image();
-    img1.crossOrigin = 'Anonymous';
-    img1.src = imageSrc;
-    img1.onload = () => {
-      imgRef1.current = img1;
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = imageSrc;
+    img.onload = () => {
+      imgRef.current = img;
       renderCanvas();
     };
-
-    if (imageSrc2) {
-      const img2 = new Image();
-      img2.crossOrigin = 'Anonymous';
-      img2.src = imageSrc2;
-      img2.onload = () => {
-        imgRef2.current = img2;
-        renderCanvas();
-      };
-    }
-  }, [imageSrc, imageSrc2]);
+  }, [imageSrc]);
 
   // Handle Mouse Move: Tính toán ma trận đồng bộ 100% khi nằm ngang 90deg ở cả 2 trạng thái
   const handleMouseMove = (e) => {
@@ -79,19 +98,36 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const renderCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const activeImg = targetSlot === 1 ? imgRef1.current : (imgRef2.current || imgRef1.current);
-    if (!activeImg) return;
+    const activeImg = imgRef.current;
+    if (!activeImg || !activeImg.width || !activeImg.height) return;
 
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
 
+    // Aspect ratio fit (contain mode) - giữ tỉ lệ gốc của ảnh PNG, không bị méo hay cắt mép ở chân/đầu
+    const imgRatio = activeImg.width / activeImg.height;
+    const canvasRatio = width / height;
+
+    let drawW, drawH, drawX, drawY;
+    if (imgRatio > canvasRatio) {
+      drawW = width * 0.85; // Thu vừa vặn 85% để tạo khoảng lùi an toàn
+      drawH = drawW / imgRatio;
+      drawX = (width - drawW) / 2;
+      drawY = (height - drawH) / 2 + offsetY;
+    } else {
+      drawH = height * 0.85;
+      drawW = drawH * imgRatio;
+      drawX = (width - drawW) / 2;
+      drawY = (height - drawH) / 2 + offsetY;
+    }
+
     // Clear background
     ctx.clearRect(0, 0, width, height);
 
-    // BƯỚC 1: Vẽ Ảnh màu gốc ở dưới cùng
+    // BƯỚC 1: Vẽ Ảnh màu gốc ở dưới cùng (dịch chuyển theo offsetY & tỉ lệ chuẩn)
     ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(activeImg, 0, offsetY, width, height);
+    ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
 
     // BƯỚC 2: Phủ lớp Đen ĐẶC CHỈ lên khu vực hình ảnh PNG (vùng Alpha > 0)
     ctx.globalCompositeOperation = 'source-in';
@@ -107,30 +143,24 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       ctx.arc(cursorPos.x, cursorPos.y, radius, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Vệt Nón Chiếu Chéo theo beamAngle linh hoạt
+      // Vệt Nón Chiếu Chéo theo beamAngle (Góc Hướng) và coneSpread (Độ Mở Góc Chiếu)
       ctx.save();
-      const rad = (beamAngle * Math.PI) / 180;
-      const length = Math.max(width, height) * 1.5;
-      const endX = cursorPos.x + Math.cos(rad) * length;
-      const endY = cursorPos.y + Math.sin(rad) * length;
+      const centerRad = (beamAngle * Math.PI) / 180;
+      const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
+      const length = Math.max(width, height) * 2.5;
 
-      const perpX = -Math.sin(rad);
-      const perpY = Math.cos(rad);
+      const angle1 = centerRad - halfSpreadRad;
+      const angle2 = centerRad + halfSpreadRad;
 
-      const p1x = cursorPos.x + perpX * radius;
-      const p1y = cursorPos.y + perpY * radius;
-      const p2x = cursorPos.x - perpX * radius;
-      const p2y = cursorPos.y - perpY * radius;
-      const p3x = endX - perpX * radius * 1.5;
-      const p3y = endY - perpY * radius * 1.5;
-      const p4x = endX + perpX * radius * 1.5;
-      const p4y = endY + perpY * radius * 1.5;
+      const x1 = cursorPos.x + Math.cos(angle1) * length;
+      const y1 = cursorPos.y + Math.sin(angle1) * length;
+      const x2 = cursorPos.x + Math.cos(angle2) * length;
+      const y2 = cursorPos.y + Math.sin(angle2) * length;
 
       ctx.beginPath();
-      ctx.moveTo(p1x, p1y);
-      ctx.lineTo(p4x, p4y);
-      ctx.lineTo(p3x, p3y);
-      ctx.lineTo(p2x, p2y);
+      ctx.moveTo(cursorPos.x, cursorPos.y);
+      ctx.lineTo(x1, y1);
+      ctx.lineTo(x2, y2);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
@@ -138,24 +168,17 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
     // BƯỚC 4: Vẽ lại Màu Gốc ở các vùng đã được đục thủng
     ctx.globalCompositeOperation = 'destination-over';
-    ctx.drawImage(activeImg, 0, offsetY, width, height);
+    ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
   };
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamAngle, targetSlot, imageSrc, imageSrc2, is916Mode, offsetY]);
+  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, imageSrc, is916Mode, offsetY]);
 
-  const handleImageUpload1 = (e) => {
+  const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageSrc(URL.createObjectURL(file));
-    }
-  };
-
-  const handleImageUpload2 = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageSrc2(URL.createObjectURL(file));
     }
   };
 
@@ -168,33 +191,31 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             🔦 CÀI ĐẶT SOI ĐÈN PIN (PNG)
           </h2>
 
-          {/* Upload 2 PNG Images */}
+          {/* Upload 1 PNG Image */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Tải 2 Ảnh Nhân Vật (PNG Trong Suốt):</label>
-            <div className="flex gap-2">
-              <label className="flex-1 flex flex-col items-center justify-center p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs text-center">
-                <Upload size={14} className="mb-1" /> Ảnh 1
-                <input type="file" accept="image/*" onChange={handleImageUpload1} className="hidden" />
-              </label>
-              <label className="flex-1 flex flex-col items-center justify-center p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs text-center">
-                <Upload size={14} className="mb-1" /> Ảnh 2
-                <input type="file" accept="image/*" onChange={handleImageUpload2} className="hidden" />
-              </label>
-            </div>
-          </div>
-
-          {/* Select Target Image Slot */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Chọn Ảnh Hiển Thị Soi Đèn:</label>
-            <select value={targetSlot} onChange={(e) => setTargetSlot(Number(e.target.value))} className="p-2.5 bg-slate-700 text-white rounded-lg border-none focus:ring-2 focus:ring-sky-400 outline-none cursor-pointer">
-              <option value={1}>Ảnh Số 1 (Mặc định)</option>
-              <option value={2}>Ảnh Số 2</option>
-            </select>
+            <label className="text-xs text-slate-400 font-medium">Tải Ảnh Nhân Vật (PNG Trong Suốt):</label>
+            <label className="flex items-center justify-center gap-2 p-3 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
+              <Upload size={16} /> Tải Ảnh Mới (.PNG)
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
           </div>
 
           {/* Radius */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Bán Kính Vệt Sáng ({radius}px):</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-400 font-medium">Bán Kính Vệt Sáng:</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="30"
+                  max="250"
+                  value={radius}
+                  onChange={(e) => setRadius(Number(e.target.value))}
+                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                />
+                <span className="text-xs text-slate-400">px</span>
+              </div>
+            </div>
             <input type="range" min="30" max="250" value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
           </div>
 
@@ -208,33 +229,125 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           </div>
 
           {spotlightType === 'cone' && (
-            <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-400 font-medium">Góc Chiếu Nón ({beamAngle}°):</label>
-              <input type="range" min="-180" max="180" value={beamAngle} onChange={(e) => setBeamAngle(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
-            </div>
+            <>
+              {/* Beam Angle */}
+              <div className="flex flex-col gap-2 p-3 bg-slate-900/60 rounded-xl border border-sky-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-slate-300 font-bold flex items-center gap-1">
+                    🧭 Hướng Góc Chiếu:
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="-180"
+                      max="180"
+                      value={beamAngle}
+                      onChange={(e) => setBeamAngle(Number(e.target.value))}
+                      className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-bold"
+                    />
+                    <span className="text-xs text-sky-400 font-bold">°</span>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  value={beamAngle}
+                  onChange={(e) => setBeamAngle(Number(e.target.value))}
+                  className="accent-sky-400 cursor-pointer"
+                />
+              </div>
+
+              {/* Cone Spread Angle */}
+              <div className="flex flex-col gap-2 p-3 bg-slate-900/60 rounded-xl border border-sky-500/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-slate-300 font-bold flex items-center gap-1">
+                    📐 Độ Mở Góc Chiếu:
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="5"
+                      max="160"
+                      value={coneSpread}
+                      onChange={(e) => setConeSpread(Number(e.target.value))}
+                      className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-bold"
+                    />
+                    <span className="text-xs text-sky-400 font-bold">°</span>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="160"
+                  value={coneSpread}
+                  onChange={(e) => setConeSpread(Number(e.target.value))}
+                  className="accent-sky-400 cursor-pointer"
+                />
+              </div>
+            </>
           )}
 
           {/* Hand Size */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Kích Thước Bàn Tay 👆 ({handSize}px):</label>
-            <input type="range" min="24" max="100" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-400 font-medium">Kích Thước Bàn Tay 👆:</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="24"
+                  max="500"
+                  value={handSize}
+                  onChange={(e) => setHandSize(Number(e.target.value))}
+                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                />
+                <span className="text-xs text-slate-400">px</span>
+              </div>
+            </div>
+            <input type="range" min="24" max="500" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
           </div>
 
           {/* Scale */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To ({scale}%):</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To:</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="50"
+                  max="200"
+                  value={scale}
+                  onChange={(e) => setScale(Number(e.target.value))}
+                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                />
+                <span className="text-xs text-slate-400">%</span>
+              </div>
+            </div>
             <input type="range" min="50" max="200" value={scale} onChange={(e) => setScale(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
           </div>
 
           {/* Offset Y */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống ({offsetY}px):</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống:</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="-300"
+                  max="300"
+                  value={offsetY}
+                  onChange={(e) => setOffsetY(Number(e.target.value))}
+                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                />
+                <span className="text-xs text-slate-400">px</span>
+              </div>
+            </div>
             <input type="range" min="-300" max="300" value={offsetY} onChange={(e) => setOffsetY(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
           </div>
 
           {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
-          <button 
-            onClick={() => setIs916Mode(true)} 
+          <button
+            onClick={() => setIs916Mode(true)}
             className="mt-auto p-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
             <Play size={18} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
@@ -243,21 +356,19 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       )}
 
       {/* KHUNG HIỂN THỊ KHU VỰC SÂN KHẤU (LUÔN LUÔN HIỂN THỊ GIỐNG KHI ĐANG CHẠY) */}
-      <div className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${
-        is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
-      }`}>
+      <div className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
+        }`}>
         {/* CONTAINER KHUNG NẰM NGANG NỀN GRID TRẮNG GIỐNG HỆT KHI ĐANG CHẠY */}
-        <div 
+        <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
-          className={`relative overflow-hidden cursor-none transition-all duration-300 ${
-            is916Mode 
-              ? 'w-full h-full bg-white flex items-center justify-center' 
+          className={`relative overflow-hidden cursor-none transition-all duration-300 ${is916Mode
+              ? 'w-full h-full bg-white flex items-center justify-center'
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
-          }`}
+            }`}
         >
           {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
-          <div 
+          <div
             className="absolute inset-0 pointer-events-none opacity-40"
             style={{
               backgroundImage: `linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)`,
@@ -266,28 +377,29 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           />
 
           {/* CANVAS XOAY NẰM NGANG 90 ĐỘ GIỐNG HỆT KHI ĐANG CHẠY */}
-          <div 
-            style={{ 
+          <div
+            style={{
               transform: `rotate(-90deg) scale(${(scale / 100) * (is916Mode ? 1.25 : 0.95)})`,
               transformOrigin: 'center center'
             }}
           >
-            <canvas 
-              ref={canvasRef} 
-              width={540} 
-              height={960} 
+            <canvas
+              ref={canvasRef}
+              width={540}
+              height={960}
               className=""
             />
           </div>
 
-          {/* HAND CURSOR OVERLAY 👆 (Bám sát theo ngón tay) */}
-          <div 
+          {/* HAND CURSOR OVERLAY 👆 (Đầu ngón tay trỏ đúng vị trí con trỏ) */}
+          <div
             className="absolute pointer-events-none select-none z-30 transition-transform"
-            style={{ 
-              left: `${cursorPos.rawX}px`, 
-              top: `${cursorPos.rawY}px`, 
-              fontSize: `${handSize}px`, 
-              transform: 'translate(-50%, -50%) rotate(-90deg)'
+            style={{
+              left: `${cursorPos.rawX}px`,
+              top: `${cursorPos.rawY}px`,
+              fontSize: `${handSize}px`,
+              transformOrigin: '50% 12%',
+              transform: 'translate(-50%, -12%) rotate(-90deg)'
             }}
           >
             👆

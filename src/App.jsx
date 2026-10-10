@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FlashlightReveal from './components/FlashlightReveal';
 import ShadowMatch from './components/ShadowMatch';
+import LuckyWheel from './components/LuckyWheel';
+import ImageBlend from './components/ImageBlend';
+import RedemptionEffect from './components/RedemptionEffect';
 import FeatureModal, { GAME_FEATURES } from './components/FeatureModal';
 import { LayoutGrid } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('flashlight'); // 'flashlight' | 'shadow'
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('game_studio_active_tab') || 'flashlight';
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [is916Mode, setIs916Mode] = useState(false); // State theo dõi chế độ khởi chạy 9:16
+  const [is916Mode, setIs916Mode] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('game_studio_active_tab', activeTab);
+  }, [activeTab]);
 
   const currentFeature = GAME_FEATURES.find(f => f.id === activeTab);
 
@@ -47,6 +56,15 @@ export default function App() {
         )}
         {activeTab === 'shadow' && (
           <ShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'luckywheel' && (
+          <LuckyWheel is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'imageblend' && (
+          <ImageBlend is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'redemption' && (
+          <RedemptionEffect is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
         )}
       </main>
 
