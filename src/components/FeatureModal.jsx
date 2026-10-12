@@ -13,6 +13,16 @@ export const GAME_FEATURES = [
     active: true
   },
   {
+    id: 'multi_flashlight',
+    title: 'Soi Đèn Đa Tầng (Pro)',
+    subtitle: 'Multi-Layer Flashlight',
+    description: 'Chức năng soi đèn mở rộng, tùy biến nhiều ảnh layer, tự do chỉnh vị trí X, Y, Scale và góc xoay.',
+    icon: Flashlight,
+    color: 'from-cyan-500 to-blue-600',
+    badge: 'Chức năng MỚI',
+    active: true
+  },
+  {
     id: 'shadow',
     title: 'Ghép Bóng',
     subtitle: 'Shadow Match',
@@ -20,6 +30,16 @@ export const GAME_FEATURES = [
     icon: Ghost,
     color: 'from-purple-500 to-indigo-600',
     badge: 'Chức năng 2',
+    active: true
+  },
+  {
+    id: 'multi_shadow',
+    title: 'Ghép Bóng Mở Rộng (Pro)',
+    subtitle: 'Multi Shadow & Layers',
+    description: 'Chức năng ghép bóng nâng cao: khay ảnh gốc phía trên, khu vực hiển thị phía dưới kết hợp linh hoạt cả bóng đen và ảnh đầy đủ màu sắc.',
+    icon: Ghost,
+    color: 'from-violet-600 to-fuchsia-600',
+    badge: 'Chức năng MỚI',
     active: true
   },
   {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import FlashlightReveal from './components/FlashlightReveal';
+import MultiFlashlightReveal from './components/MultiFlashlightReveal';
 import ShadowMatch from './components/ShadowMatch';
+import MultiShadowMatch from './components/MultiShadowMatch';
 import LuckyWheel from './components/LuckyWheel';
 import ImageBlend from './components/ImageBlend';
 import RedemptionEffect from './components/RedemptionEffect';
@@ -54,8 +56,14 @@ export default function App() {
         {activeTab === 'flashlight' && (
           <FlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
         )}
+        {activeTab === 'multi_flashlight' && (
+          <MultiFlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
         {activeTab === 'shadow' && (
           <ShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'multi_shadow' && (
+          <MultiShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
         )}
         {activeTab === 'luckywheel' && (
           <LuckyWheel is916Mode={is916Mode} setIs916Mode={setIs916Mode} />

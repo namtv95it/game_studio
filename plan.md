@@ -23,12 +23,28 @@ Dự án phát triển Web App React + Vite tích hợp 2 chức năng tương t
 
 ---
 
+### 🔦 Giai đoạn 1.2: Chức Năng Mới - Soi Đèn Đa Tầng (Multi-Layer Flashlight Pro) (Đã Hoàn Thành)
+- [x] Tạo component riêng biệt `MultiFlashlightReveal.jsx` độc lập với bản Soi Đèn cũ
+- [x] Tải lên nhiều ảnh cùng lúc (`multiple file upload`)
+- [x] Quản lý danh sách Lớp Ảnh (Layers): Kéo thả đổi thứ tự z-index (Dưới ➔ Trên), Bật/Tắt ẩn hiện (Eye toggle), Xóa layer
+- [x] Tùy chỉnh linh hoạt từng lớp ảnh riêng biệt: Tọa độ X (-300px đến +300px), Tọa độ Y (-400px đến +400px), Tỉ lệ Phóng to (20% đến 200%), Góc xoay Rotation (-180° đến +180°)
+- [x] Thuật toán vẽ đa tầng hợp nhất trên HTML5 Canvas và đục thủng vệt sáng đèn pin sắc nét
+- [x] Tích hợp vào **Kho Tính Năng** (`FeatureModal.jsx`) và điều hướng `App.jsx`
+
+---
+
 ### 👻 Giai đoạn 2: Chức Năng 2 - Ghép Bóng (Shadow Match) (Đã Hoàn Thành)
-- [x] Tải lên 3 hình ảnh PNG tùy chỉnh
-- [x] Tự động chuyển 1 trong 3 ảnh thành Silhouette Bóng Đen đặc màu `#000000`
-- [x] Logic Click-to-Pick (Chọn ảnh đi theo bàn tay 👆) và Click-to-Place (Đặt khít cố định lên bóng đen, giao diện sạch không khung viền)
-- [x] Phím tắt **Spacebar** reset vị trí kèm hiệu ứng lướt bay mượt mà (Spring-back animation) thu nhỏ trở về đúng khe thẻ bài ban đầu
-- [x] Chế độ xem & Quay màn hình chuẩn tỉ lệ 9:16 (1080x1920)
+- [x] Tải lên nhiều hình ảnh PNG (`multiple upload`) qua 1 ô chọn duy nhất.
+- [x] Kéo thả trực quan trong danh sách để sắp xếp thứ tự ảnh (Drag & Drop với icon `GripVertical`).
+- [x] Tự động chuyển 1 trong các ảnh thành Silhouette Bóng Đen đặc màu `#000000`.
+- [x] Tính năng **Kéo Xếp Vị Trí Trực Tiếp**: Chọn và giữ chuột kéo trực tiếp Khay ảnh thu nhỏ hoặc Bóng đen ngay trên khung quay để định vị nhanh chóng mà không cần chỉnh thanh trượt thủ công.
+- [x] Logic Click-to-Pick (Chọn ảnh đi theo bàn tay 👆) và Click-to-Place (Đặt khít cố định lên bóng đen, cho phép nhấc lên di chuyển lại).
+- [x] Phím tắt **Spacebar** reset vị trí kèm hiệu ứng lướt bay mượt mà (Spring-back animation) thu nhỏ trở về đúng khe thẻ bài ban đầu.
+- [x] Chế độ xem & Quay màn hình chuẩn tỉ lệ 9:16 (1080x1920) (Nhấn `ESC` để thoát).
+- [x] **Chức Năng Ghép Bóng Mở Rộng (MultiShadowMatch)**:
+  - Chia 2 khu vực rõ ràng: Khay ảnh gốc phía trên (2-3 ảnh để kéo xuống) & Khu vực hiển thị phía dưới.
+  - Khu vực hiển thị phía dưới hỗ trợ linh hoạt cả **Bóng Đen (Silhouette)** lẫn **Ảnh Màu Đầy Đủ**.
+  - Tự do thêm/xóa layer hiển thị, đổi thứ tự Z-Index, căn chỉnh riêng biệt X, Y, Scale, Rotation cho từng hình ảnh hoặc kéo trực tiếp trên màn hình full.
 
 ---
 
