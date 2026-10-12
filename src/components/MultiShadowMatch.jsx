@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, Plus, Trash2, Eye, EyeOff, Layers, Palette, Wand2 } from 'lucide-react';
+import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, Plus, Trash2, Eye, EyeOff, Layers, Palette, Wand2, ArrowUp, ArrowDown, X } from 'lucide-react';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -21,8 +21,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
 
   const initialSettings = getSavedSettings();
 
-  // Danh sách ảnh khay phía trên (images gốc)
+  // Danh sách ảnh khay phía trên (Top Tray images)
   const [images, setImages] = useState(initialSettings.images || POKEMON_IMAGES);
+  // Danh sách ảnh riêng dành cho Lớp Sân Khấu (Stage images)
+  const [stageImages, setStageImages] = useState(initialSettings.stageImages || initialSettings.images || POKEMON_IMAGES);
   // Chỉ số ảnh được chọn để tạo bóng đen ở phía dưới (chọn từ các ảnh phía trên)
   const [shadowIndex, setShadowIndex] = useState(initialSettings.shadowIndex ?? 0);
   
@@ -70,6 +72,19 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
   const [trayOffsetY, setTrayOffsetY] = useState(initialSettings.trayOffsetY ?? 0);
   const [trayItemSize, setTrayItemSize] = useState(initialSettings.trayItemSize ?? 90);
   const [trayGap, setTrayGap] = useState(initialSettings.trayGap ?? 24);
+  // Bật/tắt tính năng chọn ảnh khay trên để kéo xuống dưới
+  const [trayPickEnabled, setTrayPickEnabled] = useState(initialSettings.trayPickEnabled ?? true);
+
+  // Cài đặt ảnh phía dưới (Bottom Image) - có thể di chuyển tự do kể cả khi gameplay
+  const [bottomImageVisible, setBottomImageVisible] = useState(initialSettings.bottomImageVisible ?? true);
+  const [bottomImageIndex, setBottomImageIndex] = useState(initialSettings.bottomImageIndex ?? 0);
+  const [bottomImageX, setBottomImageX] = useState(initialSettings.bottomImageX ?? 640);
+  const [bottomImageY, setBottomImageY] = useState(initialSettings.bottomImageY ?? 620);
+  const [bottomImageSize, setBottomImageSize] = useState(initialSettings.bottomImageSize ?? 160);
+  const [bottomImageOpacity, setBottomImageOpacity] = useState(initialSettings.bottomImageOpacity ?? 90);
+  const [bottomImageRotation, setBottomImageRotation] = useState(initialSettings.bottomImageRotation ?? 0);
+  const [bottomImageCustomUrl, setBottomImageCustomUrl] = useState(initialSettings.bottomImageCustomUrl || null);
+  const bottomImageInputRef = useRef(null);
 
   const THEATER_WIDTH = 1280;
   const THEATER_HEIGHT = 720;
@@ -82,7 +97,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
 
   // Chế độ thao tác trên khung quay: 'gameplay' (Kéo ghép bóng thông thường) hoặc 'edit' (Kéo chỉnh vị trí các layer & khay trực tiếp)
   const [stageMode, setStageMode] = useState('gameplay');
-  const [draggingTarget, setDraggingTarget] = useState(null); // 'tray' | { type: 'layer', layerId }
+  const [draggingTarget, setDraggingTarget] = useState(null); // 'tray' | 'bottom' | { type: 'layer', layerId }
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, initValX: 0, initValY: 0 });
 
   // States for Drag and Drop Reordering in Images List
@@ -111,22 +126,33 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         images,
+        stageImages,
         shadowIndex,
         stageLayers,
         handSize,
         trayOffsetX,
         trayOffsetY,
         trayItemSize,
-        trayGap
+        trayGap,
+        trayPickEnabled,
+        bottomImageVisible,
+        bottomImageIndex,
+        bottomImageX,
+        bottomImageY,
+        bottomImageSize,
+        bottomImageOpacity,
+        bottomImageRotation,
+        bottomImageCustomUrl
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt MultiShadowMatch:', e);
     }
-  }, [images, shadowIndex, stageLayers, handSize, trayOffsetX, trayOffsetY, trayItemSize, trayGap]);
+  }, [images, stageImages, shadowIndex, stageLayers, handSize, trayOffsetX, trayOffsetY, trayItemSize, trayGap, trayPickEnabled, bottomImageVisible, bottomImageIndex, bottomImageX, bottomImageY, bottomImageSize, bottomImageOpacity, bottomImageRotation, bottomImageCustomUrl]);
 
-  // Load Image Objects for Silhouette / Canvas render
+  // Load Image Objects for Silhouette / Canvas render (Cả ảnh khay trên và ảnh sân khấu)
   useEffect(() => {
-    images.forEach((url, i) => {
+    const allUniqueUrls = Array.from(new Set([...images, ...stageImages]));
+    allUniqueUrls.forEach((url) => {
       if (!loadedImgObjects.current[url]) {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -137,7 +163,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
         };
       }
     });
-  }, [images]);
+  }, [images, stageImages]);
 
   // Dynamic Scale calculation for Theater Container
   useEffect(() => {
@@ -209,7 +235,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     if (draggingTarget === 'tray') {
       setTrayOffsetX(Math.max(0, Math.min(THEATER_WIDTH - 120, Math.round(dragStartRef.current.initValX + deltaX))));
       setTrayOffsetY(Math.max(-350, Math.min(350, Math.round(dragStartRef.current.initValY + deltaY))));
-    } else if (draggingTarget.type === 'layer') {
+    } else if (draggingTarget === 'bottom') {
+      setBottomImageX(Math.max(0, Math.min(THEATER_WIDTH, Math.round(dragStartRef.current.initValX + deltaX))));
+      setBottomImageY(Math.max(0, Math.min(THEATER_HEIGHT, Math.round(dragStartRef.current.initValY + deltaY))));
+    } else if (draggingTarget && draggingTarget.type === 'layer') {
       const layerId = draggingTarget.layerId;
       setStageLayers(prev => prev.map(layer => {
         if (layer.id === layerId) {
@@ -224,9 +253,57 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     }
   };
 
+  // Window-level event listener khi đang kéo thả (giúp di chuyển siêu mượt, không bị mất tiêu điểm ra ngoài canvas)
+  useEffect(() => {
+    if (!draggingTarget) return;
+
+    const handleWindowMouseMove = (e) => {
+      if (!theaterRef.current) return;
+      const { x, y } = getTheaterCoords(e);
+      setCursorPos({ x, y });
+
+      const rect = theaterRef.current.getBoundingClientRect();
+      const currentScale = rect.width / THEATER_WIDTH || stageScale || 1;
+      const deltaX = (e.clientX - dragStartRef.current.mouseX) / currentScale;
+      const deltaY = (e.clientY - dragStartRef.current.mouseY) / currentScale;
+
+      if (draggingTarget === 'tray') {
+        setTrayOffsetX(Math.max(0, Math.min(THEATER_WIDTH - 120, Math.round(dragStartRef.current.initValX + deltaX))));
+        setTrayOffsetY(Math.max(-350, Math.min(350, Math.round(dragStartRef.current.initValY + deltaY))));
+      } else if (draggingTarget === 'bottom') {
+        setBottomImageX(Math.max(0, Math.min(THEATER_WIDTH, Math.round(dragStartRef.current.initValX + deltaX))));
+        setBottomImageY(Math.max(0, Math.min(THEATER_HEIGHT, Math.round(dragStartRef.current.initValY + deltaY))));
+      } else if (draggingTarget && draggingTarget.type === 'layer') {
+        const layerId = draggingTarget.layerId;
+        setStageLayers(prev => prev.map(layer => {
+          if (layer.id === layerId) {
+            return {
+              ...layer,
+              x: Math.round(dragStartRef.current.initValX + deltaX),
+              y: Math.round(dragStartRef.current.initValY + deltaY)
+            };
+          }
+          return layer;
+        }));
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      setDraggingTarget(null);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [draggingTarget, stageScale]);
+
   const handleStartDragTray = (e) => {
     if (stageMode !== 'edit' || is916Mode) return;
     e.stopPropagation();
+    e.preventDefault();
     setDraggingTarget('tray');
     dragStartRef.current = {
       mouseX: e.clientX,
@@ -236,9 +313,26 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     };
   };
 
-  const handleStartDragLayer = (e, layer) => {
-    if (stageMode !== 'edit' || is916Mode) return;
+  // Kéo ảnh phía dưới - hoạt động cả trong gameplay mode và 9:16 mode
+  const handleStartDragBottom = (e) => {
     e.stopPropagation();
+    e.preventDefault();
+    setDraggingTarget('bottom');
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      initValX: bottomImageX,
+      initValY: bottomImageY
+    };
+  };
+
+  const handleStartDragLayer = (e, layer) => {
+    // Nếu ở chế độ 9:16 hoặc gameplay, chỉ cho phép kéo nếu layer có kiểu 'movable'
+    const isMovable = layer.type === 'movable';
+    if (!isMovable && (stageMode !== 'edit' || is916Mode)) return;
+
+    e.stopPropagation();
+    e.preventDefault();
     setSelectedLayerId(layer.id);
     setDraggingTarget({ type: 'layer', layerId: layer.id });
     dragStartRef.current = {
@@ -346,54 +440,84 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     setTrayItemSize(90);
     setTrayGap(24);
     setHandSize(48);
+    setBottomImageX(640);
+    setBottomImageY(620);
+    setBottomImageSize(160);
+    setBottomImageOpacity(90);
+    setBottomImageRotation(0);
     setPlacedItems([]);
     setPickedItem(null);
   };
 
-  // Upload nhiều ảnh
+  // Upload ảnh dành riêng cho khay phía trên (Top Tray) - Tải THÊM ảnh vào danh sách
   const handleMultipleImageUpload = (e) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
     if (files.length === 0) return;
 
     const newUrls = files.map((file) => URL.createObjectURL(file));
-    setImages(newUrls);
-    setShadowIndex(0);
+    setImages(prev => [...prev, ...newUrls]);
+    e.target.value = '';
+  };
 
-    // Tự động tạo lại danh sách layer:
-    // - Ảnh được chọn (mặc định ảnh 0) làm Bóng Đen ở khu vực phía dưới
-    // - Các ảnh còn lại có thể là ảnh màu minh họa
-    const newLayers = [
-      {
-        id: `layer-shadow-main`,
-        imageIndex: 0,
-        type: 'shadow',
-        x: 0,
-        y: 0,
-        scale: 100,
+  // Xóa ảnh khỏi khay phía trên (cho phép xóa dù chỉ còn 1 cái)
+  const handleDeleteTrayImage = (e, index) => {
+    e.stopPropagation();
+    const updated = images.filter((_, i) => i !== index);
+    setImages(updated);
+  };
+
+  // Upload ảnh dành riêng cho Lớp Sân Khấu (Stage Layers) - Tải THÊM ảnh vào danh sách
+  const handleStageImageUpload = (e) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const newUrls = files.map((file) => URL.createObjectURL(file));
+    const startIdx = stageImages.length;
+    setStageImages(prev => [...prev, ...newUrls]);
+
+    // Tự động tạo thêm layer tương ứng cho các ảnh mới tải lên
+    const addedLayers = newUrls.map((_, i) => {
+      const idx = startIdx + i;
+      return {
+        id: `layer-stage-${Date.now()}-${i}`,
+        imageIndex: idx,
+        type: 'color',
+        x: ((idx * 50) % 300) - 100,
+        y: ((idx * 30) % 200) - 50,
+        scale: 75,
         rotation: 0,
         visible: true,
-        name: `Bóng Đen (Ảnh #1)`
-      }
-    ];
+        name: `Ảnh sân khấu #${idx + 1}`
+      };
+    });
 
-    if (newUrls.length > 1) {
-      newLayers.push({
-        id: `layer-color-extra`,
-        imageIndex: 1,
-        type: 'color',
-        x: 180,
-        y: 40,
-        scale: 65,
-        rotation: 5,
-        visible: true,
-        name: `Ảnh Màu Minh Họa #2`
-      });
-    }
+    setStageLayers(prev => [...prev, ...addedLayers]);
+    setSelectedImageIndex(startIdx);
+    e.target.value = '';
+  };
 
-    setStageLayers(newLayers);
-    setSelectedLayerId(newLayers[0]?.id || null);
-    setPlacedItems([]);
-    setPickedItem(null);
+  // Xóa ảnh khỏi danh sách sân khấu (cho phép xóa dù chỉ còn 1 cái)
+  const handleDeleteStageImage = (e, index) => {
+    e.stopPropagation();
+    const updated = stageImages.filter((_, i) => i !== index);
+    setStageImages(updated);
+
+    // Cập nhật lại các layer: xóa layer dùng ảnh này hoặc remap imageIndex
+    setStageLayers(prev => {
+      return prev
+        .filter(l => l.imageIndex !== index)
+        .map(l => ({
+          ...l,
+          imageIndex: l.imageIndex > index ? l.imageIndex - 1 : l.imageIndex
+        }));
+    });
+
+    // Chọn lại ảnh hiển thị phù hợp
+    setSelectedImageIndex(prev => {
+      if (updated.length === 0) return null;
+      if (prev >= updated.length) return updated.length - 1;
+      return prev;
+    });
   };
 
   // Chọn 1 ảnh từ danh sách phía trên để làm Bóng Đen ở khu vực phía dưới
@@ -548,6 +672,19 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     setDragOverLayerIdx(null);
   };
 
+  // Di chuyển lớp lên trên (hiển thị đè lên các lớp khác) hoặc xuống dưới
+  const handleMoveLayerOrder = (layerId, direction) => {
+    const idx = stageLayers.findIndex(l => l.id === layerId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx + 1 : idx - 1;
+    if (targetIdx < 0 || targetIdx >= stageLayers.length) return;
+
+    const updated = [...stageLayers];
+    const [moved] = updated.splice(idx, 1);
+    updated.splice(targetIdx, 0, moved);
+    setStageLayers(updated);
+  };
+
   const selectedLayer = stageLayers.find(l => l.id === selectedLayerId) || null;
 
   const updateSelectedLayer = (field, val) => {
@@ -560,420 +697,762 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     }));
   };
 
+  // Tab điều khiển trong sidebar: 'tray' (Ảnh phía trên) | 'stage' (Lớp sân khấu)
+  const [sidebarTab, setSidebarTab] = useState('stage');
+
+  // Chế độ xem trong tab Sân Khấu: 'settings' (Cài đặt ảnh & layer) | 'order' (Thứ tự lớp phủ)
+  const [stageSubView, setStageSubView] = useState('settings');
+
+  // Ảnh đang được chọn trong sidebar (dùng để hiển cài đặt của ảnh đó)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  // Nguồn ảnh di chuyển phía dưới: ưu tiên ảnh riêng tải lên (bottomImageCustomUrl), nếu không lấy từ images[bottomImageIndex]
+  const activeBottomSrc = bottomImageCustomUrl || images[bottomImageIndex] || images[0];
+
+  const handleUploadBottomImage = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setBottomImageCustomUrl(url);
+    setBottomImageVisible(true);
+    e.target.value = '';
+  };
+
+  // Tìm layer trên sân khấu gắn với ảnh đang chọn (lấy cái đầu tiên nếu có nhiều)
+  const selectedImageLayer = stageLayers.find(l => l.imageIndex === selectedImageIndex) || null;
+
+  // Thêm layer mới gắn với ảnh đang chọn
+  const handleAddLayerForImage = (imageIndex, type) => {
+    const newId = `layer-${Date.now()}`;
+    const nameMap = {
+      shadow: `Bóng Đen (Ảnh #${imageIndex + 1})`,
+      color: `Ảnh Màu #${imageIndex + 1}`,
+      movable: `Di Chuyển #${imageIndex + 1}`
+    };
+    const newLayer = {
+      id: newId,
+      imageIndex,
+      type,
+      x: 0,
+      y: 0,
+      scale: type === 'shadow' ? 100 : 75,
+      rotation: 0,
+      visible: true,
+      name: nameMap[type] || `Layer #${imageIndex + 1}`
+    };
+    setStageLayers(prev => [...prev, newLayer]);
+    setSelectedLayerId(newId);
+    if (type === 'shadow') setShadowIndex(imageIndex);
+  };
+
+  // Update layer theo id cụ thể (không phụ thuộc selectedLayerId)
+  const updateLayerById = (id, field, val) => {
+    setStageLayers(prev => prev.map(layer =>
+      layer.id === id ? { ...layer, [field]: val } : layer
+    ));
+  };
+
   return (
     <div className={`flex w-full bg-slate-900 relative ${is916Mode || stageMode === 'edit' ? 'h-full' : 'h-[calc(100vh-56px)]'}`}>
       {/* SIDEBAR CÀI ĐẶT (Ẩn khi ở chế độ quay video 9:16 hoặc Kéo Xếp Full) */}
       {!is916Mode && stageMode !== 'edit' && (
-        <div className="w-84 bg-slate-800 p-4 border-r border-slate-700 flex flex-col gap-4 overflow-y-auto">
+        <div className="w-96 bg-slate-800 p-4 border-r border-slate-700 flex flex-col gap-4 overflow-y-auto">
+          {/* HEADER */}
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-purple-400 flex items-center gap-1.5">
               👻 GHÉP BÓNG MỞ RỘNG (PRO)
             </h2>
           </div>
 
-          {/* CHUYỂN ĐỔI CHẾ ĐỘ THAO TÁC SÂN KHẤU */}
-          <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700">
+          {/* NÚT BẬT CHẾ ĐỘ SẮP XẾP VỊ TRÍ */}
+          <button
+            onClick={() => setStageMode('edit')}
+            className="w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md shadow-purple-950/40 border border-purple-400/30"
+          >
+            <Move size={15} /> Sắp Xếp Vị Trí (Kéo Thả Trực Tiếp)
+          </button>
+
+          {/* 2 TAB: ẢNH PHÍA TRÊN & LỚP SÂN KHẤU */}
+          <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700 gap-1">
             <button
-              onClick={() => setStageMode('edit')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'edit'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Move size={14} /> Kéo Xếp Vị Trí (Full)
-            </button>
-            <button
-              onClick={() => setStageMode('gameplay')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'gameplay'
+              onClick={() => setSidebarTab('tray')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                sidebarTab === 'tray'
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Sparkles size={14} /> Chơi Ghép Bóng
+              🖼️ Ảnh Phía Trên
+            </button>
+            <button
+              onClick={() => setSidebarTab('stage')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                sidebarTab === 'stage'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              🎭 Lớp Sân Khấu
             </button>
           </div>
 
-          {/* PHẦN 1: ẢNH GỐC PHÍA TRÊN (2-3 ẢNH ĐỂ KÉO XUỐNG) */}
-          <div className="flex flex-col gap-2 p-3 bg-slate-900/60 rounded-xl border border-slate-700/80">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
-                📥 1. Ảnh Khay Gốc (Để Kéo Xuống)
-              </span>
-              <span className="text-[10px] text-slate-400">({images.length} ảnh)</span>
-            </div>
-
-            <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
-              <Upload size={14} /> Tải Nhiều Ảnh PNG (Nhân Vật)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleMultipleImageUpload}
-                className="hidden"
-              />
-            </label>
-
-            {/* Hướng dẫn và chọn nhanh */}
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-              <span>Danh sách ({images.length} ảnh):</span>
-              <span className="text-[10px] text-purple-300 font-semibold">Click ảnh để chọn làm bóng</span>
-            </div>
-
-            {/* Danh sách ảnh khay với drag-drop thứ tự và click chọn làm bóng đen */}
-            <div className="grid grid-cols-3 gap-2">
-              {images.map((src, i) => (
-                <div
-                  key={i}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
-                  onDragEnd={handleDragEnd}
-                  onDrop={(e) => handleDrop(e, i)}
-                  onClick={() => handleSelectShadowImageFromTop(i)}
-                  className={`h-16 bg-slate-900/90 rounded-lg cursor-pointer overflow-hidden relative border transition-all flex items-center justify-center p-1 group select-none ${
-                    i === shadowIndex
-                      ? 'border-purple-400 ring-2 ring-purple-500/70 shadow-lg shadow-purple-500/20'
-                      : 'border-slate-700 hover:border-slate-500'
-                  } ${draggedImageIndex === i ? 'opacity-40 scale-95 border-dashed border-purple-500' : ''} ${
-                    dragOverImageIndex === i && draggedImageIndex !== i ? 'ring-2 ring-sky-400 border-sky-400 scale-105' : ''
+          {/* NỘI DUNG TAB 1: ẢNH PHÍA TRÊN */}
+          {sidebarTab === 'tray' && (
+            <div className="flex flex-col gap-3">
+              {/* NÚT BẬT/TẮT TÍNH NĂNG CHỌN PHÍA TRÊN RỒI KÉO XUỐNG DƯỚI */}
+              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700 flex items-center justify-between shadow-lg">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    👆 Cho Phép Chọn Kéo Thả
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {trayPickEnabled ? 'Đang bật: Nhấp ảnh khay trên để nhấc ảnh kéo ghép' : 'Đang tắt: Khóa chọn ảnh, không nhấc ảnh khi bấm'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setTrayPickEnabled(!trayPickEnabled)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                    trayPickEnabled ? 'bg-sky-500 justify-end' : 'bg-slate-700 justify-start'
                   }`}
-                  title={`Ảnh #${i + 1} - Click để chọn làm Bóng Đen ở phía dưới (Giữ & Kéo để đổi thứ tự)`}
+                  title={trayPickEnabled ? 'Bấm để tắt tính năng nhấc ảnh' : 'Bấm để bật tính năng nhấc ảnh'}
                 >
-                  <img src={src} alt={`Top Image ${i}`} className="w-full h-full object-contain pointer-events-none select-none" />
-                  
-                  {/* Grip handle khi hover */}
-                  <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded p-0.5 pointer-events-none">
-                    <GripVertical size={10} className="text-slate-300" />
-                  </div>
+                  <div className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
+                </button>
+              </div>
 
-                  {/* Số thứ tự */}
-                  <span className="absolute bottom-1 left-1 bg-black/75 text-white text-[9px] font-bold px-1 rounded pointer-events-none">
-                    #{i + 1}
-                  </span>
-
-                  {/* Badge BÓNG ĐEN hiển thị trên ảnh đang được chọn */}
-                  {i === shadowIndex && (
-                    <span className="absolute top-1 right-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full leading-tight shadow-md border border-purple-300/40 pointer-events-none">
-                      🌑 Bóng
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Select Dropdown tường minh để chọn ảnh làm bóng đen */}
-            <div className="flex flex-col gap-1 mt-1 pt-2 border-t border-slate-700/60">
-              <label className="text-[11px] text-purple-300 font-semibold flex items-center gap-1">
-                <span>🌑 Chọn Ảnh Làm Bóng Đen Ở Phía Dưới:</span>
+              {/* Upload ảnh khay phía trên - TẢI THÊM ẢNH */}
+              <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-sky-500/60 text-xs font-semibold transition-colors shadow-sm">
+                <Upload size={14} className="text-sky-400" /> + Tải Thêm Ảnh Cho Khay Phía Trên (PNG)
+                <input type="file" accept="image/*" multiple onChange={handleMultipleImageUpload} className="hidden" />
               </label>
-              <select
-                value={shadowIndex}
-                onChange={(e) => handleSelectShadowImageFromTop(Number(e.target.value))}
-                className="w-full p-2 bg-slate-800 text-white text-xs rounded-lg border border-purple-500/40 focus:ring-2 focus:ring-purple-400 outline-none cursor-pointer font-medium"
-              >
-                {images.map((_, i) => (
-                  <option key={i} value={i}>
-                    👉 Thẻ Ảnh #{i + 1} {i === shadowIndex ? '(Đang kích hoạt làm Bóng Đen)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          {/* PHẦN 2: CÁC LỚP HIỂN THỊ PHÍA DƯỚI (KHU VỰC SÂN KHẤU: BÓNG ĐEN & ẢNH MÀU ĐẦY ĐỦ) */}
-          <div className="flex flex-col gap-2 p-3 bg-slate-900/60 rounded-xl border border-slate-700/80">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-1">
-                <Layers size={13} /> 2. Khu Vực Hiển Thị Phía Dưới
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleAddLayer('shadow')}
-                  className="px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                  title="Thêm layer bóng đen mới"
-                >
-                  <Plus size={10} /> + Bóng Đen
-                </button>
-                <button
-                  onClick={() => handleAddLayer('color')}
-                  className="px-2 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                  title="Thêm layer ảnh màu đầy đủ mới"
-                >
-                  <Plus size={10} /> + Ảnh Màu
-                </button>
-              </div>
-            </div>
-
-            {/* Danh sách các Layers */}
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-              {stageLayers.map((layer, index) => (
-                <div
-                  key={layer.id}
-                  draggable
-                  onDragStart={(e) => handleLayerDragStart(e, index)}
-                  onDragOver={(e) => handleLayerDragOver(e, index)}
-                  onDrop={(e) => handleLayerDrop(e, index)}
-                  onClick={() => setSelectedLayerId(layer.id)}
-                  className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                    layer.id === selectedLayerId
-                      ? 'bg-purple-950/70 border-purple-500 text-white shadow-sm'
-                      : 'bg-slate-800/90 border-slate-700 text-slate-300 hover:border-slate-500'
-                  } ${draggedLayerIdx === index ? 'opacity-40' : ''}`}
-                >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <GripVertical size={12} className="text-slate-500 cursor-grab" />
-                    
-                    {/* Badge kiểu hiển thị: Bóng Đen hoặc Đầy Màu */}
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStageLayers(prev => prev.map(l => l.id === layer.id ? { ...l, type: l.type === 'shadow' ? 'color' : 'shadow' } : l));
-                      }}
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer ${
-                        layer.type === 'shadow'
-                          ? 'bg-black text-purple-300 border border-purple-500/40'
-                          : 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white'
-                      }`}
-                      title="Click để chuyển đổi giữa Bóng Đen và Ảnh Màu"
+              {/* Grid sắp xếp thứ tự ảnh khay trên */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-300">Danh sách ảnh trong khay:</span>
+                  <span className="text-[10px] text-slate-400">({images.length} ảnh)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {images.map((src, i) => (
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, i)}
+                      onDragOver={(e) => handleDragOver(e, i)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => handleDrop(e, i)}
+                      className={`relative h-[72px] rounded-xl overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 border-slate-700 hover:border-slate-500 ${
+                        draggedImageIndex === i ? 'opacity-40 scale-95' : ''
+                      } ${dragOverImageIndex === i && draggedImageIndex !== i ? 'ring-2 ring-sky-400 border-sky-400 scale-105' : ''}`}
+                      title={`Kéo thả để đổi thứ tự ảnh #${i + 1}`}
                     >
-                      {layer.type === 'shadow' ? '🌑 Bóng Đen' : '🎨 Đầy Màu'}
-                    </span>
-
-                    {/* Thumbnail ảnh */}
-                    {images[layer.imageIndex] && (
-                      <img
-                        src={images[layer.imageIndex]}
-                        alt="thumb"
-                        className="w-5 h-5 object-contain rounded"
-                      />
-                    )}
-
-                    <span className="truncate text-[11px] font-medium">{layer.name}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStageLayers(prev => prev.map(l => l.id === layer.id ? { ...l, visible: !l.visible } : l));
-                      }}
-                      className="p-1 text-slate-400 hover:text-white"
-                      title={layer.visible ? 'Ẩn' : 'Hiện'}
-                    >
-                      {layer.visible ? <Eye size={12} /> : <EyeOff size={12} className="text-rose-400" />}
-                    </button>
-                    {stageLayers.length > 1 && (
+                      <img src={src} alt={`Ảnh ${i + 1}`} className="w-full h-full object-contain p-1 pointer-events-none select-none" />
+                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1 rounded pointer-events-none">
+                        #{i + 1}
+                      </span>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteLayer(layer.id);
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-400"
-                        title="Xóa layer"
+                        onClick={(e) => handleDeleteTrayImage(e, i)}
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-600/90 hover:bg-rose-500 text-white rounded p-0.5 cursor-pointer shadow-md z-10"
+                        title={`Xóa ảnh #${i + 1} khỏi khay`}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} />
                       </button>
-                    )}
-                  </div>
+                      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded p-0.5 pointer-events-none">
+                        <GripVertical size={10} className="text-slate-300" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                  <GripVertical size={10} /> Kéo thả thẻ để đổi thứ tự xuất hiện trên khay
+                </p>
+              </div>
 
-            {/* Tùy chỉnh chi tiết Layer đang chọn */}
-            {selectedLayer && (
-              <div className="flex flex-col gap-2.5 p-2.5 bg-slate-950/70 rounded-lg border border-purple-500/30 mt-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-purple-300">
-                    ⚙️ Tùy Chỉnh: {selectedLayer.name}
-                  </span>
-                  <select
-                    value={selectedLayer.imageIndex}
-                    onChange={(e) => updateSelectedLayer('imageIndex', Number(e.target.value))}
-                    className="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded border border-slate-700 outline-none"
+              {/* Cài đặt kích thước, khoảng cách khay */}
+              <div className="flex flex-col gap-3 p-4 bg-slate-900/90 rounded-2xl border border-slate-700 shadow-xl">
+                <span className="text-xs font-bold text-sky-300 flex items-center gap-1.5 uppercase tracking-wide">
+                  ⚙️ Căn Chỉnh Khay Ảnh
+                </span>
+                {[
+                  { label: 'Kích thước thẻ', val: trayItemSize, set: setTrayItemSize, min: 40, max: 250, unit: 'px', step: 5 },
+                  { label: 'Dãn cách giữa các thẻ', val: trayGap, set: setTrayGap, min: 0, max: 100, unit: 'px', step: 2 },
+                  { label: 'Vị trí ngang (X)', val: trayOffsetX, set: setTrayOffsetX, min: 0, max: 1150, unit: 'px', step: 10 },
+                  { label: 'Vị trí dọc (Y)', val: trayOffsetY, set: setTrayOffsetY, min: -350, max: 350, unit: 'px', step: 5 },
+                ].map(({ label, val, set, min, max, unit, step }) => (
+                  <div key={label} className="flex flex-col gap-1.5 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-300 font-semibold">{label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => set(Math.max(min, val - step))}
+                          className="w-7 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors flex items-center justify-center cursor-pointer"
+                        >-</button>
+                        <div className="flex items-center bg-slate-800 border border-slate-700 rounded-md px-2 py-0.5">
+                          <input
+                            type="number"
+                            min={min}
+                            max={max}
+                            value={val}
+                            onChange={(e) => set(Number(e.target.value))}
+                            className="w-12 bg-transparent text-sky-300 font-bold text-xs text-center focus:outline-none"
+                          />
+                          <span className="text-slate-400 text-xs font-bold">{unit}</span>
+                        </div>
+                        <button
+                          onClick={() => set(Math.min(max, val + step))}
+                          className="w-7 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors flex items-center justify-center cursor-pointer"
+                        >+</button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={min}
+                      max={max}
+                      value={val}
+                      onChange={(e) => set(Number(e.target.value))}
+                      className="accent-sky-400 cursor-pointer h-2"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* NỘI DUNG TAB 2: LỚP SÂN KHẤU (ẢNH SÂN KHẤU RIÊNG BIỆT) */}
+          {sidebarTab === 'stage' && (
+            <div className="flex flex-col gap-3">
+              {/* NÚT 1 CHẠM 2 TRẠNG THÁI: SẮP XẾP LỚP PHỦ / THOÁT LỚP PHỦ */}
+              <button
+                type="button"
+                onClick={() => setStageSubView(stageSubView === 'order' ? 'settings' : 'order')}
+                className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md border ${
+                  stageSubView === 'order'
+                    ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white border-amber-400/50 shadow-amber-900/30'
+                    : 'bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white border-purple-500/50 shadow-purple-900/30'
+                }`}
+              >
+                {stageSubView === 'order' ? (
+                  <>
+                    <X size={15} />
+                    <span>Thoát lớp phủ</span>
+                  </>
+                ) : (
+                  <>
+                    <Layers size={15} />
+                    <span>Sắp xếp lớp phủ ({stageLayers.length})</span>
+                  </>
+                )}
+              </button>
+
+              {/* CHẾ ĐỘ 1: BÌNH THƯỜNG - CÀI ĐẶT ẢNH & THÔNG SỐ LAYER */}
+              {stageSubView === 'settings' && (
+                <>
+                  {/* Nút Upload ảnh dành riêng cho Sân Khấu - TẢI THÊM ẢNH */}
+                  <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-purple-500/60 text-xs font-semibold transition-colors shadow-sm">
+                    <Upload size={14} className="text-purple-400" /> + Tải Thêm Ảnh Cho Sân Khấu (PNG)
+                    <input type="file" accept="image/*" multiple onChange={handleStageImageUpload} className="hidden" />
+                  </label>
+
+                  {/* DANH SÁCH ẢNH SÂN KHẤU - CLICK ĐỂ CHỌN & CÀI ĐẶT */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-slate-300">Chọn ảnh sân khấu để cài đặt:</span>
+                      <span className="text-[10px] text-slate-400">({stageImages.length} ảnh)</span>
+                    </div>
+
+                    {/* Grid ảnh sân khấu - click để chọn */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {stageImages.map((src, i) => {
+                        const hasShadow = stageLayers.some(l => l.imageIndex === i && l.type === 'shadow');
+                        const hasColor = stageLayers.some(l => l.imageIndex === i && l.type === 'color');
+                        const hasMovable = stageLayers.some(l => l.imageIndex === i && l.type === 'movable');
+                        return (
+                          <div
+                            key={i}
+                            onClick={() => setSelectedImageIndex(i)}
+                            className={`relative h-[72px] rounded-xl cursor-pointer overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 ${
+                              selectedImageIndex === i
+                                ? 'border-purple-400 ring-2 ring-purple-400/50 shadow-lg shadow-purple-500/20'
+                                : 'border-slate-700 hover:border-slate-500'
+                            }`}
+                            title={`Ảnh sân khấu #${i + 1} — Click để chọn & cài đặt`}
+                          >
+                            <img src={src} alt={`Ảnh sân khấu ${i + 1}`} className="w-full h-full object-contain p-1 pointer-events-none select-none" />
+
+                            {/* Số thứ tự */}
+                            <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1 rounded pointer-events-none">
+                              #{i + 1}
+                            </span>
+
+                            {/* Nút xóa ảnh sân khấu khi hover */}
+                            <button
+                              onClick={(e) => handleDeleteStageImage(e, i)}
+                              className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-rose-600/90 hover:bg-rose-500 text-white rounded p-0.5 cursor-pointer shadow-md z-10"
+                              title={`Xóa ảnh #${i + 1} khỏi danh sách sân khấu`}
+                            >
+                              <Trash2 size={11} />
+                            </button>
+
+                            {/* Badges trạng thái */}
+                            <div className="absolute top-1 right-1 flex flex-col gap-0.5 pointer-events-none">
+                              {hasShadow && (
+                                <span className="bg-purple-600 text-white text-[8px] font-bold px-1 py-px rounded leading-tight" title="Bóng đen">🌑</span>
+                              )}
+                              {hasColor && (
+                                <span className="bg-sky-600 text-white text-[8px] font-bold px-1 py-px rounded leading-tight" title="Ảnh màu">🎨</span>
+                              )}
+                              {hasMovable && (
+                                <span className="bg-emerald-600 text-white text-[8px] font-bold px-1 py-px rounded leading-tight" title="Di chuyển">🚀</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* CÀI ĐẶT CHO ẢNH ĐANG CHỌN TRONG SÂN KHẤU */}
+                  {typeof selectedImageIndex === 'number' && (stageImages[selectedImageIndex] || images[selectedImageIndex]) && (
+                    <div className="flex flex-col gap-3.5 p-4 bg-slate-900/90 rounded-2xl border border-slate-700 shadow-xl">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+                        <img
+                          src={stageImages[selectedImageIndex] || images[selectedImageIndex]}
+                          alt=""
+                          className="w-12 h-12 object-contain bg-slate-800 rounded-xl border border-slate-700 p-1 shadow-inner"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-white">Ảnh sân khấu #{selectedImageIndex + 1}</span>
+                            <div className="flex items-center gap-1.5">
+                              {selectedImageLayer && (
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                  selectedImageLayer.type === 'shadow'
+                                    ? 'bg-purple-900/60 text-purple-300 border border-purple-700/60'
+                                    : selectedImageLayer.type === 'movable'
+                                    ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60'
+                                    : 'bg-sky-900/60 text-sky-300 border border-sky-700/60'
+                                }`}>
+                                  {selectedImageLayer.type === 'shadow' ? '🌑 Bóng Đen' : selectedImageLayer.type === 'movable' ? '🚀 Di Chuyển' : '🎨 Ảnh Màu'}
+                                </span>
+                              )}
+                              <button
+                                onClick={(e) => handleDeleteStageImage(e, selectedImageIndex)}
+                                className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-800/80 transition-colors cursor-pointer flex items-center justify-center shadow-sm"
+                                title={`Xóa ảnh sân khấu #${selectedImageIndex + 1}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">Tùy chỉnh thông số trên sân khấu</p>
+                        </div>
+                      </div>
+
+                      {/* ── LỚP SÂN KHẤU ── */}
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5 uppercase tracking-wide">
+                            <Layers size={14} /> Kiểu hiển thị
+                          </span>
+                          {selectedImageLayer ? (
+                            <div className="flex items-center gap-1.5">
+                              {/* Nút di chuyển lớp lên trên (nổi lên trên) */}
+                              <button
+                                onClick={() => handleMoveLayerOrder(selectedImageLayer.id, 'up')}
+                                disabled={stageLayers.findIndex(l => l.id === selectedImageLayer.id) === stageLayers.length - 1}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-purple-300 border border-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
+                                title="Đưa lớp này lên trên (hiển thị đè lên)"
+                              >
+                                <ArrowUp size={14} />
+                              </button>
+                              {/* Nút di chuyển lớp xuống dưới (nằm dưới cùng) */}
+                              <button
+                                onClick={() => handleMoveLayerOrder(selectedImageLayer.id, 'down')}
+                                disabled={stageLayers.findIndex(l => l.id === selectedImageLayer.id) === 0}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-purple-300 border border-slate-700 transition-all cursor-pointer disabled:cursor-not-allowed"
+                                title="Đưa lớp này xuống dưới (bị các lớp khác đè lên)"
+                              >
+                                <ArrowDown size={14} />
+                              </button>
+                              <div className="w-px h-4 bg-slate-700 mx-0.5" />
+                              <button
+                                onClick={() => {
+                                  const newVisible = !selectedImageLayer.visible;
+                                  updateLayerById(selectedImageLayer.id, 'visible', newVisible);
+                                }}
+                                className={`p-1.5 rounded-lg border transition-all ${
+                                  selectedImageLayer.visible
+                                    ? 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+                                    : 'bg-rose-950/60 text-rose-400 border-rose-800/80 hover:text-rose-300'
+                                }`}
+                                title={selectedImageLayer.visible ? 'Đang hiện — click để ẩn' : 'Đang ẩn — click để hiện'}
+                              >
+                                {selectedImageLayer.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLayer(selectedImageLayer.id)}
+                                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-slate-700 hover:border-rose-800/60 transition-all cursor-pointer"
+                                title="Xóa lớp này khỏi sân khấu"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {selectedImageLayer ? (
+                          <div className="flex flex-col gap-3.5">
+                            {/* Kiểu hiển thị: Bóng Đen / Ảnh Màu / Di Chuyển */}
+                            <div className="grid grid-cols-3 gap-1.5 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
+                              <button
+                                onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'shadow')}
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  selectedImageLayer.type === 'shadow'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-900/50 ring-1 ring-purple-400'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                🌑 Bóng
+                              </button>
+                              <button
+                                onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'color')}
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  selectedImageLayer.type === 'color'
+                                    ? 'bg-sky-600 text-white shadow-md shadow-sky-900/50 ring-1 ring-sky-400'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                🎨 Màu
+                              </button>
+                              <button
+                                onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'movable')}
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                  selectedImageLayer.type === 'movable'
+                                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50 ring-1 ring-emerald-400'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                🚀 Di Chuyển
+                              </button>
+                            </div>
+
+                            {selectedImageLayer.type === 'movable' && (
+                              <div className="text-xs text-emerald-300 bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-800/60 flex items-center gap-2">
+                                <Move size={14} className="text-emerald-400 shrink-0" />
+                                <span>Có thể dùng chuột giữ & kéo di chuyển tự do trên sân khấu.</span>
+                              </div>
+                            )}
+
+                            {/* Tỉ lệ (Scale) */}
+                            <div className="flex flex-col gap-1.5 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-slate-300 font-semibold">Tỉ lệ kích thước</span>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'scale', Math.max(30, selectedImageLayer.scale - 5))}
+                                    className="w-7 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors flex items-center justify-center"
+                                  >-</button>
+                                  <div className="flex items-center bg-slate-800 border border-slate-700 rounded-md px-1.5 py-0.5">
+                                    <input
+                                      type="number"
+                                      min="30"
+                                      max="200"
+                                      value={selectedImageLayer.scale}
+                                      onChange={(e) => updateLayerById(selectedImageLayer.id, 'scale', Number(e.target.value))}
+                                      className="w-10 bg-transparent text-white font-bold text-xs text-center focus:outline-none"
+                                    />
+                                    <span className="text-slate-400 text-xs font-bold">%</span>
+                                  </div>
+                                  <button
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'scale', Math.min(200, selectedImageLayer.scale + 5))}
+                                    className="w-7 h-6 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors flex items-center justify-center"
+                                  >+</button>
+                                </div>
+                              </div>
+                              <input
+                                type="range"
+                                min="30"
+                                max="200"
+                                value={selectedImageLayer.scale}
+                                onChange={(e) => updateLayerById(selectedImageLayer.id, 'scale', Number(e.target.value))}
+                                className="accent-purple-400 cursor-pointer h-2"
+                              />
+                            </div>
+
+                            {/* Tọa độ X, Y */}
+                            <div className="grid grid-cols-2 gap-2 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80">
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-slate-300 font-semibold">Tọa độ X</span>
+                                  <input
+                                    type="number"
+                                    value={selectedImageLayer.x}
+                                    onChange={(e) => updateLayerById(selectedImageLayer.id, 'x', Number(e.target.value))}
+                                    className="w-14 bg-slate-800 text-white font-bold text-xs text-center rounded-md border border-slate-700 py-1 focus:border-purple-400 focus:outline-none"
+                                  />
+                                </div>
+                                <input
+                                  type="range"
+                                  min="-500"
+                                  max="500"
+                                  value={selectedImageLayer.x}
+                                  onChange={(e) => updateLayerById(selectedImageLayer.id, 'x', Number(e.target.value))}
+                                  className="accent-purple-400 cursor-pointer h-1.5"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-slate-300 font-semibold">Tọa độ Y</span>
+                                  <input
+                                    type="number"
+                                    value={selectedImageLayer.y}
+                                    onChange={(e) => updateLayerById(selectedImageLayer.id, 'y', Number(e.target.value))}
+                                    className="w-14 bg-slate-800 text-white font-bold text-xs text-center rounded-md border border-slate-700 py-1 focus:border-purple-400 focus:outline-none"
+                                  />
+                                </div>
+                                <input
+                                  type="range"
+                                  min="-400"
+                                  max="400"
+                                  value={selectedImageLayer.y}
+                                  onChange={(e) => updateLayerById(selectedImageLayer.id, 'y', Number(e.target.value))}
+                                  className="accent-purple-400 cursor-pointer h-1.5"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Góc Xoay (Rotation) */}
+                            <div className="flex flex-col gap-2.5 p-3 bg-slate-950/60 rounded-xl border border-purple-500/30">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                  🔄 Góc xoay
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'rotation', ((selectedImageLayer.rotation - 5 + 180) % 360) - 180)}
+                                    className="w-8 h-7 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors"
+                                    title="Giảm 5 độ"
+                                  >-5°</button>
+                                  <div className="flex items-center bg-slate-800 border border-purple-500/60 rounded-md px-2 py-1">
+                                    <input
+                                      type="number"
+                                      min="-180"
+                                      max="180"
+                                      value={selectedImageLayer.rotation}
+                                      onChange={(e) => updateLayerById(selectedImageLayer.id, 'rotation', Number(e.target.value))}
+                                      className="w-12 bg-transparent text-purple-300 font-bold text-xs text-center focus:outline-none"
+                                    />
+                                    <span className="text-purple-400 text-xs font-bold">°</span>
+                                  </div>
+                                  <button
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'rotation', ((selectedImageLayer.rotation + 5 + 180) % 360) - 180)}
+                                    className="w-8 h-7 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md text-xs font-bold border border-slate-700 transition-colors"
+                                    title="Tăng 5 độ"
+                                  >+5°</button>
+                                  <button
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'rotation', 0)}
+                                    className="px-2.5 h-7 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-md border border-slate-700 transition-colors"
+                                    title="Đặt lại góc thẳng 0°"
+                                  >
+                                    0°
+                                  </button>
+                                </div>
+                              </div>
+
+                              <input
+                                type="range"
+                                min="-180"
+                                max="180"
+                                value={selectedImageLayer.rotation}
+                                onChange={(e) => updateLayerById(selectedImageLayer.id, 'rotation', Number(e.target.value))}
+                                className="accent-purple-400 cursor-pointer h-2"
+                              />
+
+                              {/* Các nút góc cố định chuẩn nhanh */}
+                              <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                {[
+                                  { label: '-90°', val: -90 },
+                                  { label: '-45°', val: -45 },
+                                  { label: '0°', val: 0 },
+                                  { label: '45°', val: 45 },
+                                  { label: '90°', val: 90 },
+                                ].map(({ label, val }) => (
+                                  <button
+                                    key={label}
+                                    onClick={() => updateLayerById(selectedImageLayer.id, 'rotation', val)}
+                                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                      selectedImageLayer.rotation === val
+                                        ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-300'
+                                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              onClick={() => handleAddLayerForImage(selectedImageIndex, 'shadow')}
+                              className="py-2.5 bg-purple-700 hover:bg-purple-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-md"
+                            >
+                              <Plus size={13} /> Bóng
+                            </button>
+                            <button
+                              onClick={() => handleAddLayerForImage(selectedImageIndex, 'color')}
+                              className="py-2.5 bg-sky-700 hover:bg-sky-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-md"
+                            >
+                              <Plus size={13} /> Màu
+                            </button>
+                            <button
+                              onClick={() => handleAddLayerForImage(selectedImageIndex, 'movable')}
+                              className="py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer shadow-md"
+                            >
+                              <Plus size={13} /> Di chuyển
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* CHẾ ĐỘ 2: THỨ TỰ LỚP PHỦ SÂN KHẤU (Z-INDEX STACK) */}
+              {stageSubView === 'order' && (
+                <div className="flex flex-col gap-3 p-4 bg-slate-900/90 rounded-2xl border border-slate-700 shadow-xl">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div>
+                      <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5 uppercase tracking-wide">
+                        <Layers size={14} /> Thứ tự lớp phủ trên sân khấu
+                      </span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Lớp ở trên cùng sẽ hiển thị đè lên các lớp phía dưới</p>
+                    </div>
+                    <span className="text-xs font-bold bg-purple-950/80 text-purple-300 px-2 py-0.5 rounded-full border border-purple-800/80">
+                      {stageLayers.length} lớp
+                    </span>
+                  </div>
+
+                  {stageLayers.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-500">
+                      Chưa có lớp nào trên sân khấu. Hãy tải ảnh và thêm lớp ở mục Cài Đặt.
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {/* Hiển thị từ trên xuống dưới (đảo ngược mảng để lớp hiển thị trên cùng nằm ở đầu danh sách) */}
+                      {[...stageLayers].reverse().map((layer, reverseIdx) => {
+                        const actualIdx = stageLayers.length - 1 - reverseIdx;
+                        const isTop = actualIdx === stageLayers.length - 1;
+                        const isBottom = actualIdx === 0;
+                        const isThisSelected = selectedImageIndex === layer.imageIndex;
+                        const layerImg = stageImages[layer.imageIndex] || images[layer.imageIndex] || images[0];
+
+                        return (
+                          <div
+                            key={layer.id}
+                            onClick={() => {
+                              setSelectedImageIndex(layer.imageIndex);
+                              setSelectedLayerId(layer.id);
+                            }}
+                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                              isThisSelected
+                                ? 'bg-purple-900/40 border-purple-500/80 shadow-md ring-1 ring-purple-400/50'
+                                : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-xs font-bold text-purple-400 bg-purple-950/80 px-1.5 py-0.5 rounded border border-purple-800/60">
+                                #{stageLayers.length - actualIdx}
+                              </span>
+                              <img
+                                src={layerImg}
+                                alt=""
+                                className="w-9 h-9 object-contain bg-slate-800 rounded-lg border border-slate-700 p-1 shrink-0"
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold text-white truncate max-w-[140px]">
+                                  {layer.name}
+                                </span>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                    layer.type === 'shadow'
+                                      ? 'bg-purple-900/60 text-purple-300'
+                                      : layer.type === 'movable'
+                                      ? 'bg-emerald-900/60 text-emerald-300'
+                                      : 'bg-sky-900/60 text-sky-300'
+                                  }`}>
+                                    {layer.type === 'shadow' ? '🌑 Bóng' : layer.type === 'movable' ? '🚀 Di chuyển' : '🎨 Màu'}
+                                  </span>
+                                  {isTop && (
+                                    <span className="text-[9px] font-bold text-amber-400 bg-amber-950/60 px-1 rounded border border-amber-800/60">
+                                      ★ Trên cùng
+                                    </span>
+                                  )}
+                                  {isBottom && (
+                                    <span className="text-[9px] font-bold text-slate-400 bg-slate-900 px-1 rounded">
+                                      Dưới cùng
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {/* Nút Đưa lên trên (nổi lên) */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveLayerOrder(layer.id, 'up');
+                                }}
+                                disabled={isTop}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-20 disabled:hover:bg-slate-800 text-purple-300 border border-slate-700 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="Đưa lên trên (hiển thị đè lên các lớp khác)"
+                              >
+                                <ArrowUp size={14} />
+                              </button>
+                              {/* Nút Đưa xuống dưới */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveLayerOrder(layer.id, 'down');
+                                }}
+                                disabled={isBottom}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-20 disabled:hover:bg-slate-800 text-purple-300 border border-slate-700 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                title="Đưa xuống dưới (bị các lớp khác đè lên)"
+                              >
+                                <ArrowDown size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setStageSubView('settings')}
+                    className="w-full mt-2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-slate-700"
                   >
-                    {images.map((_, i) => (
-                      <option key={i} value={i}>Gắn với Ảnh #{i + 1}</option>
-                    ))}
-                  </select>
+                    <X size={14} /> Thoát lớp phủ
+                  </button>
                 </div>
-
-                {/* Chuyển kiểu hiển thị */}
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] text-slate-400 font-medium">Kiểu Hiển Thị:</label>
-                  <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700">
-                    <button
-                      onClick={() => updateSelectedLayer('type', 'shadow')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                        selectedLayer.type === 'shadow' ? 'bg-purple-600 text-white' : 'text-slate-400'
-                      }`}
-                    >
-                      🌑 Bóng Đen
-                    </button>
-                    <button
-                      onClick={() => updateSelectedLayer('type', 'color')}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-                        selectedLayer.type === 'color' ? 'bg-sky-600 text-white' : 'text-slate-400'
-                      }`}
-                    >
-                      🎨 Đầy Màu
-                    </button>
-                  </div>
-                </div>
-
-                {/* Scale */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Tỉ Lệ Kích Thước (Scale):</span>
-                    <span className="text-white font-bold">{selectedLayer.scale}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="30"
-                    max="200"
-                    value={selectedLayer.scale}
-                    onChange={(e) => updateSelectedLayer('scale', Number(e.target.value))}
-                    className="accent-purple-400 cursor-pointer h-1"
-                  />
-                </div>
-
-                {/* Vị trí X (Ngang) */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Tọa Độ X (Sang Trái/Phải):</span>
-                    <span className="text-white font-bold">{selectedLayer.x}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-500"
-                    max="500"
-                    value={selectedLayer.x}
-                    onChange={(e) => updateSelectedLayer('x', Number(e.target.value))}
-                    className="accent-purple-400 cursor-pointer h-1"
-                  />
-                </div>
-
-                {/* Vị trí Y (Dọc) */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Tọa Độ Y (Lên/Xuống):</span>
-                    <span className="text-white font-bold">{selectedLayer.y}px</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-400"
-                    max="400"
-                    value={selectedLayer.y}
-                    onChange={(e) => updateSelectedLayer('y', Number(e.target.value))}
-                    className="accent-purple-400 cursor-pointer h-1"
-                  />
-                </div>
-
-                {/* Góc Xoay Rotation */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-slate-400">Góc Xoay:</span>
-                    <span className="text-white font-bold">{selectedLayer.rotation}°</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value={selectedLayer.rotation}
-                    onChange={(e) => updateSelectedLayer('rotation', Number(e.target.value))}
-                    className="accent-purple-400 cursor-pointer h-1"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* CÀI ĐẶT KHAY ẢNH GỐC */}
-          <div className="flex flex-col gap-2 p-3 bg-slate-900/60 rounded-xl border border-slate-700/80">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              🖼️ Cài Đặt Khay Ảnh Phía Trên
-            </span>
-
-            {/* Tray Item Size */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Kích Thước Thẻ Khay:</span>
-                <span className="text-white font-bold">{trayItemSize}px</span>
-              </div>
-              <input
-                type="range"
-                min="40"
-                max="250"
-                value={trayItemSize}
-                onChange={(e) => setTrayItemSize(Number(e.target.value))}
-                className="accent-purple-400 cursor-pointer h-1"
-              />
+              )}
             </div>
+          )}
 
-            {/* Tray Gap */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Dãn Cách Thẻ:</span>
-                <span className="text-white font-bold">{trayGap}px</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={trayGap}
-                onChange={(e) => setTrayGap(Number(e.target.value))}
-                className="accent-purple-400 cursor-pointer h-1"
-              />
-            </div>
-
-            {/* Tray OffsetX */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Vị Trí Khay (Trái/Phải):</span>
-                <span className="text-white font-bold">{trayOffsetX}px</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1150"
-                value={trayOffsetX}
-                onChange={(e) => setTrayOffsetX(Number(e.target.value))}
-                className="accent-purple-400 cursor-pointer h-1"
-              />
-            </div>
-
-            {/* Tray OffsetY */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Vị Trí Khay (Lên/Xuống):</span>
-                <span className="text-white font-bold">{trayOffsetY}px</span>
-              </div>
-              <input
-                type="range"
-                min="-350"
-                max="350"
-                value={trayOffsetY}
-                onChange={(e) => setTrayOffsetY(Number(e.target.value))}
-                className="accent-purple-400 cursor-pointer h-1"
-              />
-            </div>
-          </div>
-
-          {/* Hand Size */}
+          {/* Kích thước bàn tay */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Kích Thước Bàn Tay 👆:</span>
+              <span className="text-slate-400">Kích Thước Bàn Tay 👆</span>
               <span className="text-white font-bold">{handSize}px</span>
             </div>
-            <input
-              type="range"
-              min="24"
-              max="150"
-              value={handSize}
+            <input type="range" min="24" max="150" value={handSize}
               onChange={(e) => setHandSize(Number(e.target.value))}
-              className="accent-purple-400 cursor-pointer h-1.5"
-            />
+              className="accent-purple-400 cursor-pointer h-1.5" />
           </div>
 
           {/* Action Buttons */}
@@ -1069,7 +1548,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                   ref={(el) => (cardRefs.current[i] = el)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (stageMode === 'gameplay') {
+                    if (stageMode === 'gameplay' && trayPickEnabled) {
                       handlePickItem(i, src);
                     }
                   }}
@@ -1088,35 +1567,54 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               ))}
             </div>
 
-            {/* 2. CÁC LỚP HIỂN THỊ PHÍA DƯỚI (STAGE LAYERS: BÓNG ĐEN VÀ ẢNH MÀU ĐẦY ĐỦ) */}
-            {stageLayers.map((layer) => {
+            {/* 2. CÁC LỚP HIỂN THỊ PHÍA DƯỚI (STAGE LAYERS: BÓNG ĐEN, ẢNH MÀU, DI CHUYỂN) */}
+            {stageLayers.map((layer, idx) => {
               if (!layer.visible) return null;
-              const imgUrl = images[layer.imageIndex] || images[0];
+              const imgUrl = stageImages[layer.imageIndex] || stageImages[0] || images[layer.imageIndex] || images[0];
               if (!imgUrl) return null;
 
               const isSelected = stageMode === 'edit' && selectedLayerId === layer.id;
+              const isMovable = layer.type === 'movable';
+              const isDraggingThis = draggingTarget && draggingTarget.type === 'layer' && draggingTarget.layerId === layer.id;
+              // z-index cơ bản theo thứ tự mảng stageLayers (idx càng lớn thì càng ở trên), nếu đang kéo thì ưu tiên nổi lên trên cùng (z-35)
+              const layerZIndex = isDraggingThis ? 35 : (10 + idx);
 
               return (
                 <div
                   key={layer.id}
                   onMouseDown={(e) => handleStartDragLayer(e, layer)}
-                  className={`absolute transition-all ${
-                    stageMode === 'edit' && !is916Mode
-                      ? 'cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-purple-400 rounded-2xl'
+                  className={`absolute ${
+                    isDraggingThis ? 'transition-none select-none' : isMovable ? 'transition-all duration-75' : 'transition-all duration-300'
+                  } ${
+                    stageMode === 'edit' || isMovable
+                      ? isDraggingThis
+                        ? 'cursor-grabbing'
+                        : is916Mode
+                        ? 'cursor-none'
+                        : 'cursor-grab hover:ring-2 hover:ring-purple-400 rounded-2xl'
                       : ''
                   } ${isSelected && !is916Mode ? 'ring-2 ring-purple-500 rounded-2xl' : ''}`}
                   style={{
                     left: `calc(50% + ${layer.x}px)`,
                     top: `calc(50% + ${layer.y}px)`,
+                    zIndex: layerZIndex,
                     transform: `translate(-50%, -50%) rotate(${layer.rotation - 90}deg) scale(${layer.scale / 100})`,
-                    transformOrigin: 'center center'
+                    transformOrigin: 'center center',
+                    touchAction: isMovable ? 'none' : 'auto',
+                    userSelect: 'none'
                   }}
-                  title={stageMode === 'edit' ? `Kéo để di chuyển: ${layer.name}` : ''}
+                  title={
+                    stageMode === 'edit'
+                      ? `Kéo để di chuyển: ${layer.name}`
+                      : isMovable
+                      ? `Giữ chuột để di chuyển ảnh tự do: ${layer.name}`
+                      : ''
+                  }
                 >
                   {/* Nhãn hiển thị khi ở chế độ edit */}
                   {isSelected && !is916Mode && (
                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-purple-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow pointer-events-none whitespace-nowrap z-30 flex items-center gap-1">
-                      <Move size={10} /> {layer.name} ({layer.type === 'shadow' ? 'Bóng Đen' : 'Đầy Màu'})
+                      <Move size={10} /> {layer.name} ({layer.type === 'shadow' ? 'Bóng Đen' : layer.type === 'movable' ? 'Di Chuyển' : 'Đầy Màu'})
                     </div>
                   )}
 
@@ -1137,7 +1635,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                         loadedImg={loadedImgObjects.current[imgUrl]}
                       />
                     ) : (
-                      /* HIỂN THỊ DẠNG ẢNH ĐẦY ĐỦ MÀU SẮC */
+                      /* HIỂN THỊ DẠNG ẢNH ĐẦY ĐỦ MÀU SẮC (ẢNH MÀU HOẶC DI CHUYỂN) */
                       <img
                         src={imgUrl}
                         alt={layer.name}
@@ -1153,6 +1651,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                 </div>
               );
             })}
+
 
             {/* 3. CÁC ẢNH ĐÃ GHÉP THÀNH CÔNG LÊN SÂN KHẤU */}
             {placedItems.map((item) => (
