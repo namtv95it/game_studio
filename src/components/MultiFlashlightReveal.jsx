@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Upload, Play, Plus, Trash2, Move, RotateCw, ZoomIn, Eye, EyeOff, Layers, GripVertical, Check, Sparkles } from 'lucide-react';
+import { Upload, Play, Plus, Trash2, Move, RotateCw, ZoomIn, Eye, EyeOff, Layers, GripVertical, Check, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
 const STORAGE_KEY = 'multi_flashlight_game_settings_v2';
 
@@ -85,6 +85,13 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
   const [watermarkBgColor, setWatermarkBgColor] = useState(initialSettings.watermarkBgColor || '#facc15'); // Màu vàng giống trong ảnh
   const [watermarkBgOpacity, setWatermarkBgOpacity] = useState(initialSettings.watermarkBgOpacity ?? 100);
 
+  // Trạng thái Dấu Hỏi Chấm trên bóng đen (mặc định trống để người dùng tự bấm thêm)
+  const [enableQuestionMarks, setEnableQuestionMarks] = useState(initialSettings.enableQuestionMarks ?? true);
+  const [questionMarks, setQuestionMarks] = useState(initialSettings.questionMarks || []);
+  const [qmColor, setQmColor] = useState(initialSettings.qmColor || '#ef4444');
+  const [qmDefaultSize, setQmDefaultSize] = useState(initialSettings.qmDefaultSize ?? 48);
+  const [isPlacingQm, setIsPlacingQm] = useState(false);
+
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
   const [internalIs916Mode, setInternalIs916Mode] = useState(false);
 
@@ -98,6 +105,13 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
 
   const is916Mode = propIs916Mode !== undefined ? propIs916Mode : internalIs916Mode;
   const setIs916Mode = propSetIs916Mode || setInternalIs916Mode;
+
+  // Accordion state (mở cái này thì đóng cái kia)
+  const [activeSection, setActiveSection] = useState('layers');
+
+  const toggleSection = (key) => {
+    setActiveSection((prev) => (prev === key ? null : key));
+  };
 
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -129,12 +143,16 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         watermarkActiveColor,
         enableWatermarkBg,
         watermarkBgColor,
-        watermarkBgOpacity
+        watermarkBgOpacity,
+        enableQuestionMarks,
+        questionMarks,
+        qmColor,
+        qmDefaultSize
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt MultiFlashlight:', e);
     }
-  }, [items, radius, spotlightType, beamAngle, coneSpread, handSize, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity]);
+  }, [items, radius, spotlightType, beamAngle, coneSpread, handSize, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize]);
 
   // Phím ESC để thoát 9:16
   useEffect(() => {
@@ -238,6 +256,30 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
     }
   };
 
+  // Nhấp chuột vào sân khấu để thêm hoặc xóa dấu ? khi đang ở chế độ Đặt Dấu ?
+  const handleStageClick = (e) => {
+    if (is916Mode || !isPlacingQm) return;
+    const { canvasX, canvasY } = getCanvasCoords(e);
+    const roundX = Math.round(canvasX);
+    const roundY = Math.round(canvasY);
+
+    const existingIdx = questionMarks.findIndex(
+      (qm) => Math.hypot(qm.x - roundX, qm.y - roundY) < Math.max(25, (qm.size || qmDefaultSize) / 2)
+    );
+
+    if (existingIdx !== -1) {
+      setQuestionMarks((prev) => prev.filter((_, idx) => idx !== existingIdx));
+    } else {
+      const newQm = {
+        id: `mqm-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        x: roundX,
+        y: roundY,
+        size: qmDefaultSize
+      };
+      setQuestionMarks((prev) => [...prev, newQm]);
+    }
+  };
+
   // Render tất cả các ảnh màu lên một canvas
   const drawAllColorImages = (ctx, width, height) => {
     items.forEach((item) => {
@@ -284,8 +326,29 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, width, height);
 
-    // BƯỚC 3: Đục thủng vệt sáng Đèn Pin SẮC NÉT (chỉ khi ở chế độ Soi Đèn hoặc khi quay video 9:16)
-    if (stageMode === 'flashlight' || is916Mode) {
+    // BƯỚC 2.5: Vẽ các Dấu Hỏi Chấm '?' lên bóng đen (chỉ trên diện tích có bóng đen)
+    if (enableQuestionMarks && questionMarks.length > 0) {
+      ctx.globalCompositeOperation = 'source-over';
+      questionMarks.forEach((qm) => {
+        const qmSize = qm.size || qmDefaultSize;
+        ctx.save();
+        ctx.font = `900 ${qmSize}px "Arial Black", "Arial", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Viền đỏ rực rỡ và đổ bóng nhẹ
+        ctx.fillStyle = qmColor;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText('?', qm.x, qm.y);
+        ctx.restore();
+      });
+    }
+
+    // BƯỚC 3 & 4: Đục thủng vệt sáng Đèn Pin SẮC NÉT (chỉ khi ở chế độ Soi Đèn và KHÔNG ở chế độ đặt dấu hỏi ?, hoặc khi quay video 9:16)
+    if (((stageMode === 'flashlight' && !isPlacingQm) || is916Mode)) {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = 'black';
 
@@ -326,7 +389,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, items, is916Mode, globalScale, globalOffsetY, stageMode, beamBgColor, enableBeamBg, beamOpacity]);
+  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, items, is916Mode, globalScale, globalOffsetY, stageMode, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm]);
 
   // Upload thêm 1 hoặc nhiều ảnh mới
   const handleMultipleImageUpload = (e) => {
@@ -494,318 +557,581 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             />
           </label>
 
-          {/* Danh sách các Layers ảnh */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
-              <span className="flex items-center gap-1"><Layers size={13} /> Lớp Ảnh (Kéo đổi thứ tự):</span>
-              {items.length > 0 && (
-                <button
-                  onClick={handleClearAllItems}
-                  className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Xóa tất cả ảnh trong danh sách"
-                >
-                  <Trash2 size={11} /> Xóa hết
-                </button>
-              )}
-            </div>
+          {/* NHÓM 1: QUẢN LÝ LỚP ẢNH (LAYERS) */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSection('layers')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">📚</span>
+                <span className="text-xs font-bold text-sky-300">Quản Lý Lớp Ảnh (Layers)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {items.length} lớp
+                </span>
+                {activeSection === 'layers' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
 
-            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-              {items.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-500 bg-slate-900/40 rounded-lg border border-dashed border-slate-700">
-                  Chưa có ảnh nào. Bấm <b>"Thêm Nhiều Ảnh (.PNG)"</b> để tải ảnh lên.
-                </div>
-              ) : (
-                items.map((item, idx) => {
-                  const isSelected = item.id === selectedItemId;
-                  return (
-                    <div
-                      key={item.id}
-                      draggable
-                      onDragStart={() => handleDragStartList(idx)}
-                      onDragOver={(e) => handleDragOverList(e, idx)}
-                      onDragEnd={() => { setDraggedListIdx(null); setDragOverListIdx(null); }}
-                      onDrop={() => handleDropList(idx)}
-                      onClick={() => {
-                        setSelectedItemId(item.id);
-                        setStageMode('edit');
-                      }}
-                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${isSelected
-                          ? 'bg-sky-900/40 border-sky-400 ring-1 ring-sky-400/50 shadow-md'
-                          : 'bg-slate-900/60 border-slate-700 hover:border-slate-500'
-                        } ${draggedListIdx === idx ? 'opacity-40 border-dashed' : ''} ${dragOverListIdx === idx ? 'ring-2 ring-sky-400 border-sky-400 scale-102' : ''
-                        }`}
+            {activeSection === 'layers' && (
+              <div className="p-3 flex flex-col gap-2.5 border-t border-slate-800">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-0.5">
+                  <span className="flex items-center gap-1"><Layers size={13} /> Kéo để xếp thứ tự hiển thị:</span>
+                  {items.length > 0 && (
+                    <button
+                      onClick={handleClearAllItems}
+                      className="text-[10px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Xóa tất cả ảnh trong danh sách"
                     >
-                      <GripVertical size={14} className="text-slate-500 hover:text-slate-300 cursor-grab" />
+                      <Trash2 size={11} /> Xóa hết
+                    </button>
+                  )}
+                </div>
 
-                      <div className="w-9 h-9 rounded bg-slate-950/80 p-0.5 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
-                        <img src={item.src} alt={item.name} className="w-full h-full object-contain" />
-                      </div>
+                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {items.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500 bg-slate-950/40 rounded-lg border border-dashed border-slate-700">
+                      Chưa có ảnh nào. Bấm <b>"Thêm Nhiều Ảnh (.PNG)"</b> để tải ảnh lên.
+                    </div>
+                  ) : (
+                    items.map((item, idx) => {
+                      const isSelected = item.id === selectedItemId;
+                      return (
+                        <div
+                          key={item.id}
+                          draggable
+                          onDragStart={() => handleDragStartList(idx)}
+                          onDragOver={(e) => handleDragOverList(e, idx)}
+                          onDragEnd={() => { setDraggedListIdx(null); setDragOverListIdx(null); }}
+                          onDrop={() => handleDropList(idx)}
+                          onClick={() => {
+                            setSelectedItemId(item.id);
+                            setStageMode('edit');
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${isSelected
+                              ? 'bg-sky-900/40 border-sky-400 ring-1 ring-sky-400/50 shadow-md'
+                              : 'bg-slate-950/60 border-slate-700 hover:border-slate-500'
+                            } ${draggedListIdx === idx ? 'opacity-40 border-dashed' : ''} ${dragOverListIdx === idx ? 'ring-2 ring-sky-400 border-sky-400 scale-102' : ''
+                            }`}
+                        >
+                          <GripVertical size={14} className="text-slate-500 hover:text-slate-300 cursor-grab" />
 
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-slate-200 truncate">{item.name}</div>
-                        <div className="text-[10px] text-slate-400">
-                          X: {item.x}px | Y: {item.y}px | {item.scale}%
+                          <div className="w-8 h-8 rounded bg-slate-950 p-0.5 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img src={item.src} alt={item.name} className="w-full h-full object-contain" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-slate-200 truncate">{item.name}</div>
+                            <div className="text-[10px] text-slate-400">
+                              X: {item.x}px | Y: {item.y}px | {item.scale}%
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={(e) => toggleVisibility(item.id, e)}
+                              className="p-1 text-slate-400 hover:text-white transition-colors"
+                              title={item.visible ? 'Ẩn ảnh' : 'Hiện ảnh'}
+                            >
+                              {item.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-slate-600" />}
+                            </button>
+
+                            <button
+                              onClick={(e) => handleDeleteItem(item.id, e)}
+                              className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                              title="Xóa lớp này"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={(e) => toggleVisibility(item.id, e)}
-                          className="p-1 text-slate-400 hover:text-white transition-colors"
-                          title={item.visible ? 'Ẩn ảnh' : 'Hiện ảnh'}
-                        >
-                          {item.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-slate-600" />}
-                        </button>
-
-                        <button
-                          onClick={(e) => handleDeleteItem(item.id, e)}
-                          className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
-                          title="Xóa lớp này"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }))}
-            </div>
-          </div>
-
-          {/* Tinh chỉnh nhanh kích thước & góc xoay cho ảnh được chọn */}
-          {selectedItem && (
-            <div className="flex flex-col gap-2 p-3 bg-slate-900/80 rounded-xl border border-sky-500/20">
-              <div className="flex items-center justify-between text-xs font-bold text-sky-300">
-                <span className="truncate">🎯 {selectedItem.name}</span>
-                <span className="text-[10px] text-slate-400 font-mono">X:{selectedItem.x} Y:{selectedItem.y}</span>
-              </div>
-
-              {/* Tỉ lệ Scale & Góc Xoay Rotation */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-[11px] text-slate-400">
-                    <span>Phóng to:</span>
-                    <span className="text-white font-mono">{selectedItem.scale}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="20"
-                    max="200"
-                    value={selectedItem.scale}
-                    onChange={(e) => updateSelectedItem('scale', Number(e.target.value))}
-                    className="accent-sky-400 cursor-pointer h-1.5"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <div className="flex justify-between text-[11px] text-slate-400">
-                    <span>Góc xoay:</span>
-                    <span className="text-white font-mono">{selectedItem.rotation}°</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value={selectedItem.rotation}
-                    onChange={(e) => updateSelectedItem('rotation', Number(e.target.value))}
-                    className="accent-sky-400 cursor-pointer h-1.5"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cài đặt Đèn Pin */}
-          <div className="flex flex-col gap-2.5">
-            <h3 className="text-xs font-bold text-slate-300">🔦 CÀI ĐẶT ĐÈN PIN</h3>
-
-            {/* Radius */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Bán Kính Vệt Sáng:</span>
-                <span className="text-white font-mono">{radius}px</span>
-              </div>
-              <input type="range" min="30" max="250" value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
-            </div>
-
-            {/* Spotlight Type */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-400">Kiểu Chiếu Đèn:</label>
-              <select
-                value={spotlightType}
-                onChange={(e) => setSpotlightType(e.target.value)}
-                className="p-2 bg-slate-700 text-white rounded-lg border-none text-xs outline-none cursor-pointer"
-              >
-                <option value="circle">🔵 Vệt Sáng Tròn</option>
-                <option value="cone">📐 Vệt Nón Chiếu Chéo</option>
-              </select>
-            </div>
-
-            {/* Màu Quầng Sáng Đèn Pin (Phần chiếu ngoài nhân vật) */}
-            <div className="flex flex-col gap-2 p-2.5 bg-slate-900/60 rounded-xl border border-sky-500/20">
-              <div className="flex items-center justify-between text-xs font-bold text-sky-300">
-                <span>🔦 Quầng Sáng Đèn:</span>
-                <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer font-normal">
-                  <input
-                    type="checkbox"
-                    checked={enableBeamBg}
-                    onChange={(e) => setEnableBeamBg(e.target.checked)}
-                    className="accent-sky-400 cursor-pointer"
-                  />
-                  <span>Đổi màu quầng</span>
-                </label>
-              </div>
-
-              {enableBeamBg && (
-                <div className="flex flex-col gap-2 pt-1 border-t border-slate-800 mt-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">Màu ánh đèn:</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={beamBgColor}
-                        onChange={(e) => setBeamBgColor(e.target.value)}
-                        className="w-6 h-6 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                      />
-                      <span className="text-xs font-mono text-white uppercase">{beamBgColor}</span>
-                    </div>
-                  </div>
-
-                  {/* Độ mờ / trong suốt */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Độ đậm ánh sáng:</span>
-                      <span className="text-white font-mono">{beamOpacity}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={beamOpacity}
-                      onChange={(e) => setBeamOpacity(Number(e.target.value))}
-                      className="accent-sky-400 cursor-pointer h-1.5"
-                    />
-                  </div>
-
-                  {/* Gợi ý các màu ánh đèn sặc sỡ: Đỏ, Cam, Vàng, Lục, Lam, Tím */}
-                  <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                    {[
-                      { label: 'Đỏ', color: '#ff0033' },
-                      { label: 'Cam', color: '#ff6600' },
-                      { label: 'Vàng', color: '#ffee00' },
-                      { label: 'Lục', color: '#00e640' },
-                      { label: 'Lam', color: '#00a8ff' },
-                      { label: 'Tím', color: '#9c27b0' },
-                      { label: 'Hồng Neon', color: '#ff007f' },
-                      { label: 'Trắng Sáng', color: '#ffffff' }
-                    ].map((preset) => (
-                      <button
-                        key={preset.color}
-                        type="button"
-                        onClick={() => setBeamBgColor(preset.color)}
-                        className={`w-5.5 h-5.5 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer shadow-sm ${beamBgColor.toLowerCase() === preset.color.toLowerCase()
-                            ? 'ring-2 ring-sky-400 scale-125 border-white'
-                            : 'border-slate-700 opacity-90 hover:opacity-100'
-                          }`}
-                        style={{ backgroundColor: preset.color }}
-                        title={preset.label}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-
-
-            {spotlightType === 'cone' && (
-              <div className="grid grid-cols-2 gap-2 p-2 bg-slate-900/60 rounded-lg">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400">Hướng Chiếu: {beamAngle}°</span>
-                  <input type="range" min="-180" max="180" value={beamAngle} onChange={(e) => setBeamAngle(Number(e.target.value))} className="accent-sky-400 cursor-pointer h-1" />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-slate-400">Độ Mở: {coneSpread}°</span>
-                  <input type="range" min="5" max="160" value={coneSpread} onChange={(e) => setConeSpread(Number(e.target.value))} className="accent-sky-400 cursor-pointer h-1" />
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Hand Size */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Bàn Tay 👆:</span>
-                <span className="text-white font-mono">{handSize}px</span>
-              </div>
-              <input type="range" min="24" max="200" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-sky-400 cursor-pointer" />
-            </div>
+          {/* NHÓM 2: TINH CHỈNH ẢNH ĐANG CHỌN */}
+          {selectedItem && (
+            <div className="bg-slate-900/50 rounded-xl border border-sky-500/30 overflow-hidden shadow-sm">
+              <button
+                type="button"
+                onClick={() => toggleSection('selected')}
+                className="w-full px-3.5 py-2.5 flex items-center justify-between bg-sky-950/40 hover:bg-sky-900/40 transition-colors text-left cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🎯</span>
+                  <span className="text-xs font-bold text-sky-300 truncate max-w-[150px]">{selectedItem.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-sky-400 font-mono">
+                    {selectedItem.scale}% • {selectedItem.rotation}°
+                  </span>
+                  {activeSection === 'selected' ? <ChevronUp size={15} className="text-sky-400" /> : <ChevronDown size={15} className="text-sky-400" />}
+                </div>
+              </button>
 
-            {/* Global Scale & Offset Y */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] text-slate-400">Toàn cảnh: {globalScale}%</span>
-                <input type="range" min="50" max="150" value={globalScale} onChange={(e) => setGlobalScale(Number(e.target.value))} className="accent-sky-400 cursor-pointer h-1.5" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] text-slate-400">Dọc (Y): {globalOffsetY}px</span>
-                <input type="range" min="-300" max="300" value={globalOffsetY} onChange={(e) => setGlobalOffsetY(Number(e.target.value))} className="accent-sky-400 cursor-pointer h-1.5" />
-              </div>
-            </div>
+              {activeSection === 'selected' && (
+                <div className="p-3 flex flex-col gap-2.5 border-t border-slate-800">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Tọa độ vị trí:</span>
+                    <span className="font-mono text-sky-300">X: {selectedItem.x}px | Y: {selectedItem.y}px</span>
+                  </div>
 
-            {/* Watermark Logo / Tên kênh */}
-            <div className="flex flex-col gap-2.5 p-2.5 bg-slate-900/60 rounded-xl border border-sky-500/20">
-              <div className="flex items-center justify-between text-xs font-bold text-sky-300">
-                <span>🏷️ Watermark Phía Dưới:</span>
-                <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer font-normal">
-                  <input
-                    type="checkbox"
-                    checked={enableWatermark}
-                    onChange={(e) => setEnableWatermark(e.target.checked)}
-                    className="accent-sky-400 cursor-pointer"
-                  />
-                  <span>Bật</span>
-                </label>
-              </div>
-              {enableWatermark && (
-                <div className="flex flex-col gap-2 pt-1 border-t border-slate-800">
-                  <input
-                    type="text"
-                    value={watermarkText}
-                    onChange={(e) => setWatermarkText(e.target.value)}
-                    placeholder="Nhập watermark (ví dụ: @Soonix)"
-                    className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
-                  />
-
-                  {/* Kích thước phông chữ & Màu sắc */}
+                  {/* Tỉ lệ Scale & Góc Xoay Rotation */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Cỡ chữ:</span>
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="8"
-                            max="200"
-                            value={watermarkFontSize}
-                            onChange={(e) => setWatermarkFontSize(Math.max(1, Number(e.target.value)))}
-                            className="w-12 px-1.5 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                          />
-                          <span className="text-[10px] text-slate-400">px</span>
-                        </div>
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Phóng to:</span>
+                        <span className="text-white font-mono">{selectedItem.scale}%</span>
                       </div>
                       <input
                         type="range"
-                        min="8"
-                        max="120"
-                        value={Math.min(120, Math.max(8, watermarkFontSize))}
-                        onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
+                        min="20"
+                        max="200"
+                        value={selectedItem.scale}
+                        onChange={(e) => updateSelectedItem('scale', Number(e.target.value))}
                         className="accent-sky-400 cursor-pointer h-1.5"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Màu chữ:</span>
-                        <div className="flex items-center gap-1">
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Góc xoay:</span>
+                        <span className="text-white font-mono">{selectedItem.rotation}°</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-180"
+                        max="180"
+                        value={selectedItem.rotation}
+                        onChange={(e) => updateSelectedItem('rotation', Number(e.target.value))}
+                        className="accent-sky-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* NHÓM 3: HIỆU ỨNG ĐÈN PIN & SÂN KHẤU */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSection('flashlight')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🔦</span>
+                <span className="text-xs font-bold text-sky-300">Hiệu Ứng Đèn Pin</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {radius}px • {spotlightType === 'circle' ? 'Tròn' : 'Nón'}
+                </span>
+                {activeSection === 'flashlight' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'flashlight' && (
+              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
+                {/* Spotlight Type */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-slate-400 font-medium">Kiểu Chiếu Đèn:</label>
+                  <select
+                    value={spotlightType}
+                    onChange={(e) => setSpotlightType(e.target.value)}
+                    className="p-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-sky-400 text-xs outline-none cursor-pointer"
+                  >
+                    <option value="circle">🔵 Vệt Sáng Tròn</option>
+                    <option value="cone">📐 Vệt Nón Chiếu Chéo</option>
+                  </select>
+                </div>
+
+                {/* Radius */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>Bán Kính Vệt Sáng:</span>
+                    <span className="text-white font-mono">{radius}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="30"
+                    max="250"
+                    value={radius}
+                    onChange={(e) => setRadius(Number(e.target.value))}
+                    className="accent-sky-400 cursor-pointer h-1.5"
+                  />
+                </div>
+
+                {/* Cone details */}
+                {spotlightType === 'cone' && (
+                  <div className="grid grid-cols-2 gap-2 p-2 bg-slate-950/40 rounded-lg border border-sky-500/20">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-400">Hướng: {beamAngle}°</span>
+                      <input
+                        type="range"
+                        min="-180"
+                        max="180"
+                        value={beamAngle}
+                        onChange={(e) => setBeamAngle(Number(e.target.value))}
+                        className="accent-sky-400 cursor-pointer h-1"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-slate-400">Độ Mở: {coneSpread}°</span>
+                      <input
+                        type="range"
+                        min="5"
+                        max="160"
+                        value={coneSpread}
+                        onChange={(e) => setConeSpread(Number(e.target.value))}
+                        className="accent-sky-400 cursor-pointer h-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Màu Quầng Sáng Đèn Pin */}
+                <div className="flex flex-col gap-2 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
+                  <div className="flex items-center justify-between text-xs font-bold text-sky-300">
+                    <span>Màu Quầng Sáng Đèn:</span>
+                    <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer font-normal">
+                      <input
+                        type="checkbox"
+                        checked={enableBeamBg}
+                        onChange={(e) => setEnableBeamBg(e.target.checked)}
+                        className="accent-sky-400 cursor-pointer"
+                      />
+                      <span>Đổi màu quầng</span>
+                    </label>
+                  </div>
+
+                  {enableBeamBg && (
+                    <div className="flex flex-col gap-2 pt-1 border-t border-slate-800 mt-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">Màu ánh đèn:</span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={beamBgColor}
+                            onChange={(e) => setBeamBgColor(e.target.value)}
+                            className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                          />
+                          <span className="text-xs font-mono text-white uppercase">{beamBgColor}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Độ đậm:</span>
+                          <span className="text-white font-mono">{beamOpacity}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={beamOpacity}
+                          onChange={(e) => setBeamOpacity(Number(e.target.value))}
+                          className="accent-sky-400 cursor-pointer h-1.5"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        {[
+                          { label: 'Đỏ', color: '#ff0033' },
+                          { label: 'Cam', color: '#ff6600' },
+                          { label: 'Vàng', color: '#ffee00' },
+                          { label: 'Lục', color: '#00e640' },
+                          { label: 'Lam', color: '#00a8ff' },
+                          { label: 'Tím', color: '#9c27b0' },
+                          { label: 'Hồng Neon', color: '#ff007f' },
+                          { label: 'Trắng Sáng', color: '#ffffff' }
+                        ].map((preset) => (
+                          <button
+                            key={preset.color}
+                            type="button"
+                            onClick={() => setBeamBgColor(preset.color)}
+                            className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 cursor-pointer shadow-sm ${
+                              beamBgColor.toLowerCase() === preset.color.toLowerCase()
+                                ? 'ring-1 ring-sky-400 scale-110 border-white'
+                                : 'border-slate-700 opacity-90 hover:opacity-100'
+                            }`}
+                            style={{ backgroundColor: preset.color }}
+                            title={preset.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hand Size */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>Bàn Tay Chỉ 👆:</span>
+                    <span className="text-white font-mono">{handSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="24"
+                    max="200"
+                    value={handSize}
+                    onChange={(e) => setHandSize(Number(e.target.value))}
+                    className="accent-sky-400 cursor-pointer h-1.5"
+                  />
+                </div>
+
+                {/* Global Scale & Offset Y */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] text-slate-400">Toàn cảnh: {globalScale}%</span>
+                    <input
+                      type="range"
+                      min="50"
+                      max="150"
+                      value={globalScale}
+                      onChange={(e) => setGlobalScale(Number(e.target.value))}
+                      className="accent-sky-400 cursor-pointer h-1.5"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] text-slate-400">Dọc (Y): {globalOffsetY}px</span>
+                    <input
+                      type="range"
+                      min="-300"
+                      max="300"
+                      value={globalOffsetY}
+                      onChange={(e) => setGlobalOffsetY(Number(e.target.value))}
+                      className="accent-sky-400 cursor-pointer h-1.5"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NHÓM: DẤU HỎI CHẤM TRÊN BÓNG ĐEN (?) */}
+          <div className="bg-slate-900/50 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSection('questionMarks')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base text-rose-400 font-black">❓</span>
+                <span className="text-xs font-bold text-rose-300">Dấu Hỏi Chấm (?) Trên Bóng</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableQuestionMarks ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-400'}`}>
+                  {enableQuestionMarks ? `${questionMarks.length} dấu` : 'Tắt'}
+                </span>
+                {activeSection === 'questionMarks' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'questionMarks' && (
+              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-300 font-medium">Bật Dấu Hỏi Chấm:</span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableQuestionMarks}
+                      onChange={(e) => setEnableQuestionMarks(e.target.checked)}
+                      className="accent-rose-500 cursor-pointer"
+                    />
+                    <span className={enableQuestionMarks ? 'text-rose-400 font-bold' : 'text-slate-400'}>
+                      {enableQuestionMarks ? 'Đang Bật' : 'Đang Tắt'}
+                    </span>
+                  </label>
+                </div>
+
+                {enableQuestionMarks && (
+                  <div className="flex flex-col gap-3 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setIsPlacingQm(!isPlacingQm)}
+                      className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md ${
+                        isPlacingQm
+                          ? 'bg-rose-600 hover:bg-rose-500 text-white ring-2 ring-rose-400 animate-pulse'
+                          : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
+                      }`}
+                    >
+                      <Plus size={14} />
+                      {isPlacingQm ? '📍 ĐANG BẬT ĐẶT DẤU ? (Nhấp lên bóng để thêm)' : '➕ Nhấp chuột để đặt dấu ?'}
+                    </button>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800">
+                      💡 <b>Hướng dẫn:</b> Bật nút trên, sau đó nhấp trực tiếp vào bóng nhân vật trên khung để đặt thêm dấu <b>?</b>. Nhấp trúng dấu <b>?</b> đã có để xóa nó.
+                    </p>
+
+                    {/* Cỡ chữ mặc định & Màu sắc */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Cỡ chữ:</span>
+                          <span className="font-mono text-white text-[11px]">{qmDefaultSize}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="20"
+                          max="120"
+                          value={qmDefaultSize}
+                          onChange={(e) => {
+                            const newSize = Number(e.target.value);
+                            setQmDefaultSize(newSize);
+                            setQuestionMarks((prev) => prev.map((q) => ({ ...q, size: newSize })));
+                          }}
+                          className="accent-rose-500 cursor-pointer h-1.5"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Màu chữ:</span>
+                          <input
+                            type="color"
+                            value={qmColor}
+                            onChange={(e) => setQmColor(e.target.value)}
+                            className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 justify-end pt-1">
+                          {['#ef4444', '#f97316', '#facc15', '#22c55e', '#ffffff'].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setQmColor(c)}
+                              className={`w-3.5 h-3.5 rounded-full border ${qmColor === c ? 'border-rose-400 scale-110' : 'border-slate-600'}`}
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Danh sách & nút xóa tất cả */}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-slate-400">
+                        Đang có: <b className="text-white">{questionMarks.length}</b> dấu hỏi
+                      </span>
+                      {questionMarks.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setQuestionMarks([])}
+                          className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 size={12} /> Xóa tất cả dấu ?
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuestionMarks([
+                          { id: 'mqm-1', x: 270, y: 350, size: 55 },
+                          { id: 'mqm-2', x: 190, y: 460, size: 45 },
+                          { id: 'mqm-3', x: 350, y: 460, size: 45 },
+                          { id: 'mqm-4', x: 270, y: 550, size: 50 },
+                          { id: 'mqm-5', x: 380, y: 650, size: 45 }
+                        ]);
+                        setQmColor('#ef4444');
+                        setQmDefaultSize(48);
+                      }}
+                      className="text-xs text-sky-400 hover:text-sky-300 hover:underline text-left cursor-pointer pt-0.5"
+                    >
+                      ↺ Khôi phục vị trí 5 dấu ? mẫu
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* NHÓM 4: WATERMARK / LOGO KÊNH */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSection('watermark')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🏷️</span>
+                <span className="text-xs font-bold text-sky-300">Watermark / Logo Kênh</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableWatermark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'}`}>
+                  {enableWatermark ? 'Bật' : 'Tắt'}
+                </span>
+                {activeSection === 'watermark' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'watermark' && (
+              <div className="p-3.5 flex flex-col gap-3 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-300 font-medium">Bật Watermark:</span>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableWatermark}
+                      onChange={(e) => setEnableWatermark(e.target.checked)}
+                      className="accent-sky-400 cursor-pointer"
+                    />
+                    <span className={enableWatermark ? 'text-sky-300 font-bold' : 'text-slate-400'}>
+                      {enableWatermark ? 'Đang Bật' : 'Đang Tắt'}
+                    </span>
+                  </label>
+                </div>
+
+                {enableWatermark && (
+                  <div className="flex flex-col gap-3 pt-2 border-t border-slate-800">
+                    <input
+                      type="text"
+                      value={watermarkText}
+                      onChange={(e) => setWatermarkText(e.target.value)}
+                      placeholder="Nhập watermark (ví dụ: @Soonix)"
+                      className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                    />
+
+                    {/* Kích thước phông chữ & Màu sắc */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Cỡ chữ:</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="8"
+                              max="200"
+                              value={watermarkFontSize}
+                              onChange={(e) => setWatermarkFontSize(Math.max(1, Number(e.target.value)))}
+                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+                            />
+                            <span className="text-[10px] text-slate-400">px</span>
+                          </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="8"
+                          max="120"
+                          value={Math.min(120, Math.max(8, watermarkFontSize))}
+                          onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
+                          className="accent-sky-400 cursor-pointer h-1.5"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Màu chữ:</span>
                           <input
                             type="color"
                             value={watermarkColor}
@@ -813,122 +1139,116 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                             className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
                           />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 justify-end pt-0.5">
-                        {['#94a3b8', '#ffffff', '#000000', '#facc15', '#38bdf8'].map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setWatermarkColor(c)}
-                            className={`w-3.5 h-3.5 rounded-full border ${watermarkColor === c ? 'border-sky-400 scale-110' : 'border-slate-600'}`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Độ mờ (Opacity) */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Độ mờ / trong suốt:</span>
-                      <span className="text-white font-mono">{watermarkOpacity}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={watermarkOpacity}
-                      onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
-                      className="accent-sky-400 cursor-pointer h-1.5"
-                    />
-                  </div>
-
-                  {/* Vị trí căn chỉnh */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Khoảng cách cách mép:</span>
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          value={watermarkDistance}
-                          onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                          className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                        />
-                        <span className="text-[10px] text-slate-400">px</span>
-                      </div>
-                    </div>
-                    <input
-                      type="range"
-                      min="-120"
-                      max="200"
-                      value={watermarkDistance}
-                      onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                      className="accent-sky-400 cursor-pointer h-1.5"
-                    />
-                  </div>
-
-                  {/* Nền Thẻ Watermark (Badge bo góc) */}
-                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
-                        <span>🎨 Màu nền Watermark:</span>
-                      </span>
-                      <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={enableWatermarkBg}
-                          onChange={(e) => setEnableWatermarkBg(e.target.checked)}
-                          className="accent-amber-400 cursor-pointer"
-                        />
-                        <span className="text-amber-300 font-medium">{enableWatermarkBg ? 'Bật' : 'Tắt'}</span>
-                      </label>
-                    </div>
-
-                    {enableWatermarkBg && (
-                      <div className="flex flex-col gap-2 pl-2 border-l-2 border-amber-500/30">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Màu nền:</span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="color"
-                              value={watermarkBgColor}
-                              onChange={(e) => setWatermarkBgColor(e.target.value)}
-                              className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                            />
-                            <span className="text-xs font-mono text-white uppercase">{watermarkBgColor}</span>
-                          </div>
-                        </div>
-
-                        {/* Presets màu nền */}
-                        <div className="flex items-center gap-1.5 justify-end">
-                          {[
-                            { name: 'Vàng rực', color: '#ffcc00' },
-                            { name: 'Vàng chanh', color: '#facc15' },
-                            { name: 'Cam', color: '#fb923c' },
-                            { name: 'Đen mờ', color: '#0f172a' },
-                            { name: 'Trắng', color: '#ffffff' },
-                            { name: 'Đỏ', color: '#ef4444' },
-                            { name: 'Xanh ngọc', color: '#06b6d4' }
-                          ].map((p) => (
+                        <div className="flex items-center gap-1 justify-end pt-1">
+                          {['#94a3b8', '#ffffff', '#000000', '#facc15', '#38bdf8'].map((c) => (
                             <button
-                              key={p.color}
+                              key={c}
                               type="button"
-                              onClick={() => setWatermarkBgColor(p.color)}
-                              className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
-                                }`}
-                              style={{ backgroundColor: p.color }}
-                              title={p.name}
+                              onClick={() => setWatermarkColor(c)}
+                              className={`w-3.5 h-3.5 rounded-full border ${watermarkColor === c ? 'border-sky-400 scale-110' : 'border-slate-600'}`}
+                              style={{ backgroundColor: c }}
                             />
                           ))}
                         </div>
+                      </div>
+                    </div>
 
-                        {/* Độ đậm nhạt của nền */}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Độ đậm màu nền:</span>
-                            <span className="text-white font-mono">{watermarkBgOpacity}%</span>
+                    {/* Khoảng cách cách mép & Độ mờ */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Cách mép:</span>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={watermarkDistance}
+                              onChange={(e) => setWatermarkDistance(Number(e.target.value))}
+                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+                            />
+                            <span className="text-[10px] text-slate-400">px</span>
                           </div>
+                        </div>
+                        <input
+                          type="range"
+                          min="-120"
+                          max="200"
+                          value={watermarkDistance}
+                          onChange={(e) => setWatermarkDistance(Number(e.target.value))}
+                          className="accent-sky-400 cursor-pointer h-1.5"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Độ mờ:</span>
+                          <span className="text-white font-mono text-[11px]">{watermarkOpacity}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={watermarkOpacity}
+                          onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
+                          className="accent-sky-400 cursor-pointer h-1.5"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Nền Thẻ Watermark (Badge bo góc) */}
+                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
+                          <span>🎨 Màu nền Thẻ:</span>
+                        </span>
+                        <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableWatermarkBg}
+                            onChange={(e) => setEnableWatermarkBg(e.target.checked)}
+                            className="accent-amber-400 cursor-pointer"
+                          />
+                          <span className="text-amber-300 font-medium">{enableWatermarkBg ? 'Bật' : 'Tắt'}</span>
+                        </label>
+                      </div>
+
+                      {enableWatermarkBg && (
+                        <div className="flex flex-col gap-2 pl-2 border-l-2 border-amber-500/30">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Màu & Độ đậm:</span>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="color"
+                                value={watermarkBgColor}
+                                onChange={(e) => setWatermarkBgColor(e.target.value)}
+                                className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                              />
+                              <span className="text-[11px] font-mono text-white">{watermarkBgOpacity}%</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 justify-end">
+                            {[
+                              { name: 'Vàng rực', color: '#ffcc00' },
+                              { name: 'Vàng chanh', color: '#facc15' },
+                              { name: 'Cam', color: '#fb923c' },
+                              { name: 'Đen mờ', color: '#0f172a' },
+                              { name: 'Trắng', color: '#ffffff' },
+                              { name: 'Đỏ', color: '#ef4444' },
+                              { name: 'Xanh ngọc', color: '#06b6d4' }
+                            ].map((p) => (
+                              <button
+                                key={p.color}
+                                type="button"
+                                onClick={() => setWatermarkBgColor(p.color)}
+                                className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${
+                                  watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
+                                }`}
+                                style={{ backgroundColor: p.color }}
+                                title={p.name}
+                              />
+                            ))}
+                          </div>
+
                           <input
                             type="range"
                             min="10"
@@ -938,79 +1258,79 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                             className="accent-amber-400 cursor-pointer h-1.5"
                           />
                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hiệu ứng đổi màu Watermark khi đèn pin soi qua */}
-                  <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
-                        <span>💡 Đổi màu khi chiếu đèn:</span>
-                      </span>
-                      <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={enableWatermarkBeamEffect}
-                          onChange={(e) => setEnableWatermarkBeamEffect(e.target.checked)}
-                          className="accent-amber-400 cursor-pointer"
-                        />
-                        <span className="text-amber-300 font-medium">{enableWatermarkBeamEffect ? 'Bật' : 'Tắt'}</span>
-                      </label>
+                      )}
                     </div>
 
-                    {enableWatermarkBeamEffect && (
-                      <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-amber-500/30">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Màu khi đèn soi vào:</span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="color"
-                              value={watermarkActiveColor}
-                              onChange={(e) => setWatermarkActiveColor(e.target.value)}
-                              className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                            />
-                            <span className="text-xs font-mono text-white uppercase">{watermarkActiveColor}</span>
+                    {/* Hiệu ứng đổi màu Watermark khi đèn pin soi qua */}
+                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
+                          <span>💡 Đổi màu khi chiếu đèn:</span>
+                        </span>
+                        <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableWatermarkBeamEffect}
+                            onChange={(e) => setEnableWatermarkBeamEffect(e.target.checked)}
+                            className="accent-amber-400 cursor-pointer"
+                          />
+                          <span className="text-amber-300 font-medium">{enableWatermarkBeamEffect ? 'Bật' : 'Tắt'}</span>
+                        </label>
+                      </div>
+
+                      {enableWatermarkBeamEffect && (
+                        <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-amber-500/30">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Màu khi soi vào:</span>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="color"
+                                value={watermarkActiveColor}
+                                onChange={(e) => setWatermarkActiveColor(e.target.value)}
+                                className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                              />
+                              <span className="text-xs font-mono text-white uppercase">{watermarkActiveColor}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 justify-end pt-0.5">
+                            {['#facc15', '#f97316', '#ef4444', '#22c55e', '#06b6d4', '#a855f7', '#ffffff'].map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => setWatermarkActiveColor(c)}
+                                className={`w-3.5 h-3.5 rounded-full border transition-transform ${watermarkActiveColor === c ? 'border-amber-400 scale-125' : 'border-slate-600'}`}
+                                style={{ backgroundColor: c }}
+                              />
+                            ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 justify-end pt-0.5">
-                          {['#facc15', '#f97316', '#ef4444', '#22c55e', '#06b6d4', '#a855f7', '#ffffff'].map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => setWatermarkActiveColor(c)}
-                              className={`w-3.5 h-3.5 rounded-full border transition-transform ${watermarkActiveColor === c ? 'border-amber-400 scale-125' : 'border-slate-600'}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                    <span>Mẫu mẫu: Thẻ Vàng @Snake Magic</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setWatermarkText('@Snake Magic');
-                        setWatermarkFontSize(18);
-                        setWatermarkColor('#000000');
-                        setWatermarkOpacity(100);
-                        setEnableWatermarkBg(true);
-                        setWatermarkBgColor('#ffcc00');
-                        setWatermarkBgOpacity(100);
-                        setWatermarkDistance(20);
-                        setEnableWatermarkBeamEffect(false);
-                      }}
-                      className="text-amber-400 hover:text-amber-300 cursor-pointer underline font-medium"
-                    >
-                      Dùng mẫu Thẻ Vàng
-                    </button>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                      <span>Mẫu: Thẻ Vàng @Snake Magic</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWatermarkText('@Snake Magic');
+                          setWatermarkFontSize(18);
+                          setWatermarkColor('#000000');
+                          setWatermarkOpacity(100);
+                          setEnableWatermarkBg(true);
+                          setWatermarkBgColor('#ffcc00');
+                          setWatermarkBgOpacity(100);
+                          setWatermarkDistance(20);
+                          setEnableWatermarkBeamEffect(false);
+                        }}
+                        className="text-amber-400 hover:text-amber-300 cursor-pointer underline font-medium"
+                      >
+                        Dùng mẫu Thẻ Vàng
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
@@ -1019,7 +1339,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
               setStageMode('flashlight');
               setIs916Mode(true);
             }}
-            className="mt-auto p-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs"
+            className="mt-2 p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs active:scale-98"
           >
             <Play size={16} /> Khởi Chạy
           </button>
@@ -1035,12 +1355,25 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
-          className={`relative overflow-hidden transition-all duration-300 ${stageMode === 'flashlight' || is916Mode ? 'cursor-none' : 'cursor-default'
+          onClick={handleStageClick}
+          className={`relative overflow-hidden transition-all duration-300 ${
+            isPlacingQm && !is916Mode
+              ? 'cursor-crosshair'
+              : stageMode === 'flashlight' || is916Mode
+                ? 'cursor-none'
+                : 'cursor-default'
             } ${is916Mode
               ? 'w-full h-full bg-white flex items-center justify-center'
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
+          {/* BANNER HƯỚNG DẪN KHI ĐANG BẬT CHẾ ĐỘ ĐẶT DẤU HỎI ? */}
+          {isPlacingQm && !is916Mode && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-rose-950/90 text-rose-200 text-xs font-semibold px-4 py-2 rounded-full border border-rose-500/50 shadow-2xl backdrop-blur-sm z-40 pointer-events-none flex items-center gap-2">
+              <span className="animate-ping w-2 h-2 rounded-full bg-rose-400"></span>
+              <span>Đang bật chế độ đặt dấu <b>?</b>: Nhấp lên vị trí bóng đen để thêm, nhấp vào dấu <b>?</b> đã có để xóa</span>
+            </div>
+          )}
           {/* Nền Grid Kẻ Ô Mờ */}
           <div
             className="absolute inset-0 pointer-events-none opacity-40"
@@ -1050,8 +1383,8 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             }}
           />
 
-          {/* QUẦNG SÁNG ĐÈN PIN NỀN TRÊN CONTAINER (Không bao giờ bị cắt viền do mép canvas) */}
-          {(stageMode === 'flashlight' || is916Mode) && enableBeamBg && (
+          {/* QUẦNG SÁNG ĐÈN PIN NỀN TRÊN CONTAINER (Không bao giờ bị cắt viền do mép canvas) - Tắt khi đang đặt dấu ? */}
+          {(stageMode === 'flashlight' || is916Mode) && (!isPlacingQm || is916Mode) && enableBeamBg && (
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden"
               style={{ opacity: Math.max(0, Math.min(1, beamOpacity / 100)) }}
@@ -1203,8 +1536,8 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             </div>
           )}
 
-          {/* HAND CURSOR OVERLAY 👆 (Chỉ hiển thị khi ở chế độ Soi Đèn hoặc khi quay video 9:16) */}
-          {(stageMode === 'flashlight' || is916Mode) && (
+          {/* HAND CURSOR OVERLAY 👆 (Chỉ hiển thị khi ở chế độ Soi Đèn và KHÔNG ở chế độ đặt dấu ?, hoặc khi quay video 9:16) */}
+          {(stageMode === 'flashlight' || is916Mode) && (!isPlacingQm || is916Mode) && (
             <div
               className="absolute pointer-events-none select-none z-30 transition-transform"
               style={{
