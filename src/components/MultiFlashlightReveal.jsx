@@ -313,40 +313,6 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
       ctx.globalCompositeOperation = 'destination-over';
       drawAllColorImages(ctx, width, height);
       ctx.restore();
-
-      // BƯỚC 5: Tô màu quầng sáng đèn pin cho toàn bộ phần còn lại trong vùng chiếu (chỗ không có ảnh/nhân vật)
-      if (enableBeamBg) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.globalAlpha = Math.max(0, Math.min(1, beamOpacity / 100));
-        ctx.fillStyle = beamBgColor;
-
-        if (spotlightType === 'circle') {
-          ctx.beginPath();
-          ctx.arc(cursorPos.x, cursorPos.y, radius, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          const centerRad = (beamAngle * Math.PI) / 180;
-          const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
-          const length = Math.max(width, height) * 2.5;
-
-          const angle1 = centerRad - halfSpreadRad;
-          const angle2 = centerRad + halfSpreadRad;
-
-          const x1 = cursorPos.x + Math.cos(angle1) * length;
-          const y1 = cursorPos.y + Math.sin(angle1) * length;
-          const x2 = cursorPos.x + Math.cos(angle2) * length;
-          const y2 = cursorPos.y + Math.sin(angle2) * length;
-
-          ctx.beginPath();
-          ctx.moveTo(cursorPos.x, cursorPos.y);
-          ctx.lineTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      }
     }
   };
 
@@ -1006,8 +972,42 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             }}
           />
 
+          {/* QUẦNG SÁNG ĐÈN PIN NỀN TRÊN CONTAINER (Không bao giờ bị cắt viền do mép canvas) */}
+          {(stageMode === 'flashlight' || is916Mode) && enableBeamBg && (
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden"
+              style={{ opacity: Math.max(0, Math.min(1, beamOpacity / 100)) }}
+            >
+              {spotlightType === 'circle' ? (
+                <circle
+                  cx={cursorPos.rawX}
+                  cy={cursorPos.rawY}
+                  r={radius * ((globalScale / 100) * (is916Mode ? 1.25 : 0.95))}
+                  fill={beamBgColor}
+                />
+              ) : (() => {
+                const effectiveR = Math.max(1200, radius * 8);
+                const containerAngle = ((beamAngle - 90) * Math.PI) / 180;
+                const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
+                const a1 = containerAngle - halfSpread;
+                const a2 = containerAngle + halfSpread;
+                const x1 = cursorPos.rawX + Math.cos(a1) * effectiveR;
+                const y1 = cursorPos.rawY + Math.sin(a1) * effectiveR;
+                const x2 = cursorPos.rawX + Math.cos(a2) * effectiveR;
+                const y2 = cursorPos.rawY + Math.sin(a2) * effectiveR;
+                return (
+                  <path
+                    d={`M ${cursorPos.rawX} ${cursorPos.rawY} L ${x1} ${y1} L ${x2} ${y2} Z`}
+                    fill={beamBgColor}
+                  />
+                );
+              })()}
+            </svg>
+          )}
+
           {/* CANVAS XOAY NẰM NGANG 90 ĐỘ GIỐNG HỆT KHI ĐANG CHẠY */}
           <div
+            className="relative z-10"
             style={{
               transform: `rotate(-90deg) scale(${(globalScale / 100) * (is916Mode ? 1.25 : 0.95)})`,
               transformOrigin: 'center center'
