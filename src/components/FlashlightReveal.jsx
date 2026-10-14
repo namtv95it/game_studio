@@ -335,7 +335,92 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             🔦 CÀI ĐẶT SOI ĐÈN PIN (PNG)
           </h2>
 
-          {/* NHÓM 1: VỆT SÁNG & ĐÈN PIN */}
+          {/* NHÓM 1: NHÂN VẬT & KHUNG HÌNH */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleSection('character')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🖼️</span>
+                <span className="text-xs font-bold text-sky-300">Nhân Vật & Khung Hình</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {scale}% • Y:{offsetY}px
+                </span>
+                {activeSection === 'character' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'character' && (
+              <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
+                {/* Upload 1 PNG Image */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs text-slate-400 font-medium">Tải Ảnh Nhân Vật (PNG):</label>
+                  <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700/90 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
+                    <Upload size={15} /> Đổi Ảnh Nhân Vật (.PNG)
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
+                </div>
+
+                {/* Scale */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="50"
+                        max="200"
+                        value={scale}
+                        onChange={(e) => setScale(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="50"
+                    max="200"
+                    value={scale}
+                    onChange={(e) => setScale(Number(e.target.value))}
+                    className="accent-sky-400 cursor-pointer h-1.5"
+                  />
+                </div>
+
+                {/* Offset Y */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="-300"
+                        max="300"
+                        value={offsetY}
+                        onChange={(e) => setOffsetY(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="-300"
+                    max="300"
+                    value={offsetY}
+                    onChange={(e) => setOffsetY(Number(e.target.value))}
+                    className="accent-sky-400 cursor-pointer h-1.5"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NHÓM 2: VỆT SÁNG & ĐÈN PIN */}
           <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
             <button
               type="button"
@@ -527,91 +612,6 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     max="500"
                     value={handSize}
                     onChange={(e) => setHandSize(Number(e.target.value))}
-                    className="accent-sky-400 cursor-pointer h-1.5"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* NHÓM 2: NHÂN VẬT & KHUNG HÌNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
-            <button
-              type="button"
-              onClick={() => toggleSection('character')}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🖼️</span>
-                <span className="text-xs font-bold text-sky-300">Nhân Vật & Khung Hình</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 font-mono">
-                  {scale}% • Y:{offsetY}px
-                </span>
-                {activeSection === 'character' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-              </div>
-            </button>
-
-            {activeSection === 'character' && (
-              <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
-                {/* Upload 1 PNG Image */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs text-slate-400 font-medium">Tải Ảnh Nhân Vật (PNG):</label>
-                  <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700/90 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
-                    <Upload size={15} /> Đổi Ảnh Nhân Vật (.PNG)
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  </label>
-                </div>
-
-                {/* Scale */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To:</label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="50"
-                        max="200"
-                        value={scale}
-                        onChange={(e) => setScale(Number(e.target.value))}
-                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                      />
-                      <span className="text-xs text-slate-400">%</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="200"
-                    value={scale}
-                    onChange={(e) => setScale(Number(e.target.value))}
-                    className="accent-sky-400 cursor-pointer h-1.5"
-                  />
-                </div>
-
-                {/* Offset Y */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống:</label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="-300"
-                        max="300"
-                        value={offsetY}
-                        onChange={(e) => setOffsetY(Number(e.target.value))}
-                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                      />
-                      <span className="text-xs text-slate-400">px</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="-300"
-                    max="300"
-                    value={offsetY}
-                    onChange={(e) => setOffsetY(Number(e.target.value))}
                     className="accent-sky-400 cursor-pointer h-1.5"
                   />
                 </div>
