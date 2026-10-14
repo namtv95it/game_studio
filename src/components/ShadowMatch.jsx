@@ -441,21 +441,19 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
           <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => setStageMode('edit')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'edit'
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stageMode === 'edit'
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Move size={14} /> Kéo Xếp Vị Trí (Full)
             </button>
             <button
               onClick={() => setStageMode('gameplay')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'gameplay'
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stageMode === 'gameplay'
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Sparkles size={14} /> Chơi Ghép Bóng
             </button>
@@ -492,19 +490,17 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
                       onDragEnd={handleDragEnd}
                       onDrop={(e) => handleDrop(e, i)}
                       onClick={() => setTargetIndex(i)}
-                      className={`h-16 bg-slate-900/80 rounded-lg cursor-grab active:cursor-grabbing overflow-hidden relative border transition-all flex items-center justify-center p-1 group select-none ${
-                        i === targetIndex
+                      className={`h-16 bg-slate-900/80 rounded-lg cursor-grab active:cursor-grabbing overflow-hidden relative border transition-all flex items-center justify-center p-1 group select-none ${i === targetIndex
                           ? 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-500/20'
                           : 'border-slate-700 hover:border-slate-500'
-                      } ${draggedImageIndex === i ? 'opacity-40 scale-95 border-dashed border-purple-500' : ''} ${
-                        dragOverImageIndex === i && draggedImageIndex !== i
+                        } ${draggedImageIndex === i ? 'opacity-40 scale-95 border-dashed border-purple-500' : ''} ${dragOverImageIndex === i && draggedImageIndex !== i
                           ? 'ring-2 ring-sky-400 border-sky-400 scale-105'
                           : ''
-                      }`}
+                        }`}
                       title={`Ảnh ${i + 1} - Giữ & Kéo để đổi thứ tự (Click chọn làm bóng)`}
                     >
                       <img src={src} alt={`Uploaded ${i}`} className="w-full h-full object-contain pointer-events-none select-none" />
-                      
+
                       {/* Grip Handle Icon on Hover */}
                       <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded p-0.5 pointer-events-none">
                         <GripVertical size={10} className="text-slate-300" />
@@ -698,29 +694,26 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             onClick={() => setIs916Mode(true)}
             className="mt-auto p-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
-            <Play size={18} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
+            <Play size={18} /> Khởi Chạy
           </button>
         </div>
       )}
 
       {/* KHUNG HIỂN THỊ KHU VỰC SÂN KHẤU (FULL MÀN HÌNH KHI Ở CHẾ ĐỘ 9:16 HOẶC KHI Ở CHẾ ĐỘ KÉO XẾP VỊ TRÍ) */}
       <div
-        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${
-          is916Mode || stageMode === 'edit' ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
-        }`}
+        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode || stageMode === 'edit' ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
+          }`}
         onMouseUp={handleMouseUpStage}
       >
         <div
           ref={stageRef}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
-          className={`relative overflow-hidden transition-all duration-300 ${
-            stageMode === 'gameplay' || is916Mode ? 'cursor-none' : 'cursor-default'
-          } ${
-            is916Mode || stageMode === 'edit'
+          className={`relative overflow-hidden transition-all duration-300 ${stageMode === 'gameplay' || is916Mode ? 'cursor-none' : 'cursor-default'
+            } ${is916Mode || stageMode === 'edit'
               ? 'w-full h-full bg-white flex items-center justify-center'
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
-          }`}
+            }`}
         >
           {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
           <div
@@ -740,18 +733,16 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
               transform: `scale(${stageScale})`,
               transformOrigin: 'center center'
             }}
-            className={`relative shrink-0 flex items-center justify-center select-none ${
-              stageMode === 'edit' && !is916Mode ? 'ring-2 ring-purple-400/40 rounded-2xl' : ''
-            }`}
+            className={`relative shrink-0 flex items-center justify-center select-none ${stageMode === 'edit' && !is916Mode ? 'ring-2 ring-purple-400/40 rounded-2xl' : ''
+              }`}
           >
             {/* BỘ 3 ẢNH THỦ NHỎ TRONG KHAY: HỖ TRỢ KÉO THẢ TRỰC TIẾP KHAY KHI Ở CHẾ ĐỘ EDIT */}
             <div
               onMouseDown={handleStartDragTray}
-              className={`absolute z-20 flex flex-col items-center p-2 rounded-xl transition-all select-none ${
-                stageMode === 'edit' && !is916Mode
+              className={`absolute z-20 flex flex-col items-center p-2 rounded-xl transition-all select-none ${stageMode === 'edit' && !is916Mode
                   ? 'cursor-grab active:cursor-grabbing border-2 border-dashed border-purple-400 bg-purple-500/10 hover:bg-purple-500/20'
                   : ''
-              }`}
+                }`}
               style={{
                 left: `${trayOffsetX}px`,
                 top: `calc(50% + ${trayOffsetY}px)`,
@@ -777,13 +768,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
                       handlePickItem(i, src);
                     }
                   }}
-                  className={`transition-all flex items-center justify-center select-none ${
-                    stageMode === 'edit' && !is916Mode
+                  className={`transition-all flex items-center justify-center select-none ${stageMode === 'edit' && !is916Mode
                       ? 'cursor-grab'
                       : placedItems.length > 0
-                      ? 'pointer-events-none'
-                      : 'hover:scale-110 cursor-none'
-                  }`}
+                        ? 'pointer-events-none'
+                        : 'hover:scale-110 cursor-none'
+                    }`}
                   style={{
                     width: `${trayItemSize}px`,
                     height: `${trayItemSize}px`
@@ -797,11 +787,10 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             {/* CANVAS SÂN KHẤU XOAY NẰM NGANG 90 ĐỘ: TỈ LỆ VÀ KÍCH THƯỚC ĐỒNG NHẤT 100% CẢ PREVIEW VÀ 9:16 */}
             <div
               onMouseDown={handleStartDragShadow}
-              className={`transition-all ${
-                stageMode === 'edit' && !is916Mode
+              className={`transition-all ${stageMode === 'edit' && !is916Mode
                   ? 'cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-purple-400 rounded-2xl'
                   : ''
-              }`}
+                }`}
               style={{
                 transform: `rotate(-90deg) scale(${targetScale / 100})`,
                 transformOrigin: 'center center'
@@ -821,9 +810,8 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
               <div
                 key={item.id}
                 onClick={(e) => handlePlacedItemClick(e, item)}
-                className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)] flex items-center justify-center select-none ${
-                  item.isReturning ? 'z-30 pointer-events-none' : 'z-10 cursor-none'
-                }`}
+                className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)] flex items-center justify-center select-none ${item.isReturning ? 'z-30 pointer-events-none' : 'z-10 cursor-none'
+                  }`}
                 style={{
                   left: `${item.x}px`,
                   top: `${item.y}px`,

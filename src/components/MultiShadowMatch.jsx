@@ -27,7 +27,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
   const [stageImages, setStageImages] = useState(initialSettings.stageImages || initialSettings.images || POKEMON_IMAGES);
   // Chỉ số ảnh được chọn để tạo bóng đen ở phía dưới (chọn từ các ảnh phía trên)
   const [shadowIndex, setShadowIndex] = useState(initialSettings.shadowIndex ?? 0);
-  
+
   // Danh sách các layer hiển thị ở khu vực phía dưới
   // Mỗi layer: { id, imageIndex, type: 'shadow' | 'color', x, y, scale, rotation, visible, name }
   const [stageLayers, setStageLayers] = useState(() => {
@@ -776,21 +776,19 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
           <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700 gap-1">
             <button
               onClick={() => setSidebarTab('tray')}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                sidebarTab === 'tray'
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${sidebarTab === 'tray'
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               🖼️ Ảnh Phía Trên
             </button>
             <button
               onClick={() => setSidebarTab('stage')}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                sidebarTab === 'stage'
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${sidebarTab === 'stage'
                   ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               🎭 Lớp Sân Khấu
             </button>
@@ -811,9 +809,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                 </div>
                 <button
                   onClick={() => setTrayPickEnabled(!trayPickEnabled)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${
-                    trayPickEnabled ? 'bg-sky-500 justify-end' : 'bg-slate-700 justify-start'
-                  }`}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-200 cursor-pointer ${trayPickEnabled ? 'bg-sky-500 justify-end' : 'bg-slate-700 justify-start'
+                    }`}
                   title={trayPickEnabled ? 'Bấm để tắt tính năng nhấc ảnh' : 'Bấm để bật tính năng nhấc ảnh'}
                 >
                   <div className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
@@ -841,9 +838,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDragEnd={handleDragEnd}
                       onDrop={(e) => handleDrop(e, i)}
-                      className={`relative h-[72px] rounded-xl overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 border-slate-700 hover:border-slate-500 ${
-                        draggedImageIndex === i ? 'opacity-40 scale-95' : ''
-                      } ${dragOverImageIndex === i && draggedImageIndex !== i ? 'ring-2 ring-sky-400 border-sky-400 scale-105' : ''}`}
+                      className={`relative h-[72px] rounded-xl overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 border-slate-700 hover:border-slate-500 ${draggedImageIndex === i ? 'opacity-40 scale-95' : ''
+                        } ${dragOverImageIndex === i && draggedImageIndex !== i ? 'ring-2 ring-sky-400 border-sky-400 scale-105' : ''}`}
                       title={`Kéo thả để đổi thứ tự ảnh #${i + 1}`}
                     >
                       <img src={src} alt={`Ảnh ${i + 1}`} className="w-full h-full object-contain p-1 pointer-events-none select-none" />
@@ -925,11 +921,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               <button
                 type="button"
                 onClick={() => setStageSubView(stageSubView === 'order' ? 'settings' : 'order')}
-                className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md border ${
-                  stageSubView === 'order'
+                className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md border ${stageSubView === 'order'
                     ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white border-amber-400/50 shadow-amber-900/30'
                     : 'bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white border-purple-500/50 shadow-purple-900/30'
-                }`}
+                  }`}
               >
                 {stageSubView === 'order' ? (
                   <>
@@ -970,11 +965,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                           <div
                             key={i}
                             onClick={() => setSelectedImageIndex(i)}
-                            className={`relative h-[72px] rounded-xl cursor-pointer overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 ${
-                              selectedImageIndex === i
+                            className={`relative h-[72px] rounded-xl cursor-pointer overflow-hidden border-2 transition-all group select-none flex items-center justify-center bg-slate-900/80 ${selectedImageIndex === i
                                 ? 'border-purple-400 ring-2 ring-purple-400/50 shadow-lg shadow-purple-500/20'
                                 : 'border-slate-700 hover:border-slate-500'
-                            }`}
+                              }`}
                             title={`Ảnh sân khấu #${i + 1} — Click để chọn & cài đặt`}
                           >
                             <img src={src} alt={`Ảnh sân khấu ${i + 1}`} className="w-full h-full object-contain p-1 pointer-events-none select-none" />
@@ -1026,13 +1020,12 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                             <span className="text-sm font-bold text-white">Ảnh sân khấu #{selectedImageIndex + 1}</span>
                             <div className="flex items-center gap-1.5">
                               {selectedImageLayer && (
-                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                  selectedImageLayer.type === 'shadow'
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${selectedImageLayer.type === 'shadow'
                                     ? 'bg-purple-900/60 text-purple-300 border border-purple-700/60'
                                     : selectedImageLayer.type === 'movable'
-                                    ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60'
-                                    : 'bg-sky-900/60 text-sky-300 border border-sky-700/60'
-                                }`}>
+                                      ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/60'
+                                      : 'bg-sky-900/60 text-sky-300 border border-sky-700/60'
+                                  }`}>
                                   {selectedImageLayer.type === 'shadow' ? '🌑 Bóng Đen' : selectedImageLayer.type === 'movable' ? '🚀 Di Chuyển' : '🎨 Ảnh Màu'}
                                 </span>
                               )}
@@ -1081,11 +1074,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                                   const newVisible = !selectedImageLayer.visible;
                                   updateLayerById(selectedImageLayer.id, 'visible', newVisible);
                                 }}
-                                className={`p-1.5 rounded-lg border transition-all ${
-                                  selectedImageLayer.visible
+                                className={`p-1.5 rounded-lg border transition-all ${selectedImageLayer.visible
                                     ? 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
                                     : 'bg-rose-950/60 text-rose-400 border-rose-800/80 hover:text-rose-300'
-                                }`}
+                                  }`}
                                 title={selectedImageLayer.visible ? 'Đang hiện — click để ẩn' : 'Đang ẩn — click để hiện'}
                               >
                                 {selectedImageLayer.visible ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -1107,31 +1099,28 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                             <div className="grid grid-cols-3 gap-1.5 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
                               <button
                                 onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'shadow')}
-                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  selectedImageLayer.type === 'shadow'
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${selectedImageLayer.type === 'shadow'
                                     ? 'bg-purple-600 text-white shadow-md shadow-purple-900/50 ring-1 ring-purple-400'
                                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                                }`}
+                                  }`}
                               >
                                 🌑 Bóng
                               </button>
                               <button
                                 onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'color')}
-                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  selectedImageLayer.type === 'color'
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${selectedImageLayer.type === 'color'
                                     ? 'bg-sky-600 text-white shadow-md shadow-sky-900/50 ring-1 ring-sky-400'
                                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                                }`}
+                                  }`}
                               >
                                 🎨 Màu
                               </button>
                               <button
                                 onClick={() => updateLayerById(selectedImageLayer.id, 'type', 'movable')}
-                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                  selectedImageLayer.type === 'movable'
+                                className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${selectedImageLayer.type === 'movable'
                                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/50 ring-1 ring-emerald-400'
                                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                                }`}
+                                  }`}
                               >
                                 🚀 Di Chuyển
                               </button>
@@ -1281,11 +1270,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                                   <button
                                     key={label}
                                     onClick={() => updateLayerById(selectedImageLayer.id, 'rotation', val)}
-                                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                                      selectedImageLayer.rotation === val
+                                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${selectedImageLayer.rotation === val
                                         ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-300'
                                         : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
-                                    }`}
+                                      }`}
                                   >
                                     {label}
                                   </button>
@@ -1357,11 +1345,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                               setSelectedImageIndex(layer.imageIndex);
                               setSelectedLayerId(layer.id);
                             }}
-                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-                              isThisSelected
+                            className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${isThisSelected
                                 ? 'bg-purple-900/40 border-purple-500/80 shadow-md ring-1 ring-purple-400/50'
                                 : 'bg-slate-950/70 border-slate-800 hover:border-slate-700'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="text-xs font-bold text-purple-400 bg-purple-950/80 px-1.5 py-0.5 rounded border border-purple-800/60">
@@ -1377,13 +1364,12 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                                   {layer.name}
                                 </span>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                                    layer.type === 'shadow'
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${layer.type === 'shadow'
                                       ? 'bg-purple-900/60 text-purple-300'
                                       : layer.type === 'movable'
-                                      ? 'bg-emerald-900/60 text-emerald-300'
-                                      : 'bg-sky-900/60 text-sky-300'
-                                  }`}>
+                                        ? 'bg-emerald-900/60 text-emerald-300'
+                                        : 'bg-sky-900/60 text-sky-300'
+                                    }`}>
                                     {layer.type === 'shadow' ? '🌑 Bóng' : layer.type === 'movable' ? '🚀 Di chuyển' : '🎨 Màu'}
                                   </span>
                                   {isTop && (
@@ -1473,7 +1459,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               onClick={() => setIs916Mode(true)}
               className="p-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
             >
-              <Play size={16} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
+              <Play size={16} /> Khởi Chạy
             </button>
           </div>
         </div>
@@ -1481,22 +1467,19 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
 
       {/* KHU VỰC SÂN KHẤU (FULL MÀN HÌNH KHI Ở CHẾ ĐỘ 9:16 HOẶC KÉO XẾP FULL) */}
       <div
-        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${
-          is916Mode || stageMode === 'edit' ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
-        }`}
+        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode || stageMode === 'edit' ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
+          }`}
         onMouseUp={handleMouseUpStage}
       >
         <div
           ref={stageRef}
           onMouseMove={handleMouseMove}
           onClick={handleStageClick}
-          className={`relative overflow-hidden transition-all duration-300 ${
-            stageMode === 'gameplay' || is916Mode ? 'cursor-none' : 'cursor-default'
-          } ${
-            is916Mode || stageMode === 'edit'
+          className={`relative overflow-hidden transition-all duration-300 ${stageMode === 'gameplay' || is916Mode ? 'cursor-none' : 'cursor-default'
+            } ${is916Mode || stageMode === 'edit'
               ? 'w-full h-full bg-white flex items-center justify-center'
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
-          }`}
+            }`}
         >
           {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất */}
           <div
@@ -1516,18 +1499,16 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               transform: `scale(${stageScale})`,
               transformOrigin: 'center center'
             }}
-            className={`relative shrink-0 flex items-center justify-center select-none ${
-              stageMode === 'edit' && !is916Mode ? 'ring-2 ring-purple-400/40 rounded-2xl' : ''
-            }`}
+            className={`relative shrink-0 flex items-center justify-center select-none ${stageMode === 'edit' && !is916Mode ? 'ring-2 ring-purple-400/40 rounded-2xl' : ''
+              }`}
           >
             {/* 1. KHAY ẢNH GỐC (PHẦN PHÍA TRÊN / KHAY CHỌN ĐỂ KÉO XUỐNG) */}
             <div
               onMouseDown={handleStartDragTray}
-              className={`absolute z-30 flex flex-col items-center p-2 rounded-xl transition-all select-none ${
-                stageMode === 'edit' && !is916Mode
+              className={`absolute z-30 flex flex-col items-center p-2 rounded-xl transition-all select-none ${stageMode === 'edit' && !is916Mode
                   ? 'cursor-grab active:cursor-grabbing border-2 border-dashed border-purple-400 bg-purple-500/10 hover:bg-purple-500/20'
                   : ''
-              }`}
+                }`}
               style={{
                 left: `${trayOffsetX}px`,
                 top: `calc(50% + ${trayOffsetY}px)`,
@@ -1552,11 +1533,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                       handlePickItem(i, src);
                     }
                   }}
-                  className={`transition-all flex items-center justify-center select-none ${
-                    stageMode === 'edit' && !is916Mode
+                  className={`transition-all flex items-center justify-center select-none ${stageMode === 'edit' && !is916Mode
                       ? 'cursor-grab'
                       : 'hover:scale-110 cursor-none'
-                  }`}
+                    }`}
                   style={{
                     width: `${trayItemSize}px`,
                     height: `${trayItemSize}px`
@@ -1583,17 +1563,15 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                 <div
                   key={layer.id}
                   onMouseDown={(e) => handleStartDragLayer(e, layer)}
-                  className={`absolute ${
-                    isDraggingThis ? 'transition-none select-none' : isMovable ? 'transition-all duration-75' : 'transition-all duration-300'
-                  } ${
-                    stageMode === 'edit' || isMovable
+                  className={`absolute ${isDraggingThis ? 'transition-none select-none' : isMovable ? 'transition-all duration-75' : 'transition-all duration-300'
+                    } ${stageMode === 'edit' || isMovable
                       ? isDraggingThis
                         ? 'cursor-grabbing'
                         : is916Mode
-                        ? 'cursor-none'
-                        : 'cursor-grab hover:ring-2 hover:ring-purple-400 rounded-2xl'
+                          ? 'cursor-none'
+                          : 'cursor-grab hover:ring-2 hover:ring-purple-400 rounded-2xl'
                       : ''
-                  } ${isSelected && !is916Mode ? 'ring-2 ring-purple-500 rounded-2xl' : ''}`}
+                    } ${isSelected && !is916Mode ? 'ring-2 ring-purple-500 rounded-2xl' : ''}`}
                   style={{
                     left: `calc(50% + ${layer.x}px)`,
                     top: `calc(50% + ${layer.y}px)`,
@@ -1607,8 +1585,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                     stageMode === 'edit'
                       ? `Kéo để di chuyển: ${layer.name}`
                       : isMovable
-                      ? `Giữ chuột để di chuyển ảnh tự do: ${layer.name}`
-                      : ''
+                        ? `Giữ chuột để di chuyển ảnh tự do: ${layer.name}`
+                        : ''
                   }
                 >
                   {/* Nhãn hiển thị khi ở chế độ edit */}
@@ -1658,9 +1636,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               <div
                 key={item.id}
                 onClick={(e) => handlePlacedItemClick(e, item)}
-                className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)] flex items-center justify-center select-none ${
-                  item.isReturning ? 'z-30 pointer-events-none' : 'z-20 cursor-none'
-                }`}
+                className={`absolute transition-all duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)] flex items-center justify-center select-none ${item.isReturning ? 'z-30 pointer-events-none' : 'z-20 cursor-none'
+                  }`}
                 style={{
                   left: `${item.x}px`,
                   top: `${item.y}px`,

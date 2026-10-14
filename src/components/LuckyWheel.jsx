@@ -462,7 +462,7 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
                 onClick={() => setIs916Mode(true)}
                 className="mt-2 p-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs"
               >
-                <Play size={16} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
+                <Play size={16} /> Khởi Chạy
               </button>
             </div>
           )}
@@ -475,8 +475,8 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
           ref={stageRef}
           onMouseMove={handleMouseMove}
           className={`relative overflow-hidden cursor-auto transition-all duration-300 ${is916Mode
-              ? 'w-full h-full bg-white flex items-center justify-center'
-              : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
+            ? 'w-full h-full bg-white flex items-center justify-center'
+            : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
           {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất */}
@@ -576,14 +576,14 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
               {activeCharImg && (
                 <div
                   className={`relative transition-all duration-700 ease-out flex items-center justify-center ${charPos.status === 'ko'
-                      ? 'rotate-90 scale-90 translate-y-8 opacity-80'
-                      : charPos.status === 'sucked'
-                        ? 'scale-0 rotate-[1080deg] -translate-y-40 duration-1000'
-                        : charPos.status === 'dancing'
-                          ? 'animate-bounce scale-110'
-                          : turnPhase === 'walking'
-                            ? '-translate-y-24 scale-105'
-                            : 'translate-y-0 scale-100'
+                    ? 'rotate-90 scale-90 translate-y-8 opacity-80'
+                    : charPos.status === 'sucked'
+                      ? 'scale-0 rotate-[1080deg] -translate-y-40 duration-1000'
+                      : charPos.status === 'dancing'
+                        ? 'animate-bounce scale-110'
+                        : turnPhase === 'walking'
+                          ? '-translate-y-24 scale-105'
+                          : 'translate-y-0 scale-100'
                     }`}
                 >
                   {/* NẾU LÀ TRẠNG THÁI NHẬN QUÀ (DANCING), HIỂN THỊ TRỰC TIẾP ẢNH NHẬN QUÀ (COUPLEIMG) THAY THẾ NHÂN VẬT */}

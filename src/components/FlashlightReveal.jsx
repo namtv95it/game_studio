@@ -353,11 +353,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       key={preset.color}
                       type="button"
                       onClick={() => setBeamBgColor(preset.color)}
-                      className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer shadow-sm ${
-                        beamBgColor.toLowerCase() === preset.color.toLowerCase()
+                      className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer shadow-sm ${beamBgColor.toLowerCase() === preset.color.toLowerCase()
                           ? 'ring-2 ring-sky-400 scale-125 border-white'
                           : 'border-slate-700 opacity-90 hover:opacity-100'
-                      }`}
+                        }`}
                       style={{ backgroundColor: preset.color }}
                       title={preset.label}
                     />
@@ -661,9 +660,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                             key={p.color}
                             type="button"
                             onClick={() => setWatermarkBgColor(p.color)}
-                            className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${
-                              watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
-                            }`}
+                            className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
+                              }`}
                             style={{ backgroundColor: p.color }}
                             title={p.name}
                           />
@@ -764,7 +762,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             onClick={() => setIs916Mode(true)}
             className="mt-auto p-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
-            <Play size={18} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
+            <Play size={18} /> Khởi Chạy
           </button>
         </div>
       )}
@@ -777,8 +775,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           ref={containerRef}
           onMouseMove={handleMouseMove}
           className={`relative overflow-hidden cursor-none transition-all duration-300 ${is916Mode
-              ? 'w-full h-full bg-white flex items-center justify-center'
-              : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
+            ? 'w-full h-full bg-white flex items-center justify-center'
+            : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
           {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
@@ -852,12 +850,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   zIndex: 25,
                   ...(enableWatermarkBg
                     ? {
-                        backgroundColor: watermarkBgColor,
-                        opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
-                        padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
-                        borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      }
+                      backgroundColor: watermarkBgColor,
+                      opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
+                      padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
+                      borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }
                     : {})
                 }}
               >

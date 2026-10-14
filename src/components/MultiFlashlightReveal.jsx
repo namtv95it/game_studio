@@ -205,10 +205,10 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         prev.map((item) =>
           item.id === draggingItemId
             ? {
-                ...item,
-                x: Math.round(dragStartRef.current.itemInitX + deltaX),
-                y: Math.round(dragStartRef.current.itemInitY + deltaY)
-              }
+              ...item,
+              x: Math.round(dragStartRef.current.itemInitX + deltaX),
+              y: Math.round(dragStartRef.current.itemInitY + deltaY)
+            }
             : item
         )
       );
@@ -464,21 +464,19 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
           <div className="flex bg-slate-900/90 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => setStageMode('edit')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'edit'
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stageMode === 'edit'
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Move size={14} /> Kéo Xếp Vị Trí
             </button>
             <button
               onClick={() => setStageMode('flashlight')}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                stageMode === 'flashlight'
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${stageMode === 'flashlight'
                   ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               <Sparkles size={14} /> Chế Độ Soi Đèn
             </button>
@@ -518,60 +516,58 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                 </div>
               ) : (
                 items.map((item, idx) => {
-                const isSelected = item.id === selectedItemId;
-                return (
-                  <div
-                    key={item.id}
-                    draggable
-                    onDragStart={() => handleDragStartList(idx)}
-                    onDragOver={(e) => handleDragOverList(e, idx)}
-                    onDragEnd={() => { setDraggedListIdx(null); setDragOverListIdx(null); }}
-                    onDrop={() => handleDropList(idx)}
-                    onClick={() => {
-                      setSelectedItemId(item.id);
-                      setStageMode('edit');
-                    }}
-                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${
-                      isSelected
-                        ? 'bg-sky-900/40 border-sky-400 ring-1 ring-sky-400/50 shadow-md'
-                        : 'bg-slate-900/60 border-slate-700 hover:border-slate-500'
-                    } ${draggedListIdx === idx ? 'opacity-40 border-dashed' : ''} ${
-                      dragOverListIdx === idx ? 'ring-2 ring-sky-400 border-sky-400 scale-102' : ''
-                    }`}
-                  >
-                    <GripVertical size={14} className="text-slate-500 hover:text-slate-300 cursor-grab" />
-                    
-                    <div className="w-9 h-9 rounded bg-slate-950/80 p-0.5 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
-                      <img src={item.src} alt={item.name} className="w-full h-full object-contain" />
-                    </div>
+                  const isSelected = item.id === selectedItemId;
+                  return (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={() => handleDragStartList(idx)}
+                      onDragOver={(e) => handleDragOverList(e, idx)}
+                      onDragEnd={() => { setDraggedListIdx(null); setDragOverListIdx(null); }}
+                      onDrop={() => handleDropList(idx)}
+                      onClick={() => {
+                        setSelectedItemId(item.id);
+                        setStageMode('edit');
+                      }}
+                      className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${isSelected
+                          ? 'bg-sky-900/40 border-sky-400 ring-1 ring-sky-400/50 shadow-md'
+                          : 'bg-slate-900/60 border-slate-700 hover:border-slate-500'
+                        } ${draggedListIdx === idx ? 'opacity-40 border-dashed' : ''} ${dragOverListIdx === idx ? 'ring-2 ring-sky-400 border-sky-400 scale-102' : ''
+                        }`}
+                    >
+                      <GripVertical size={14} className="text-slate-500 hover:text-slate-300 cursor-grab" />
 
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-slate-200 truncate">{item.name}</div>
-                      <div className="text-[10px] text-slate-400">
-                        X: {item.x}px | Y: {item.y}px | {item.scale}%
+                      <div className="w-9 h-9 rounded bg-slate-950/80 p-0.5 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
+                        <img src={item.src} alt={item.name} className="w-full h-full object-contain" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-slate-200 truncate">{item.name}</div>
+                        <div className="text-[10px] text-slate-400">
+                          X: {item.x}px | Y: {item.y}px | {item.scale}%
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => toggleVisibility(item.id, e)}
+                          className="p-1 text-slate-400 hover:text-white transition-colors"
+                          title={item.visible ? 'Ẩn ảnh' : 'Hiện ảnh'}
+                        >
+                          {item.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-slate-600" />}
+                        </button>
+
+                        <button
+                          onClick={(e) => handleDeleteItem(item.id, e)}
+                          className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                          title="Xóa lớp này"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => toggleVisibility(item.id, e)}
-                        className="p-1 text-slate-400 hover:text-white transition-colors"
-                        title={item.visible ? 'Ẩn ảnh' : 'Hiện ảnh'}
-                      >
-                        {item.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-slate-600" />}
-                      </button>
-
-                      <button
-                        onClick={(e) => handleDeleteItem(item.id, e)}
-                        className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
-                        title="Xóa lớp này"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              }))}
+                  );
+                }))}
             </div>
           </div>
 
@@ -706,11 +702,10 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                         key={preset.color}
                         type="button"
                         onClick={() => setBeamBgColor(preset.color)}
-                        className={`w-5.5 h-5.5 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer shadow-sm ${
-                          beamBgColor.toLowerCase() === preset.color.toLowerCase()
+                        className={`w-5.5 h-5.5 rounded-full border-2 transition-transform hover:scale-125 cursor-pointer shadow-sm ${beamBgColor.toLowerCase() === preset.color.toLowerCase()
                             ? 'ring-2 ring-sky-400 scale-125 border-white'
                             : 'border-slate-700 opacity-90 hover:opacity-100'
-                        }`}
+                          }`}
                         style={{ backgroundColor: preset.color }}
                         title={preset.label}
                       />
@@ -920,9 +915,8 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                               key={p.color}
                               type="button"
                               onClick={() => setWatermarkBgColor(p.color)}
-                              className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${
-                                watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
-                              }`}
+                              className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
+                                }`}
                               style={{ backgroundColor: p.color }}
                               title={p.name}
                             />
@@ -1027,28 +1021,25 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             }}
             className="mt-auto p-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs"
           >
-            <Play size={16} /> Ẩn Giao Diện Quay Video (ESC Quay Lại)
+            <Play size={16} /> Khởi Chạy
           </button>
         </div>
       )}
 
       {/* SÂN KHẤU CANVAS TRÌNH CHIẾU */}
       <div
-        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${
-          is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
-        }`}
+        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
+          }`}
         onMouseUp={handleMouseUpStage}
       >
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
-          className={`relative overflow-hidden transition-all duration-300 ${
-            stageMode === 'flashlight' || is916Mode ? 'cursor-none' : 'cursor-default'
-          } ${
-            is916Mode
+          className={`relative overflow-hidden transition-all duration-300 ${stageMode === 'flashlight' || is916Mode ? 'cursor-none' : 'cursor-default'
+            } ${is916Mode
               ? 'w-full h-full bg-white flex items-center justify-center'
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
-          }`}
+            }`}
         >
           {/* Nền Grid Kẻ Ô Mờ */}
           <div
@@ -1121,12 +1112,12 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                   zIndex: 25,
                   ...(enableWatermarkBg
                     ? {
-                        backgroundColor: watermarkBgColor,
-                        opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
-                        padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
-                        borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      }
+                      backgroundColor: watermarkBgColor,
+                      opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
+                      padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
+                      borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    }
                     : {})
                 }}
               >
@@ -1175,9 +1166,8 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                   <div
                     key={item.id}
                     onMouseDown={(e) => handleStartDragItem(e, item)}
-                    className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center transition-shadow group ${
-                      isSelected ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-black/50' : 'hover:ring-1 hover:ring-sky-300'
-                    }`}
+                    className={`absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center transition-shadow group ${isSelected ? 'ring-2 ring-sky-400 ring-offset-2 ring-offset-black/50' : 'hover:ring-1 hover:ring-sky-300'
+                      }`}
                     style={{
                       left: `${posX}px`,
                       top: `${posY}px`,
