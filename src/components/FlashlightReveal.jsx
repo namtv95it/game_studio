@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus } from 'lucide-react';
+import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 
 const STORAGE_KEY = 'flashlight_game_settings';
 
@@ -1072,14 +1073,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               <span>Đang bật chế độ đặt dấu <b>?</b>: Nhấp lên vị trí bóng đen để thêm, nhấp vào dấu <b>?</b> đã có để xóa</span>
             </div>
           )}
-          {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: `linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
+          {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
+          <StageBackgroundOverlay />
 
           {/* QUẦNG SÁNG ĐÈN PIN NỀN TRÊN CONTAINER (Không bao giờ bị cắt viền do mép canvas) - Tắt khi đang ở chế độ đặt dấu hỏi ? */}
           {enableBeamBg && (!isPlacingQm || is916Mode) && (

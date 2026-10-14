@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles } from 'lucide-react';
+import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -715,14 +716,8 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
-          {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: `linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
+          {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
+          <StageBackgroundOverlay />
 
           {/* THEATER CONTAINER CỐ ĐỊNH 1280x720: TOÀN BỘ KHAY ẢNH, BÓNG ĐEN, THẺ ĐÃ GHÉP NẰM CHUNG 1 HỆ QUY CHIẾU */}
           <div

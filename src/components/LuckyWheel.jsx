@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, RefreshCw, Play, Disc, Settings, RotateCcw, Heart, Layers } from 'lucide-react';
+import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 
 // Hình ảnh mặc định chất lượng cao dành cho Sonic, Tails, Knuckles và Phần thưởng
 const DEFAULT_CHARACTERS = [
@@ -479,14 +480,8 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
             : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
-          {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: `linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
+          {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
+          <StageBackgroundOverlay />
 
           {/* GAMEPLAY LAYOUT CONTAINER (Rotated -90deg for 9:16 Short Video Aspect) */}
           <div className="relative w-[540px] h-[960px] flex flex-col items-center justify-between p-6 select-none" style={{ transform: 'rotate(-90deg)', transformOrigin: 'center center' }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play } from 'lucide-react';
+import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import demon1 from '../assets/redemption/character_demon.jpg';
 import demon2 from '../assets/redemption/character_demon2.jpg';
 import demon3 from '../assets/redemption/character_demon3.jpg';
@@ -364,14 +365,8 @@ export default function RedemptionEffect({ is916Mode: propIs916Mode, setIs916Mod
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl flex items-center justify-center'
             }`}
         >
-          {/* Nền Grid Kẻ Ô Mờ Chuẩn Nhất Xuất Hiện Ở Cả 2 Trạng Thái */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{
-              backgroundImage: `linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
+          {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
+          <StageBackgroundOverlay />
 
           {/* 9:16 rotated container */}
           <div style={{

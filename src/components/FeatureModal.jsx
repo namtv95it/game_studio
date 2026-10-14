@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flashlight, Ghost, Disc, Wand2, X, ArrowRight } from 'lucide-react';
+import { Flashlight, Ghost, Disc, Wand2, Flame, X, ArrowRight } from 'lucide-react';
 
 export const GAME_FEATURES = [
   {
@@ -69,7 +69,17 @@ export const GAME_FEATURES = [
     description: 'Chúa Jesus soi sáng và cảm hóa nhân vật Demon, chuyển đổi từ bóng tối sang ánh sáng qua 3 giai đoạn.',
     icon: Wand2,
     color: 'from-yellow-400 to-amber-600',
-    badge: 'Chức năng 5 · MỚI',
+    badge: 'Chức năng 5',
+    active: true
+  },
+  {
+    id: 'bomb_reveal',
+    title: 'Bom Biến Hình (Studio)',
+    subtitle: 'Mystery Bomb Reveal',
+    description: 'Kéo thả 3 loại bom: Cầu vồng, Tình yêu, Ác quỷ. Đếm ngược 3s rung màn hình và nổ chớp sáng hé lộ nhân vật.',
+    icon: Flame,
+    color: 'from-amber-500 via-orange-500 to-red-600',
+    badge: 'Chức năng MỚI',
     active: true
   }
 ];

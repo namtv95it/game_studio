@@ -4,6 +4,7 @@ import {
   Settings, Image as ImageIcon, Volume2, Wand2, Grid, ArrowLeft, Maximize2, Minimize2, FolderPlus, GripVertical,
   Bell, RotateCcw, MessageCircle, Heart, Share2
 } from 'lucide-react';
+import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 
 /* --- SOUND EFFECTS SYNTHESIZER (Web Audio API) --- */
 const getAudioCtx = () => {
@@ -1454,14 +1455,8 @@ export default function ImageBlend({ is916Mode, setIs916Mode }) {
               : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
         >
-          {/* Nền Grid Kẻ Ô Mờ Tươi Sáng Chuẩn 100% Giống Hệt Trong Ảnh Mẫu */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-60"
-            style={{
-              backgroundImage: `linear-gradient(#e0e7ff 1px, transparent 1px), linear-gradient(90deg, #e0e7ff 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
+          {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
+          <StageBackgroundOverlay />
 
           {/* FULL HD 1080x1920 STAGE ROTATED -90DEG DYNAMICALLY SCALED TO FILL SCREEN PERFECTLY */}
           <div
