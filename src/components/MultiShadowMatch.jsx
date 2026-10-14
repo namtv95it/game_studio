@@ -360,11 +360,17 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
   const handleStageClick = (e) => {
     if (pickedItem) {
       const { x, y } = getTheaterCoords(e);
-      // Tìm xem layer nào là shadow phù hợp (nếu có)
-      const shadowLayer = stageLayers.find(l => l.imageIndex === pickedItem.index && l.type === 'shadow');
-      const baseScale = shadowLayer ? (shadowLayer.scale / 100) : 1;
-      const boxW = 960 * baseScale;
-      const boxH = 540 * baseScale;
+      // Tìm shadow layer phù hợp: ưu tiên layer có cùng imageIndex, nếu không lấy shadow layer có cùng src, hoặc shadow layer đầu tiên đang hiển thị
+      const shadowLayer = 
+        stageLayers.find(l => l.imageIndex === pickedItem.index && l.type === 'shadow') ||
+        stageLayers.find(l => (stageImages[l.imageIndex] === pickedItem.src || images[l.imageIndex] === pickedItem.src) && l.type === 'shadow') ||
+        stageLayers.find(l => l.type === 'shadow' && l.visible) ||
+        stageLayers.find(l => l.type === 'shadow');
+
+      const targetScale = shadowLayer ? shadowLayer.scale : 100;
+      const targetRotation = shadowLayer ? shadowLayer.rotation : 0;
+      const boxW = 960;
+      const boxH = 540;
 
       const newItem = {
         id: Date.now(),
@@ -374,8 +380,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
         y: y - boxH / 2,
         width: boxW,
         height: boxH,
-        targetScale: shadowLayer ? shadowLayer.scale : 100,
-        rotation: shadowLayer ? shadowLayer.rotation : 0
+        targetScale: targetScale,
+        rotation: targetRotation
       };
 
       setPlacedItems([...placedItems, newItem]);
@@ -450,6 +456,18 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     setPickedItem(null);
   };
 
+  // Thay thế toàn bộ ảnh khay phía trên (Top Tray) bằng danh sách ảnh mới
+  const handleTrayImagesReplace = (e) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const newUrls = files.map((file) => URL.createObjectURL(file));
+    setImages(newUrls);
+    setPlacedItems([]);
+    setPickedItem(null);
+    e.target.value = '';
+  };
+
   // Upload ảnh dành riêng cho khay phía trên (Top Tray) - Tải THÊM ảnh vào danh sách
   const handleMultipleImageUpload = (e) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
@@ -467,6 +485,33 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     setImages(updated);
   };
 
+  // Thay thế toàn bộ ảnh sân khấu bằng ảnh mới tải lên (tránh bị nhân trùng lặp các lớp cũ)
+  const handleStageImageReplace = (e) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const newUrls = files.map((file) => URL.createObjectURL(file));
+    setStageImages(newUrls);
+
+    // Tạo đúng 1 bóng đen chính và (nếu tải nhiều hơn 1 ảnh) các layer màu tiếp theo
+    const newLayers = newUrls.map((_, idx) => ({
+      id: `layer-stage-${Date.now()}-${idx}`,
+      imageIndex: idx,
+      type: idx === 0 ? 'shadow' : 'color',
+      x: idx === 0 ? 0 : ((idx * 60) % 240) - 60,
+      y: idx === 0 ? 0 : ((idx * 40) % 160) - 40,
+      scale: idx === 0 ? 100 : 75,
+      rotation: 0,
+      visible: true,
+      name: idx === 0 ? 'Bóng Đen (#1)' : `Ảnh Màu #${idx + 1}`
+    }));
+
+    setStageLayers(newLayers);
+    setSelectedImageIndex(0);
+    setSelectedLayerId(newLayers[0]?.id || null);
+    e.target.value = '';
+  };
+
   // Upload ảnh dành riêng cho Lớp Sân Khấu (Stage Layers) - Tải THÊM ảnh vào danh sách
   const handleStageImageUpload = (e) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
@@ -476,7 +521,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
     const startIdx = stageImages.length;
     setStageImages(prev => [...prev, ...newUrls]);
 
-    // Tự động tạo thêm layer tương ứng cho các ảnh mới tải lên
+    // Tự động tạo thêm layer tương ứng cho các ảnh mới tải lên (mỗi ảnh tải lên chỉ tạo 1 layer duy nhất)
     const addedLayers = newUrls.map((_, i) => {
       const idx = startIdx + i;
       return {
@@ -818,11 +863,24 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                 </button>
               </div>
 
-              {/* Upload ảnh khay phía trên - TẢI THÊM ẢNH */}
-              <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-sky-500/60 text-xs font-semibold transition-colors shadow-sm">
-                <Upload size={14} className="text-sky-400" /> + Tải Thêm Ảnh Cho Khay Phía Trên (PNG)
-                <input type="file" accept="image/*" multiple onChange={handleMultipleImageUpload} className="hidden" />
-              </label>
+              {/* CÁC NÚT UPLOAD ẢNH KHAY TRÊN */}
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col items-center justify-center p-2.5 bg-sky-700/80 hover:bg-sky-600 text-white rounded-xl cursor-pointer border border-sky-400/50 text-xs font-bold transition-all shadow-md text-center gap-1 active:scale-98">
+                  <div className="flex items-center gap-1.5">
+                    <Upload size={14} /> <span>Thay Toàn Bộ Ảnh</span>
+                  </div>
+                  <span className="text-[10px] text-sky-200 font-normal">Xóa khay cũ, nạp ảnh mới</span>
+                  <input type="file" accept="image/*" multiple onChange={handleTrayImagesReplace} className="hidden" />
+                </label>
+
+                <label className="flex flex-col items-center justify-center p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl cursor-pointer border border-dashed border-sky-500/60 text-xs font-semibold transition-all shadow-sm text-center gap-1 active:scale-98">
+                  <div className="flex items-center gap-1.5 text-sky-300">
+                    <Plus size={14} /> <span>Tải Thêm Ảnh</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-normal">Thêm vào khay hiện tại</span>
+                  <input type="file" accept="image/*" multiple onChange={handleMultipleImageUpload} className="hidden" />
+                </label>
+              </div>
 
               {/* Grid sắp xếp thứ tự ảnh khay trên */}
               <div className="flex flex-col gap-1.5">
@@ -943,11 +1001,24 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
               {/* CHẾ ĐỘ 1: BÌNH THƯỜNG - CÀI ĐẶT ẢNH & THÔNG SỐ LAYER */}
               {stageSubView === 'settings' && (
                 <>
-                  {/* Nút Upload ảnh dành riêng cho Sân Khấu - TẢI THÊM ẢNH */}
-                  <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-purple-500/60 text-xs font-semibold transition-colors shadow-sm">
-                    <Upload size={14} className="text-purple-400" /> + Tải Thêm Ảnh Cho Sân Khấu (PNG)
-                    <input type="file" accept="image/*" multiple onChange={handleStageImageUpload} className="hidden" />
-                  </label>
+                  {/* CÁC NÚT UPLOAD ẢNH SÂN KHẤU */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex flex-col items-center justify-center p-2.5 bg-purple-700/80 hover:bg-purple-600 text-white rounded-xl cursor-pointer border border-purple-400/50 text-xs font-bold transition-all shadow-md text-center gap-1 active:scale-98">
+                      <div className="flex items-center gap-1.5">
+                        <Upload size={14} /> <span>Thay Mới 1 Ảnh</span>
+                      </div>
+                      <span className="text-[10px] text-purple-200 font-normal">Xóa lớp cũ, chỉ lấy ảnh này</span>
+                      <input type="file" accept="image/*" onChange={handleStageImageReplace} className="hidden" />
+                    </label>
+
+                    <label className="flex flex-col items-center justify-center p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl cursor-pointer border border-dashed border-purple-500/60 text-xs font-semibold transition-all shadow-sm text-center gap-1 active:scale-98">
+                      <div className="flex items-center gap-1.5 text-purple-300">
+                        <Plus size={14} /> <span>Tải Thêm Ảnh</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-normal">Giữ các ảnh hiện tại</span>
+                      <input type="file" accept="image/*" multiple onChange={handleStageImageUpload} className="hidden" />
+                    </label>
+                  </div>
 
                   {/* DANH SÁCH ẢNH SÂN KHẤU - CLICK ĐỂ CHỌN & CÀI ĐẶT */}
                   <div className="flex flex-col gap-2">
@@ -1670,40 +1741,50 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
             ))}
 
             {/* 4. ẢNH ĐANG CẦM THEO CON TRỎ CHUỘT */}
-            {pickedItem && (
-              <div
-                className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 opacity-100 z-40 flex items-center justify-center"
-                style={{
-                  left: `${cursorPos.x}px`,
-                  top: `${cursorPos.y}px`,
-                  width: '960px',
-                  height: '540px'
-                }}
-              >
+            {pickedItem && (() => {
+              const matchedShadow = 
+                stageLayers.find(l => l.imageIndex === pickedItem.index && l.type === 'shadow') ||
+                stageLayers.find(l => (stageImages[l.imageIndex] === pickedItem.src || images[l.imageIndex] === pickedItem.src) && l.type === 'shadow') ||
+                stageLayers.find(l => l.type === 'shadow' && l.visible) ||
+                stageLayers.find(l => l.type === 'shadow');
+              const previewScale = matchedShadow ? (matchedShadow.scale / 100) : 1;
+              const previewRotation = matchedShadow ? matchedShadow.rotation : 0;
+
+              return (
                 <div
+                  className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 opacity-95 z-40 flex items-center justify-center transition-transform duration-75"
                   style={{
-                    width: '540px',
-                    height: '960px',
-                    transform: 'rotate(-90deg) scale(1)',
-                    transformOrigin: 'center center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    left: `${cursorPos.x}px`,
+                    top: `${cursorPos.y}px`,
+                    width: '960px',
+                    height: '540px'
                   }}
                 >
-                  <img
-                    src={pickedItem.src}
-                    alt="Following"
+                  <div
                     style={{
-                      maxWidth: '85%',
-                      maxHeight: '85%',
-                      objectFit: 'contain'
+                      width: '540px',
+                      height: '960px',
+                      transform: `rotate(${previewRotation - 90}deg) scale(${previewScale})`,
+                      transformOrigin: 'center center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
-                    className="drop-shadow-2xl"
-                  />
+                  >
+                    <img
+                      src={pickedItem.src}
+                      alt="Following"
+                      style={{
+                        maxWidth: '85%',
+                        maxHeight: '85%',
+                        objectFit: 'contain'
+                      }}
+                      className="drop-shadow-2xl"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* 5. HAND CURSOR 👆 */}
             {(stageMode === 'gameplay' || is916Mode) && (

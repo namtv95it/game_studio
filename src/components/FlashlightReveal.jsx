@@ -1,8 +1,38 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus } from 'lucide-react';
+import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 
 const STORAGE_KEY = 'flashlight_game_settings';
+
+const DEFAULT_SETTINGS = {
+  imageSrc: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+  radius: 80,
+  spotlightType: 'circle',
+  beamAngle: -135,
+  coneSpread: 45,
+  handSize: 48,
+  scale: 100,
+  offsetY: 0,
+  beamBgColor: '#fef08a',
+  enableBeamBg: true,
+  beamOpacity: 100,
+  watermarkText: '@Soonix',
+  enableWatermark: true,
+  watermarkFontSize: 14,
+  watermarkColor: '#94a3b8',
+  watermarkOpacity: 50,
+  watermarkOffset: 0,
+  watermarkDistance: 16,
+  enableWatermarkBeamEffect: true,
+  watermarkActiveColor: '#facc15',
+  enableWatermarkBg: true,
+  watermarkBgColor: '#ffcc00',
+  watermarkBgOpacity: 100,
+  enableQuestionMarks: true,
+  questionMarks: [],
+  qmColor: '#ef4444',
+  qmDefaultSize: 48
+};
 
 export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
   const getSavedSettings = () => {
@@ -66,6 +96,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     setActiveSection((prev) => (prev === key ? null : key));
   };
 
+  const handleResetSettings = () => {
+    setImageSrc('');
+    setQuestionMarks([]);
+    setIsPlacingQm(false);
+  };
+
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
@@ -120,6 +156,15 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   // Load Image
   useEffect(() => {
+    if (!imageSrc) {
+      imgRef.current = null;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.src = imageSrc;
@@ -188,11 +233,14 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     const canvas = canvasRef.current;
     if (!canvas) return;
     const activeImg = imgRef.current;
-    if (!activeImg || !activeImg.width || !activeImg.height) return;
-
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
+
+    if (!activeImg || !activeImg.width || !activeImg.height) {
+      ctx.clearRect(0, 0, width, height);
+      return;
+    }
 
     // Aspect ratio fit (contain mode) - giữ tỉ lệ gốc của ảnh PNG, không bị méo hay cắt mép ở chân/đầu
     const imgRatio = activeImg.width / activeImg.height;
@@ -1041,10 +1089,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             )}
           </div>
 
+          {/* Nút Reset: Xóa Hết Hình Ảnh & Dấu ? */}
+          <button
+            type="button"
+            onClick={handleResetSettings}
+            className="mt-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+            title="Xóa hết hình ảnh và dấu ? trên sân khấu, giữ nguyên toàn bộ thông số đèn pin và watermark"
+          >
+            <RotateCcw size={15} className="text-amber-400" /> Reset (Xóa Ảnh & Dấu ?)
+          </button>
+
           {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
           <button
             onClick={() => setIs916Mode(true)}
-            className="mt-2 p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:shadow-sky-500/20 active:scale-98"
+            className="p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:shadow-sky-500/20 active:scale-98"
           >
             <Play size={18} /> Khởi Chạy
           </button>
