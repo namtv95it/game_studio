@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
+import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 
 const STORAGE_KEY = 'flashlight_game_settings';
 
@@ -11,6 +12,12 @@ const DEFAULT_SETTINGS = {
   beamAngle: -135,
   coneSpread: 45,
   handSize: 48,
+  pointerEmoji: '👆',
+  pointerRotation: -90,
+  pointerOffsetX: 0,
+  pointerOffsetY: 0,
+  pointerAnchor: 'tip',
+  enablePointer: true,
   scale: 100,
   offsetY: 0,
   beamBgColor: '#fef08a',
@@ -31,7 +38,8 @@ const DEFAULT_SETTINGS = {
   enableQuestionMarks: true,
   questionMarks: [],
   qmColor: '#ef4444',
-  qmDefaultSize: 48
+  qmDefaultSize: 48,
+  beamStartWidth: 55
 };
 
 export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
@@ -50,8 +58,15 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
   const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
   const [beamAngle, setBeamAngle] = useState(initialSettings.beamAngle ?? -135);
-  const [coneSpread, setConeSpread] = useState(initialSettings.coneSpread ?? 45);
+  const [coneSpread, setConeSpread] = useState(initialSettings.coneSpread !== undefined ? initialSettings.coneSpread : 6);
+  const [beamStartWidth, setBeamStartWidth] = useState(initialSettings.beamStartWidth ?? 55);
   const [handSize, setHandSize] = useState(initialSettings.handSize ?? 48);
+  const [pointerEmoji, setPointerEmoji] = useState(initialSettings.pointerEmoji || '👆');
+  const [pointerRotation, setPointerRotation] = useState(initialSettings.pointerRotation ?? -90);
+  const [pointerOffsetX, setPointerOffsetX] = useState(initialSettings.pointerOffsetX ?? 0);
+  const [pointerOffsetY, setPointerOffsetY] = useState(initialSettings.pointerOffsetY ?? 0);
+  const [pointerAnchor, setPointerAnchor] = useState(initialSettings.pointerAnchor || 'tip');
+  const [enablePointer, setEnablePointer] = useState(initialSettings.enablePointer ?? true);
   const [scale, setScale] = useState(initialSettings.scale ?? 100);
   const [offsetY, setOffsetY] = useState(initialSettings.offsetY ?? 0);
   // Màu nền của quầng sáng đèn pin (phần không có nhân vật trong vùng chiếu)
@@ -83,6 +98,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [qmColor, setQmColor] = useState(initialSettings.qmColor || '#ef4444'); // Đỏ tươi như trong ảnh
   const [qmDefaultSize, setQmDefaultSize] = useState(initialSettings.qmDefaultSize ?? 48);
   const [isPlacingQm, setIsPlacingQm] = useState(false); // Bật chế độ bấm để thêm dấu ?
+  const [lockPointerToCenter, setLockPointerToCenter] = useState(false); // Cố định con trỏ vào tâm để điều chỉnh
 
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
   const [internalIs916Mode, setInternalIs916Mode] = useState(false);
@@ -114,7 +130,14 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         spotlightType,
         beamAngle,
         coneSpread,
+        beamStartWidth,
         handSize,
+        pointerEmoji,
+        pointerRotation,
+        pointerOffsetX,
+        pointerOffsetY,
+        pointerAnchor,
+        enablePointer,
         scale,
         offsetY,
         imageSrc,
@@ -141,7 +164,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     } catch (e) {
       console.error('Không thể lưu cài đặt:', e);
     }
-  }, [radius, spotlightType, beamAngle, coneSpread, handSize, scale, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize]);
+  }, [radius, spotlightType, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize]);
 
   // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -195,8 +218,34 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     return { canvasX, canvasY, rawX, rawY };
   };
 
+  // Cố định con trỏ vào chính giữa sân khấu để người dùng dễ quan sát và kéo chỉnh
+  const centerCursor = () => {
+    if (!containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const rawX = containerRect.width / 2;
+    const rawY = containerRect.height / 2;
+
+    let canvasX = 270;
+    let canvasY = 480;
+    if (canvasRef.current) {
+      canvasX = canvasRef.current.width / 2;
+      canvasY = canvasRef.current.height / 2;
+    }
+    setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+  };
+
+  useEffect(() => {
+    if (lockPointerToCenter) {
+      centerCursor();
+      const handleResize = () => centerCursor();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [lockPointerToCenter, is916Mode]);
+
   // Handle Mouse Move: Tính toán ma trận đồng bộ 100% khi nằm ngang 90deg ở cả 2 trạng thái
   const handleMouseMove = (e) => {
+    if (lockPointerToCenter) return;
     const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
     setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
   };
@@ -302,24 +351,38 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         ctx.arc(cursorPos.x, cursorPos.y, radius, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Vệt Nón Chiếu Chéo theo beamAngle (Góc Hướng) và coneSpread (Độ Mở Góc Chiếu)
+        // Vệt Nón / Chùm Chiếu theo beamAngle (Góc Hướng), coneSpread (Độ Mở Góc Chiếu) và beamStartWidth (Bề Rộng Gốc)
         ctx.save();
         const centerRad = (beamAngle * Math.PI) / 180;
         const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
-        const length = Math.max(width, height) * 2.5;
+        const length = Math.max(width, height) * 3;
+
+        // Tính bề rộng gốc quy đổi theo canvas
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (height / canvasRect.width) : 1;
+        const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
+
+        const perpX = -Math.sin(centerRad);
+        const perpY = Math.cos(centerRad);
+
+        const p1x = cursorPos.x - hwCanvas * perpX;
+        const p1y = cursorPos.y - hwCanvas * perpY;
+        const p2x = cursorPos.x + hwCanvas * perpX;
+        const p2y = cursorPos.y + hwCanvas * perpY;
 
         const angle1 = centerRad - halfSpreadRad;
         const angle2 = centerRad + halfSpreadRad;
 
-        const x1 = cursorPos.x + Math.cos(angle1) * length;
-        const y1 = cursorPos.y + Math.sin(angle1) * length;
-        const x2 = cursorPos.x + Math.cos(angle2) * length;
-        const y2 = cursorPos.y + Math.sin(angle2) * length;
+        const q1x = p1x + Math.cos(angle1) * length;
+        const q1y = p1y + Math.sin(angle1) * length;
+        const q2x = p2x + Math.cos(angle2) * length;
+        const q2y = p2y + Math.sin(angle2) * length;
 
         ctx.beginPath();
-        ctx.moveTo(cursorPos.x, cursorPos.y);
-        ctx.lineTo(x1, y1);
-        ctx.lineTo(x2, y2);
+        ctx.moveTo(p1x, p1y);
+        ctx.lineTo(q1x, q1y);
+        ctx.lineTo(q2x, q2y);
+        ctx.lineTo(p2x, p2y);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -335,7 +398,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, imageSrc, is916Mode, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm]);
+  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -358,16 +421,22 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     } else {
       const dx = wmCanvasX - cursorPos.x;
       const dy = wmCanvasY - cursorPos.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 20) return true;
-
-      const angleToWm = Math.atan2(dy, dx);
       const centerRad = (beamAngle * Math.PI) / 180;
-      let angleDiff = Math.abs(angleToWm - centerRad);
-      while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - 2 * Math.PI);
+
+      const canvasRect = canvasRef.current?.getBoundingClientRect();
+      const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (960 / canvasRect.width) : 1;
+      const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
+
+      const cosA = Math.cos(centerRad);
+      const sinA = Math.sin(centerRad);
+
+      const s = dx * cosA + dy * sinA;
+      const p = Math.abs(-dx * sinA + dy * cosA);
 
       const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
-      return angleDiff <= (halfSpread + 0.15);
+      const wAtS = hwCanvas + Math.max(0, s) * Math.tan(halfSpread);
+
+      return s >= -20 && p <= (wAtS + 25);
     }
   })();
 
@@ -378,13 +447,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     <div className={`flex w-full bg-slate-900 relative ${is916Mode ? 'h-full' : 'h-[calc(100vh-56px)]'}`}>
       {/* TRẠNG THÁI 2: GIỮ NGUYÊN SIDEBAR (Nút Khởi Chạy dùng để bật Trạng Thái 1: Ẩn Hết) */}
       {!is916Mode && (
-        <div className="w-80 bg-slate-800 p-5 border-r border-slate-700 flex flex-col gap-5 overflow-y-auto">
+        <div className="w-80 bg-slate-800 p-5 pb-24 border-r border-slate-700 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <h2 className="text-lg font-bold text-sky-400 flex items-center gap-2">
             🔦 CÀI ĐẶT SOI ĐÈN PIN (PNG)
           </h2>
 
           {/* NHÓM 1: NHÂN VẬT & KHUNG HÌNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
             <button
               type="button"
               onClick={() => toggleSection('character')}
@@ -469,7 +538,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           </div>
 
           {/* NHÓM 2: VỆT SÁNG & ĐÈN PIN */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
             <button
               type="button"
               onClick={() => toggleSection('flashlight')}
@@ -489,6 +558,35 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
             {activeSection === 'flashlight' && (
               <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
+                {/* 📌 CHECKBOX CỐ ĐỊNH CON TRỎ / ĐÈN PIN VÀO TÂM */}
+                <label className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                  lockPointerToCenter
+                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 shadow-sm ring-1 ring-amber-500/30'
+                    : 'bg-slate-950/60 border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-500'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={lockPointerToCenter}
+                      onChange={(e) => setLockPointerToCenter(e.target.checked)}
+                      className="accent-amber-400 cursor-pointer w-4 h-4 rounded"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
+                        <span>📌</span> Cố định đèn pin vào tâm
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Khóa đèn ở giữa sân khấu để dễ kéo thanh trượt căn chỉnh
+                      </span>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
+                    lockPointerToCenter ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {lockPointerToCenter ? 'Khóa Tâm' : 'Tự do'}
+                  </span>
+                </label>
+
                 {/* Spotlight Type */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-medium">Kiểu Chiếu Đèn Pin:</label>
@@ -530,11 +628,38 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
                 {/* Cone options */}
                 {spotlightType === 'cone' && (
-                  <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
+                  <div className="flex flex-col gap-2.5 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
+                    {/* Hướng Chiếu Beam Angle */}
                     <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[11px] text-slate-300 font-semibold">
-                        <span>Hướng:</span>
-                        <span className="text-sky-400 font-mono">{beamAngle}°</span>
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>Hướng Chiếu:</span>
+                        <div className="flex items-center gap-1 font-mono text-white text-xs">
+                          <input
+                            type="number"
+                            min="-180"
+                            max="180"
+                            value={beamAngle}
+                            onChange={(e) => setBeamAngle(Number(e.target.value))}
+                            className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                          />
+                          <span>°</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[-135, -90, -45, 0, 45, 90, 135].map((deg) => (
+                          <button
+                            key={deg}
+                            type="button"
+                            onClick={() => setBeamAngle(deg)}
+                            className={`flex-1 py-0.5 text-[10px] rounded border transition-colors cursor-pointer ${
+                              beamAngle === deg
+                                ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {deg}°
+                          </button>
+                        ))}
                       </div>
                       <input
                         type="range"
@@ -545,17 +670,97 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         className="accent-sky-400 cursor-pointer h-1.5"
                       />
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[11px] text-slate-300 font-semibold">
-                        <span>Độ Mở:</span>
-                        <span className="text-sky-400 font-mono">{coneSpread}°</span>
+
+                    {/* Độ Mở (Góc Loe) - Hỗ trợ song song tuyệt đối 0° */}
+                    <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span className="font-medium text-sky-300">Độ Mở (Góc Loe):</span>
+                        <div className="flex items-center gap-1 font-mono text-white text-xs">
+                          <input
+                            type="number"
+                            min="0"
+                            max="120"
+                            value={coneSpread}
+                            onChange={(e) => setConeSpread(Number(e.target.value))}
+                            className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                          />
+                          <span>°</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[
+                          { label: '0° Song song', val: 0 },
+                          { label: '4° Gần song song', val: 4 },
+                          { label: '15° Hẹp', val: 15 },
+                          { label: '35° Vừa', val: 35 }
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => setConeSpread(item.val)}
+                            className={`flex-1 py-1 text-[10px] rounded border transition-colors cursor-pointer ${
+                              coneSpread === item.val
+                                ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold shadow'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
                       </div>
                       <input
                         type="range"
-                        min="5"
-                        max="160"
+                        min="0"
+                        max="90"
                         value={coneSpread}
                         onChange={(e) => setConeSpread(Number(e.target.value))}
+                        className="accent-sky-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+
+                    {/* Bề Rộng Gốc Đèn (Gốc To, Không Nhọn) */}
+                    <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span className="font-medium text-sky-300">Bề Rộng Gốc Đèn (Không Nhọn):</span>
+                        <div className="flex items-center gap-1 font-mono text-white text-xs">
+                          <input
+                            type="number"
+                            min="0"
+                            max="300"
+                            value={beamStartWidth}
+                            onChange={(e) => setBeamStartWidth(Number(e.target.value))}
+                            className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
+                          />
+                          <span>px</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[
+                          { label: '0px (Nhọn)', val: 0 },
+                          { label: '35px (Vừa)', val: 35 },
+                          { label: '55px (Chuẩn)', val: 55 },
+                          { label: '85px (To)', val: 85 }
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => setBeamStartWidth(item.val)}
+                            className={`flex-1 py-1 text-[10px] rounded border transition-colors cursor-pointer ${
+                              beamStartWidth === item.val
+                                ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold shadow'
+                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={beamStartWidth}
+                        onChange={(e) => setBeamStartWidth(Number(e.target.value))}
                         className="accent-sky-400 cursor-pointer h-1.5"
                       />
                     </div>
@@ -637,38 +842,36 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     </div>
                   )}
                 </div>
-
-                {/* Hand Size */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400 font-medium">Bàn Tay Chỉ 👆:</label>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="24"
-                        max="500"
-                        value={handSize}
-                        onChange={(e) => setHandSize(Number(e.target.value))}
-                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                      />
-                      <span className="text-xs text-slate-400">px</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="24"
-                    max="500"
-                    value={handSize}
-                    onChange={(e) => setHandSize(Number(e.target.value))}
-                    className="accent-sky-400 cursor-pointer h-1.5"
-                  />
-                </div>
               </div>
             )}
           </div>
 
+          {/* NHÓM 3: CON TRỎ & BÀN TAY CHỈ (ACCORDION MỚI) */}
+          <PointerSettingsControl
+            isOpen={activeSection === 'pointer'}
+            onToggle={() => toggleSection('pointer')}
+            isAccordion={true}
+            pointerEmoji={pointerEmoji}
+            setPointerEmoji={setPointerEmoji}
+            pointerSize={handSize}
+            setPointerSize={setHandSize}
+            pointerRotation={pointerRotation}
+            setPointerRotation={setPointerRotation}
+            pointerOffsetX={pointerOffsetX}
+            setPointerOffsetX={setPointerOffsetX}
+            pointerOffsetY={pointerOffsetY}
+            setPointerOffsetY={setPointerOffsetY}
+            pointerAnchor={pointerAnchor}
+            setPointerAnchor={setPointerAnchor}
+            enablePointer={enablePointer}
+            setEnablePointer={setEnablePointer}
+            lockPointerToCenter={lockPointerToCenter}
+            setLockPointerToCenter={setLockPointerToCenter}
+            themeColor="sky"
+          />
+
           {/* NHÓM MỚI: DẤU HỎI CHẤM TRÊN BÓNG ĐEN (?) */}
-          <div className="bg-slate-900/50 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm">
+          <div className="bg-slate-900/50 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm shrink-0">
             <button
               type="button"
               onClick={() => toggleSection('questionMarks')}
@@ -810,7 +1013,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           </div>
 
           {/* NHÓM 3: WATERMARK / LOGO KÊNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
             <button
               type="button"
               onClick={() => toggleSection('watermark')}
@@ -1093,7 +1296,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           <button
             type="button"
             onClick={handleResetSettings}
-            className="mt-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
+            className="mt-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98 shrink-0"
             title="Xóa hết hình ảnh và dấu ? trên sân khấu, giữ nguyên toàn bộ thông số đèn pin và watermark"
           >
             <RotateCcw size={15} className="text-amber-400" /> Reset (Xóa Ảnh & Dấu ?)
@@ -1102,7 +1305,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
           <button
             onClick={() => setIs916Mode(true)}
-            className="p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:shadow-sky-500/20 active:scale-98"
+            className="p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:shadow-sky-500/20 active:scale-98 shrink-0"
           >
             <Play size={18} /> Khởi Chạy
           </button>
@@ -1131,6 +1334,22 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               <span>Đang bật chế độ đặt dấu <b>?</b>: Nhấp lên vị trí bóng đen để thêm, nhấp vào dấu <b>?</b> đã có để xóa</span>
             </div>
           )}
+
+          {/* BANNER THÔNG BÁO KHI ĐANG CỐ ĐỊNH CON TRỎ Ở TÂM */}
+          {lockPointerToCenter && !is916Mode && !isPlacingQm && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-950/90 text-amber-200 text-xs font-semibold px-3.5 py-1.5 rounded-full border border-amber-500/50 shadow-2xl backdrop-blur-sm z-40 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <span>Đang cố định con trỏ ở tâm</span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setLockPointerToCenter(false); }}
+                className="ml-1 text-[10px] px-2 py-0.5 bg-amber-800 hover:bg-amber-700 text-white rounded cursor-pointer transition-colors"
+                title="Bấm để mở khóa theo chuột"
+              >
+                Mở khóa
+              </button>
+            </div>
+          )}
           {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
           <StageBackgroundOverlay />
 
@@ -1148,18 +1367,30 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   fill={beamBgColor}
                 />
               ) : (() => {
-                const effectiveR = Math.max(1200, radius * 8);
+                const effectiveR = Math.max(1600, radius * 10);
                 const containerAngle = ((beamAngle - 90) * Math.PI) / 180;
                 const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
+                const hw = (beamStartWidth || 55) / 2;
+
+                const perpX = -Math.sin(containerAngle);
+                const perpY = Math.cos(containerAngle);
+
+                const p1x = cursorPos.rawX - hw * perpX;
+                const p1y = cursorPos.rawY - hw * perpY;
+                const p2x = cursorPos.rawX + hw * perpX;
+                const p2y = cursorPos.rawY + hw * perpY;
+
                 const a1 = containerAngle - halfSpread;
                 const a2 = containerAngle + halfSpread;
-                const x1 = cursorPos.rawX + Math.cos(a1) * effectiveR;
-                const y1 = cursorPos.rawY + Math.sin(a1) * effectiveR;
-                const x2 = cursorPos.rawX + Math.cos(a2) * effectiveR;
-                const y2 = cursorPos.rawY + Math.sin(a2) * effectiveR;
+
+                const q1x = p1x + Math.cos(a1) * effectiveR;
+                const q1y = p1y + Math.sin(a1) * effectiveR;
+                const q2x = p2x + Math.cos(a2) * effectiveR;
+                const q2y = p2y + Math.sin(a2) * effectiveR;
+
                 return (
                   <path
-                    d={`M ${cursorPos.rawX} ${cursorPos.rawY} L ${x1} ${y1} L ${x2} ${y2} Z`}
+                    d={`M ${p1x} ${p1y} L ${q1x} ${q1y} L ${q2x} ${q2y} L ${p2x} ${p2y} Z`}
                     fill={beamBgColor}
                   />
                 );
@@ -1223,19 +1454,21 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             )}
           </div>
 
-          {/* HAND CURSOR OVERLAY 👆 (Chỉ hiển thị khi KHÔNG ở chế độ đặt dấu hỏi ? để tiện quan sát vị trí đặt) */}
-          {(!isPlacingQm || is916Mode) && (
+          {/* HAND / EMOJI CURSOR OVERLAY (Chỉ hiển thị khi bật và KHÔNG ở chế độ đặt dấu hỏi ? để tiện quan sát vị trí đặt) */}
+          {enablePointer && (!isPlacingQm || is916Mode) && (
             <div
               className="absolute pointer-events-none select-none z-30 transition-transform"
-              style={{
-                left: `${cursorPos.rawX}px`,
-                top: `${cursorPos.rawY}px`,
-                fontSize: `${handSize}px`,
-                transformOrigin: '50% 12%',
-                transform: 'translate(-50%, -12%) rotate(-90deg)'
-              }}
+              style={getPointerStyle({
+                x: cursorPos.rawX,
+                y: cursorPos.rawY,
+                size: handSize,
+                rotation: pointerRotation,
+                offsetX: pointerOffsetX,
+                offsetY: pointerOffsetY,
+                anchor: pointerAnchor
+              })}
             >
-              👆
+              {pointerEmoji || '👆'}
             </div>
           )}
         </div>

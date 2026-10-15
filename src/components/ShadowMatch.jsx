@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
+import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -25,6 +26,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const [images, setImages] = useState(initialSettings.images || POKEMON_IMAGES);
   const [targetIndex, setTargetIndex] = useState(initialSettings.targetIndex ?? 0);
   const [handSize, setHandSize] = useState(initialSettings.handSize ?? 48);
+  const [pointerEmoji, setPointerEmoji] = useState(initialSettings.pointerEmoji || '👆');
+  const [pointerRotation, setPointerRotation] = useState(initialSettings.pointerRotation ?? -90);
+  const [pointerOffsetX, setPointerOffsetX] = useState(initialSettings.pointerOffsetX ?? 0);
+  const [pointerOffsetY, setPointerOffsetY] = useState(initialSettings.pointerOffsetY ?? 0);
+  const [pointerAnchor, setPointerAnchor] = useState(initialSettings.pointerAnchor || 'tip');
+  const [enablePointer, setEnablePointer] = useState(initialSettings.enablePointer ?? true);
   const [targetScale, setTargetScale] = useState(initialSettings.targetScale ?? 100);
   const [targetOffsetY, setTargetOffsetY] = useState(initialSettings.targetOffsetY ?? 0);
 
@@ -41,7 +48,14 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const [pickedItem, setPickedItem] = useState(null); // { index, src }
   const [placedItems, setPlacedItems] = useState([]); // [{ index, src, x, y, width, height }]
   const [cursorPos, setCursorPos] = useState({ x: 640, y: 360 });
+  const [lockPointerToCenter, setLockPointerToCenter] = useState(false);
   const [internalIs916Mode, setInternalIs916Mode] = useState(false);
+
+  useEffect(() => {
+    if (lockPointerToCenter) {
+      setCursorPos({ x: THEATER_WIDTH / 2, y: THEATER_HEIGHT / 2 });
+    }
+  }, [lockPointerToCenter]);
 
   // Chế độ thao tác trên khung quay: 'gameplay' (Kéo ghép bóng thông thường) hoặc 'edit' (Kéo chỉnh vị trí bóng & khay trực tiếp)
   const [stageMode, setStageMode] = useState('gameplay');
@@ -65,6 +79,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         targetIndex,
         handSize,
+        pointerEmoji,
+        pointerRotation,
+        pointerOffsetX,
+        pointerOffsetY,
+        pointerAnchor,
+        enablePointer,
         targetScale,
         targetOffsetY,
         trayOffsetX,
@@ -76,7 +96,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
     } catch (e) {
       console.error('Không thể lưu cài đặt ShadowMatch:', e);
     }
-  }, [targetIndex, handSize, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images]);
+  }, [targetIndex, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images]);
 
   // Tự động tính toán scale đồng nhất cho Theater Container (Khớp hoàn hảo cả chế độ thường và full màn hình 9:16)
   useEffect(() => {
@@ -111,6 +131,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
     setTrayItemSize(100);
     setTrayGap(24);
     setHandSize(48);
+    setPointerEmoji('👆');
+    setPointerRotation(-90);
+    setPointerOffsetX(0);
+    setPointerOffsetY(0);
+    setPointerAnchor('tip');
+    setEnablePointer(true);
     setPlacedItems([]);
     setPickedItem(null);
   };
@@ -208,7 +234,9 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const handleMouseMove = (e) => {
     if (!theaterRef.current) return;
     const { x, y } = getTheaterCoords(e);
-    setCursorPos({ x, y });
+    if (!lockPointerToCenter) {
+      setCursorPos({ x, y });
+    }
 
     // Kéo thả trực tiếp trên sân khấu khi ở chế độ edit
     if (draggingTarget === 'tray') {
@@ -433,7 +461,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
     <div className={`flex w-full bg-slate-900 relative ${is916Mode || stageMode === 'edit' ? 'h-full' : 'h-[calc(100vh-56px)]'}`}>
       {/* TRẠNG THÁI 2: GIỮ NGUYÊN SIDEBAR (Ẩn khi ở chế độ 9:16 hoặc khi vào chế độ Kéo Xếp Vị Trí full màn hình) */}
       {!is916Mode && stageMode !== 'edit' && (
-        <div className="w-80 bg-slate-800 p-5 border-r border-slate-700 flex flex-col gap-5 overflow-y-auto">
+        <div className="w-80 bg-slate-800 p-5 pb-24 border-r border-slate-700 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
           <h2 className="text-lg font-bold text-purple-400 flex items-center gap-2">
             👻 CÀI ĐẶT GHÉP BÓNG
           </h2>
@@ -538,24 +566,27 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             </select>
           </div>
 
-          {/* Hand Size */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Kích Thước Bàn Tay 👆:</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="24"
-                  max="500"
-                  value={handSize}
-                  onChange={(e) => setHandSize(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="24" max="500" value={handSize} onChange={(e) => setHandSize(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
+          {/* POINTER SETTINGS CONTROL (ACCORDION MẪU CÓ SẴN & TÙY CHỈNH EMOJI) */}
+          <PointerSettingsControl
+            isAccordion={true}
+            pointerEmoji={pointerEmoji}
+            setPointerEmoji={setPointerEmoji}
+            pointerSize={handSize}
+            setPointerSize={setHandSize}
+            pointerRotation={pointerRotation}
+            setPointerRotation={setPointerRotation}
+            pointerOffsetX={pointerOffsetX}
+            setPointerOffsetX={setPointerOffsetX}
+            pointerOffsetY={pointerOffsetY}
+            setPointerOffsetY={setPointerOffsetY}
+            pointerAnchor={pointerAnchor}
+            setPointerAnchor={setPointerAnchor}
+            enablePointer={enablePointer}
+            setEnablePointer={setEnablePointer}
+            lockPointerToCenter={lockPointerToCenter}
+            setLockPointerToCenter={setLockPointerToCenter}
+            themeColor="purple"
+          />
 
           {/* Target Scale */}
           <div className="flex flex-col gap-2">
@@ -899,19 +930,37 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
               </div>
             )}
 
-            {/* HAND CURSOR 👆 (Đầu ngón tay trỏ đúng vị trí con trỏ - hiển thị khi chơi hoặc quay video) */}
-            {(stageMode === 'gameplay' || is916Mode) && (
+            {/* BANNER THÔNG BÁO KHI ĐANG CỐ ĐỊNH CON TRỎ Ở TÂM */}
+            {lockPointerToCenter && !is916Mode && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-950/90 text-amber-200 text-xs font-semibold px-3.5 py-1.5 rounded-full border border-amber-500/50 shadow-2xl backdrop-blur-sm z-50 flex items-center gap-2 pointer-events-auto">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>Đang cố định con trỏ ở tâm</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLockPointerToCenter(false); }}
+                  className="ml-1 text-[10px] px-2 py-0.5 bg-amber-800 hover:bg-amber-700 text-white rounded cursor-pointer transition-colors"
+                  title="Bấm để mở khóa theo chuột"
+                >
+                  Mở khóa
+                </button>
+              </div>
+            )}
+
+            {/* HAND / EMOJI CURSOR (Hiển thị khi bật và khi chơi hoặc quay video hoặc khi cố định tâm) */}
+            {enablePointer && (stageMode === 'gameplay' || is916Mode || lockPointerToCenter) && (
               <div
                 className="absolute pointer-events-none select-none z-30"
-                style={{
-                  left: `${cursorPos.x}px`,
-                  top: `${cursorPos.y}px`,
-                  fontSize: `${handSize}px`,
-                  transformOrigin: '50% 12%',
-                  transform: 'translate(-50%, -12%) rotate(-90deg)'
-                }}
+                style={getPointerStyle({
+                  x: cursorPos.x,
+                  y: cursorPos.y,
+                  size: handSize,
+                  rotation: pointerRotation,
+                  offsetX: pointerOffsetX,
+                  offsetY: pointerOffsetY,
+                  anchor: pointerAnchor
+                })}
               >
-                👆
+                {pointerEmoji || '👆'}
               </div>
             )}
           </div>
