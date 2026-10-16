@@ -1612,7 +1612,7 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
             {/* 1. KHAY ẢNH GỐC (PHẦN PHÍA TRÊN / KHAY CHỌN ĐỂ KÉO XUỐNG) */}
             <div
               onMouseDown={handleStartDragTray}
-              className={`absolute z-30 flex flex-col items-center p-2 rounded-xl transition-all select-none ${stageMode === 'edit' && !is916Mode
+              className={`absolute z-30 flex flex-col-reverse items-center p-2 rounded-xl transition-all select-none ${stageMode === 'edit' && !is916Mode
                   ? 'cursor-grab active:cursor-grabbing border-2 border-dashed border-purple-400 bg-purple-500/10 hover:bg-purple-500/20'
                   : ''
                 }`}
