@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles } from 'lucide-react';
+import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
+import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -10,6 +11,24 @@ const POKEMON_IMAGES = [
 ];
 
 const STORAGE_KEY = 'shadow_game_settings_v3';
+
+// Danh sách các loại nền bóng (Shadow Background Styles)
+export const SHADOW_STYLE_PRESETS = [
+  { id: 'pure-black', name: 'Đen Tuyệt Đối', type: 'color', color: '#000000', label: 'Bóng Đen Chuẩn' },
+  { id: 'charcoal', name: 'Than Chì', type: 'color', color: '#1e293b', label: 'Xám Than Đậm' },
+  { id: 'deep-navy', name: 'Xanh Đêm Sâu', type: 'color', color: '#0f172a', label: 'Navy Huyền Bí' },
+  { id: 'crimson', name: 'Đỏ Thẫm', type: 'color', color: '#881337', label: 'Bóng Đỏ Ma Mị' },
+  { id: 'deep-purple', name: 'Tím Đậm', type: 'color', color: '#4c1d95', label: 'Bóng Tím Ảo Ảnh' },
+  { id: 'emerald', name: 'Xanh Rêu Đậm', type: 'color', color: '#064e3b', label: 'Bóng Rừng Đêm' },
+  { id: 'grad-dark-violet', name: 'Gradient Đen Tím', type: 'gradient', colors: ['#0f051d', '#3b0764', '#0f051d'], label: 'Tím Huyền Bí' },
+  { id: 'grad-fire', name: 'Gradient Hỏa Băng', type: 'gradient', colors: ['#450a0a', '#b91c1c', '#7f1d1d'], label: 'Lửa Đỏ Rực' },
+  { id: 'grad-cyber', name: 'Gradient Cyber', type: 'gradient', colors: ['#030712', '#1e1b4b', '#083344'], label: 'Cyberpunk Đêm' },
+  { id: 'grad-neon-gold', name: 'Gradient Hoàng Kim', type: 'gradient', colors: ['#1c1917', '#78350f', '#b45309'], label: 'Ánh Kim Vàng' },
+  { id: 'grad-silver', name: 'Gradient Kim Loại', type: 'gradient', colors: ['#0f172a', '#475569', '#1e293b'], label: 'Bạc Kim Loại' },
+  { id: 'pattern-dots', name: 'Chấm Bi Huyền Bí', type: 'pattern', pattern: 'dots', color: '#000000', dotColor: '#38bdf8', label: 'Chấm Bi Công Nghệ' },
+  { id: 'pattern-stripes', name: 'Sọc Chéo Bí Ẩn', type: 'pattern', pattern: 'stripes', color: '#0f172a', stripeColor: '#a855f7', label: 'Sọc Chéo Bí Ẩn' },
+  { id: 'custom-color', name: 'Tùy Chỉnh Màu', type: 'color', color: '#000000', label: 'Màu Tự Chọn' }
+];
 
 export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
   const getSavedSettings = () => {
@@ -35,6 +54,11 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const [targetScale, setTargetScale] = useState(initialSettings.targetScale ?? 100);
   const [targetOffsetY, setTargetOffsetY] = useState(initialSettings.targetOffsetY ?? 0);
 
+  // Cài đặt Loại Nền Bóng (Shadow Background Style)
+  const [shadowStyle, setShadowStyle] = useState(initialSettings.shadowStyle || 'pure-black');
+  const [customShadowColor, setCustomShadowColor] = useState(initialSettings.customShadowColor || '#000000');
+  const [shadowOpacity, setShadowOpacity] = useState(initialSettings.shadowOpacity ?? 100);
+
   const THEATER_WIDTH = 1280;
   const THEATER_HEIGHT = 720;
 
@@ -43,6 +67,53 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const [trayOffsetY, setTrayOffsetY] = useState(initialSettings.trayOffsetY ?? 0);
   const [trayItemSize, setTrayItemSize] = useState(initialSettings.trayItemSize ?? 80);
   const [trayGap, setTrayGap] = useState(initialSettings.trayGap ?? 24);
+
+  // Trạng thái Dấu Hỏi Chấm trên bóng đen
+  const [enableQuestionMarks, setEnableQuestionMarks] = useState(initialSettings.enableQuestionMarks ?? false);
+  const [questionMarks, setQuestionMarks] = useState(initialSettings.questionMarks || []);
+  const [qmColor, setQmColor] = useState(initialSettings.qmColor || '#ef4444');
+  const [qmDefaultSize, setQmDefaultSize] = useState(initialSettings.qmDefaultSize ?? 48);
+  const [isPlacingQm, setIsPlacingQm] = useState(false);
+
+  // Lịch sử Hoàn tác (Undo) và Tiến tới (Redo) cho Dấu Hỏi Chấm
+  const [qmHistory, setQmHistory] = useState([initialSettings.questionMarks || []]);
+  const [qmHistoryIndex, setQmHistoryIndex] = useState(0);
+
+  const setQuestionMarksWithHistory = (newMarks) => {
+    const updated = typeof newMarks === 'function' ? newMarks(questionMarks) : newMarks;
+    setQuestionMarks(updated);
+    setQmHistory((prev) => {
+      const trimmed = prev.slice(0, qmHistoryIndex + 1);
+      return [...trimmed, updated];
+    });
+    setQmHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleUndoQm = () => {
+    if (qmHistoryIndex > 0) {
+      const prevIdx = qmHistoryIndex - 1;
+      setQmHistoryIndex(prevIdx);
+      setQuestionMarks(qmHistory[prevIdx]);
+    }
+  };
+
+  const handleRedoQm = () => {
+    if (qmHistoryIndex < qmHistory.length - 1) {
+      const nextIdx = qmHistoryIndex + 1;
+      setQmHistoryIndex(nextIdx);
+      setQuestionMarks(qmHistory[nextIdx]);
+    }
+  };
+
+  const handleClearAllQm = () => {
+    setQuestionMarksWithHistory([]);
+  };
+
+  // Trạng thái thu gọn Accordion của sidebar (mở mục 'images' mặc định)
+  const [activeSection, setActiveSection] = useState('images');
+  const toggleSection = (key) => {
+    setActiveSection((prev) => (prev === key ? null : key));
+  };
 
   // States for Interactivity
   const [pickedItem, setPickedItem] = useState(null); // { index, src }
@@ -91,12 +162,19 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
         trayOffsetY,
         trayItemSize,
         trayGap,
-        images
+        images,
+        enableQuestionMarks,
+        questionMarks,
+        qmColor,
+        qmDefaultSize,
+        shadowStyle,
+        customShadowColor,
+        shadowOpacity
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt ShadowMatch:', e);
     }
-  }, [targetIndex, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images]);
+  }, [targetIndex, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, customShadowColor, shadowOpacity]);
 
   // Tự động tính toán scale đồng nhất cho Theater Container (Khớp hoàn hảo cả chế độ thường và full màn hình 9:16)
   useEffect(() => {
@@ -126,9 +204,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const resetToDefaultLayout = () => {
     setTargetScale(100);
     setTargetOffsetY(0);
+    setShadowStyle('pure-black');
+    setCustomShadowColor('#000000');
+    setShadowOpacity(100);
     setTrayOffsetX(112);
     setTrayOffsetY(0);
-    setTrayItemSize(100);
+    setTrayItemSize(80);
     setTrayGap(24);
     setHandSize(48);
     setPointerEmoji('👆');
@@ -190,15 +271,95 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
 
-    // BƯỚC 2: Phủ lớp Đen ĐẶC CHỈ lên khu vực hình ảnh PNG (#000000)
+    // BƯỚC 2: Phủ lớp Nền Bóng (Hỗ trợ nhiều loại nền: Màu trơn, Gradient, Pattern)
     ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, width, height);
+    const currentPreset = SHADOW_STYLE_PRESETS.find((p) => p.id === shadowStyle) || SHADOW_STYLE_PRESETS[0];
+    const opacityAlpha = Math.max(0.05, Math.min(1, (shadowOpacity ?? 100) / 100));
+
+    ctx.save();
+    ctx.globalAlpha = opacityAlpha;
+
+    if (shadowStyle === 'custom-color') {
+      ctx.fillStyle = customShadowColor || '#000000';
+      ctx.fillRect(0, 0, width, height);
+    } else if (currentPreset.type === 'color') {
+      ctx.fillStyle = currentPreset.color || '#000000';
+      ctx.fillRect(0, 0, width, height);
+    } else if (currentPreset.type === 'gradient') {
+      // Linear Gradient từ trên xuống dưới
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      const cols = currentPreset.colors || ['#000000', '#1e293b'];
+      cols.forEach((col, idx) => {
+        grad.addColorStop(idx / (cols.length - 1), col);
+      });
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+    } else if (currentPreset.type === 'pattern') {
+      // Nền chính
+      ctx.fillStyle = currentPreset.color || '#000000';
+      ctx.fillRect(0, 0, width, height);
+
+      // Tạo canvas con để làm Pattern lặp
+      const patCanvas = document.createElement('canvas');
+      const patCtx = patCanvas.getContext('2d');
+      if (currentPreset.pattern === 'dots') {
+        patCanvas.width = 24;
+        patCanvas.height = 24;
+        patCtx.fillStyle = currentPreset.dotColor || '#38bdf8';
+        patCtx.beginPath();
+        patCtx.arc(12, 12, 3.5, 0, Math.PI * 2);
+        patCtx.fill();
+      } else if (currentPreset.pattern === 'stripes') {
+        patCanvas.width = 32;
+        patCanvas.height = 32;
+        patCtx.strokeStyle = currentPreset.stripeColor || '#a855f7';
+        patCtx.lineWidth = 4;
+        patCtx.beginPath();
+        patCtx.moveTo(0, 32);
+        patCtx.lineTo(32, 0);
+        patCtx.stroke();
+      }
+
+      try {
+        const pattern = ctx.createPattern(patCanvas, 'repeat');
+        if (pattern) {
+          ctx.fillStyle = pattern;
+          ctx.fillRect(0, 0, width, height);
+        }
+      } catch (err) {
+        console.error('Pattern fill error:', err);
+      }
+    } else {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.restore();
+
+    // BƯỚC 2.5: Vẽ các Dấu Hỏi Chấm '?' lên lớp bóng đen (chỉ hiển thị trên phần bóng đen)
+    if (enableQuestionMarks && questionMarks.length > 0) {
+      ctx.globalCompositeOperation = 'source-over';
+      questionMarks.forEach((qm) => {
+        const qmSize = qm.size || qmDefaultSize;
+        ctx.save();
+        ctx.font = `900 ${qmSize}px "Arial Black", "Arial", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Viền đỏ tươi rực rỡ và đổ bóng nhẹ
+        ctx.fillStyle = qmColor;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText('?', qm.x, qm.y);
+        ctx.restore();
+      });
+    }
   };
 
   useEffect(() => {
     renderCanvas();
-  }, [targetOffsetY, images, targetIndex]);
+  }, [targetOffsetY, images, targetIndex, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, customShadowColor, shadowOpacity]);
 
   const resetGameRef = useRef(null);
 
@@ -285,9 +446,57 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
     }
   };
 
+  // Tính toán tọa độ Canvas 540x960 từ tọa độ chuột thực tế
+  const getCanvasCoords = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { canvasX: 0, canvasY: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return { canvasX: 0, canvasY: 0 };
+
+    const cRawX = e.clientX - rect.left;
+    const cRawY = e.clientY - rect.top;
+
+    // Canvas được xoay rotate(-90deg)
+    // Chiều rộng trên màn hình rect.width ứng với canvas.height (960)
+    // Chiều cao trên màn hình rect.height ứng với canvas.width (540)
+    const canvasY = (cRawX / rect.width) * canvas.height;
+    const canvasX = (1 - (cRawY / rect.height)) * canvas.width;
+
+    return { canvasX, canvasY };
+  };
+
+  // Xử lý click trực tiếp lên Canvas bóng đen để thêm/xóa Dấu Hỏi (?) khi đang bật chế độ đặt dấu ?
+  const handleCanvasClick = (e) => {
+    if (is916Mode || !isPlacingQm || stageMode === 'edit') return;
+    e.stopPropagation();
+
+    const { canvasX, canvasY } = getCanvasCoords(e);
+    const roundX = Math.round(canvasX);
+    const roundY = Math.round(canvasY);
+
+    // Kiểm tra xem có nhấp trúng dấu ? đã có nào để xóa không (bán kính 25px)
+    const existingIdx = questionMarks.findIndex(
+      (qm) => Math.hypot(qm.x - roundX, qm.y - roundY) < Math.max(25, (qm.size || qmDefaultSize) / 2)
+    );
+
+    if (existingIdx !== -1) {
+      // Xóa dấu ? vừa bấm trúng
+      setQuestionMarksWithHistory((prev) => prev.filter((_, idx) => idx !== existingIdx));
+    } else {
+      // Thêm dấu ? mới tại vị trí nhấp
+      const newQm = {
+        id: `qm-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        x: roundX,
+        y: roundY,
+        size: qmDefaultSize
+      };
+      setQuestionMarksWithHistory((prev) => [...prev, newQm]);
+    }
+  };
+
   // Step 1: Click Pick Top Image (Nếu đã có ảnh ở dưới sân khấu thì không cho phép chọn tiếp)
   const handlePickItem = (index, src) => {
-    if (placedItems.length > 0 || isResetting) return;
+    if (placedItems.length > 0 || isResetting || isPlacingQm) return;
     setPickedItem({ index, src });
   };
 
@@ -309,6 +518,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
 
   // Step 2 & 3: Click Place or Pick Image on Stage (Lưu tọa độ chuẩn theo hệ Theater Container)
   const handleStageClick = (e) => {
+    if (isPlacingQm) return;
     if (pickedItem) {
       const { x, y } = getTheaterCoords(e);
 
@@ -488,86 +698,401 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             </button>
           </div>
 
-          {/* Upload Multiple Images (1 ô chọn duy nhất) */}
-          <div className="flex flex-col gap-2.5">
-            <label className="text-xs text-slate-400 font-medium">Tải Lên Nhiều Ảnh Nhân Vật (PNG):</label>
-            <label className="flex items-center justify-center gap-2 p-3 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
-              <Upload size={16} /> Chọn Nhiều Ảnh (.PNG)
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleMultipleImageUpload}
-                className="hidden"
-              />
-            </label>
+          {/* NHÓM 1: DANH SÁCH ẢNH & BÓNG MỤC TIÊU */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleSection('images')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🖼️</span>
+                <span className="text-xs font-bold text-purple-300">Nhân Vật & Ảnh Khay</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {images.length} ảnh • Bóng #{targetIndex + 1}
+                </span>
+                {activeSection === 'images' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
 
-            {/* Hiển thị danh sách ảnh đã tải lên phía dưới ô chọn */}
-            {images.length > 0 && (
-              <div className="flex flex-col gap-1.5 mt-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 font-medium">Danh sách ({images.length} ảnh):</span>
-                  <span className="text-[10px] text-purple-300">Kéo thả để đổi thứ tự</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {images.map((src, i) => (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, i)}
-                      onDragOver={(e) => handleDragOver(e, i)}
-                      onDragEnd={handleDragEnd}
-                      onDrop={(e) => handleDrop(e, i)}
-                      onClick={() => setTargetIndex(i)}
-                      className={`h-16 bg-slate-900/80 rounded-lg cursor-grab active:cursor-grabbing overflow-hidden relative border transition-all flex items-center justify-center p-1 group select-none ${i === targetIndex
-                          ? 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-500/20'
-                          : 'border-slate-700 hover:border-slate-500'
-                        } ${draggedImageIndex === i ? 'opacity-40 scale-95 border-dashed border-purple-500' : ''} ${dragOverImageIndex === i && draggedImageIndex !== i
-                          ? 'ring-2 ring-sky-400 border-sky-400 scale-105'
-                          : ''
-                        }`}
-                      title={`Ảnh ${i + 1} - Giữ & Kéo để đổi thứ tự (Click chọn làm bóng)`}
-                    >
-                      <img src={src} alt={`Uploaded ${i}`} className="w-full h-full object-contain pointer-events-none select-none" />
+            {activeSection === 'images' && (
+              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
+                {/* Upload Multiple Images (1 ô chọn duy nhất) */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-slate-400 font-medium">Tải Lên Nhiều Ảnh Nhân Vật (PNG):</label>
+                  <label className="flex items-center justify-center gap-2 p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg cursor-pointer border border-dashed border-slate-500 text-xs font-semibold text-center transition-colors">
+                    <Upload size={15} /> Chọn Nhiều Ảnh (.PNG)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleMultipleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
 
-                      {/* Grip Handle Icon on Hover */}
-                      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded p-0.5 pointer-events-none">
-                        <GripVertical size={10} className="text-slate-300" />
+                  {/* Hiển thị danh sách ảnh đã tải lên phía dưới ô chọn */}
+                  {images.length > 0 && (
+                    <div className="flex flex-col gap-1.5 mt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400 font-medium">Danh sách ({images.length} ảnh):</span>
+                        <span className="text-[10px] text-purple-300">Kéo thả để đổi thứ tự</span>
                       </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {images.map((src, i) => (
+                          <div
+                            key={i}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, i)}
+                            onDragOver={(e) => handleDragOver(e, i)}
+                            onDragEnd={handleDragEnd}
+                            onDrop={(e) => handleDrop(e, i)}
+                            onClick={() => setTargetIndex(i)}
+                            className={`h-16 bg-slate-900/80 rounded-lg cursor-grab active:cursor-grabbing overflow-hidden relative border transition-all flex items-center justify-center p-1 group select-none ${i === targetIndex
+                                ? 'border-purple-400 ring-2 ring-purple-400/60 shadow-lg shadow-purple-500/20'
+                                : 'border-slate-700 hover:border-slate-500'
+                              } ${draggedImageIndex === i ? 'opacity-40 scale-95 border-dashed border-purple-500' : ''} ${dragOverImageIndex === i && draggedImageIndex !== i
+                                ? 'ring-2 ring-sky-400 border-sky-400 scale-105'
+                                : ''
+                              }`}
+                            title={`Ảnh ${i + 1} - Giữ & Kéo để đổi thứ tự (Click chọn làm bóng)`}
+                          >
+                            <img src={src} alt={`Uploaded ${i}`} className="w-full h-full object-contain pointer-events-none select-none" />
 
-                      <span className="absolute bottom-1 left-1 bg-black/75 text-white text-[10px] font-bold px-1.5 py-0.2 rounded pointer-events-none">
-                        #{i + 1}
-                      </span>
-                      {i === targetIndex && (
-                        <span className="absolute top-1 right-1 bg-purple-500 text-white text-[9px] font-bold px-1 py-0.2 rounded-full leading-tight pointer-events-none">
-                          Bóng
-                        </span>
-                      )}
+                            {/* Grip Handle Icon on Hover */}
+                            <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded p-0.5 pointer-events-none">
+                              <GripVertical size={10} className="text-slate-300" />
+                            </div>
+
+                            <span className="absolute bottom-1 left-1 bg-black/75 text-white text-[10px] font-bold px-1.5 py-0.2 rounded pointer-events-none">
+                              #{i + 1}
+                            </span>
+                            {i === targetIndex && (
+                              <span className="absolute top-1 right-1 bg-purple-500 text-white text-[9px] font-bold px-1 py-0.2 rounded-full leading-tight pointer-events-none">
+                                Bóng
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                {/* Select Target Silhouette */}
+                <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-800">
+                  <label className="text-xs text-slate-400 font-medium">Chọn Ảnh Làm Bóng Đen Mục Tiêu:</label>
+                  <select
+                    value={targetIndex}
+                    onChange={(e) => setTargetIndex(Number(e.target.value))}
+                    className="p-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:ring-2 focus:ring-purple-400 outline-none cursor-pointer text-xs"
+                  >
+                    {images.map((_, i) => (
+                      <option key={i} value={i}>
+                        Thẻ Ảnh Số {i + 1} {i === targetIndex ? '(Đang kích hoạt)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Select Target Silhouette */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-slate-400 font-medium">Chọn Ảnh Làm Bóng Đen Mục Tiêu:</label>
-            <select
-              value={targetIndex}
-              onChange={(e) => setTargetIndex(Number(e.target.value))}
-              className="p-2.5 bg-slate-700 text-white rounded-lg border-none focus:ring-2 focus:ring-purple-400 outline-none cursor-pointer"
+          {/* NHÓM 2: CĂN CHỈNH BÓNG ĐEN */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleSection('shadow')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
             >
-              {images.map((_, i) => (
-                <option key={i} value={i}>
-                  Thẻ Ảnh Số {i + 1} {i === targetIndex ? '(Đang kích hoạt)' : ''}
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center gap-2">
+                <span className="text-base">👤</span>
+                <span className="text-xs font-bold text-purple-300">Căn Chỉnh Bóng Đen</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {targetScale}% • Y:{targetOffsetY}px
+                </span>
+                {activeSection === 'shadow' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'shadow' && (
+              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
+                {/* Target Scale */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Bóng Đen:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="50"
+                        max="200"
+                        value={targetScale}
+                        onChange={(e) => setTargetScale(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+                  <input type="range" min="50" max="200" value={targetScale} onChange={(e) => setTargetScale(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+
+                {/* Target OffsetY */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Vị Trí Bóng Đen Lên/Xuống:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="-300"
+                        max="300"
+                        value={targetOffsetY}
+                        onChange={(e) => setTargetOffsetY(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input type="range" min="-300" max="300" value={targetOffsetY} onChange={(e) => setTargetOffsetY(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+
+                {/* CÀI ĐẶT LOẠI NỀN BÓNG (SHADOW BACKGROUND PRESETS) */}
+                <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-purple-300 font-bold flex items-center gap-1.5">
+                      <span>🎨</span> Loại Nền Bóng:
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {SHADOW_STYLE_PRESETS.find((p) => p.id === shadowStyle)?.name || 'Mặc định'}
+                    </span>
+                  </div>
+
+                  {/* Grid chọn nhanh các kiểu nền bóng */}
+                  <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto custom-scrollbar p-1 bg-slate-950/40 rounded-lg border border-slate-800">
+                    {SHADOW_STYLE_PRESETS.map((preset) => {
+                      const isSelected = shadowStyle === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setShadowStyle(preset.id)}
+                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-950/60 border-purple-400 text-white shadow-sm ring-1 ring-purple-400/50'
+                              : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750 hover:text-white'
+                          }`}
+                        >
+                          {/* Preview swatch */}
+                          <div
+                            className="w-5 h-5 rounded-md border border-slate-600 shrink-0 shadow-inner"
+                            style={
+                              preset.type === 'color'
+                                ? { backgroundColor: preset.id === 'custom-color' ? customShadowColor : preset.color }
+                                : preset.type === 'gradient'
+                                ? { background: `linear-gradient(135deg, ${preset.colors.join(', ')})` }
+                                : {
+                                    backgroundColor: preset.color,
+                                    backgroundImage:
+                                      preset.pattern === 'dots'
+                                        ? `radial-gradient(${preset.dotColor} 1.5px, transparent 1.5px)`
+                                        : `repeating-linear-gradient(45deg, ${preset.stripeColor}, ${preset.stripeColor} 2px, transparent 2px, transparent 6px)`,
+                                    backgroundSize: preset.pattern === 'dots' ? '8px 8px' : 'auto'
+                                  }
+                            }
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] font-semibold truncate leading-tight">{preset.name}</span>
+                            <span className="text-[9px] text-slate-400 truncate leading-none">{preset.label}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Chọn màu tùy chỉnh nếu người dùng bấm chọn 'Tùy Chỉnh Màu' */}
+                  {shadowStyle === 'custom-color' && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800">
+                      <span className="text-xs text-slate-300 font-medium">Chọn Màu Nền Bóng:</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={customShadowColor}
+                          onChange={(e) => setCustomShadowColor(e.target.value)}
+                          className="w-7 h-7 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                        />
+                        <span className="text-xs font-mono text-purple-300 uppercase">{customShadowColor}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Độ mờ / Độ đậm của bóng (Shadow Opacity) */}
+                  <div className="flex flex-col gap-1 pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Độ đậm bóng:</span>
+                      <span className="text-white font-mono text-[11px]">{shadowOpacity}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={shadowOpacity}
+                      onChange={(e) => setShadowOpacity(Number(e.target.value))}
+                      className="accent-purple-400 cursor-pointer h-1.5"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* POINTER SETTINGS CONTROL (ACCORDION MẪU CÓ SẴN & TÙY CHỈNH EMOJI) */}
+          {/* NHÓM 3: KHAY ẢNH THU NHỎ */}
+          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleSection('tray')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🗂️</span>
+                <span className="text-xs font-bold text-purple-300">Cài Đặt Khay Ảnh</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {trayItemSize}px • Gap:{trayGap}
+                </span>
+                {activeSection === 'tray' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'tray' && (
+              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
+                {/* Tray Item Size */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Kích Thước Ảnh Khay:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="30"
+                        max="300"
+                        value={trayItemSize}
+                        onChange={(e) => setTrayItemSize(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input type="range" min="30" max="300" value={trayItemSize} onChange={(e) => setTrayItemSize(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+
+                {/* Tray Gap */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Dãn Cách Giữa Các Hình:</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="200"
+                        value={trayGap}
+                        onChange={(e) => setTrayGap(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input type="range" min="0" max="200" value={trayGap} onChange={(e) => setTrayGap(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+
+                {/* Tray OffsetX */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Vị Trí Khay (Trái/Phải):</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="1150"
+                        value={trayOffsetX}
+                        onChange={(e) => setTrayOffsetX(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input type="range" min="0" max="1150" value={trayOffsetX} onChange={(e) => setTrayOffsetX(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+
+                {/* Tray OffsetY */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">Vị Trí Khay (Lên/Xuống):</label>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="-400"
+                        max="400"
+                        value={trayOffsetY}
+                        onChange={(e) => setTrayOffsetY(Number(e.target.value))}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input type="range" min="-350" max="350" value={trayOffsetY} onChange={(e) => setTrayOffsetY(Number(e.target.value))} className="accent-purple-400 cursor-pointer h-1.5" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NHÓM 4: DẤU HỎI CHẤM TRÊN BÓNG ĐEN (?) */}
+          <div className="bg-slate-900/50 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleSection('questionMarks')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base text-rose-400 font-black">❓</span>
+                <span className="text-xs font-bold text-rose-300">Dấu Hỏi Chấm (?) Trên Bóng</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableQuestionMarks ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-400'}`}>
+                  {enableQuestionMarks ? `${questionMarks.length} dấu` : 'Tắt'}
+                </span>
+                {activeSection === 'questionMarks' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'questionMarks' && (
+              <QuestionMarkSettingsControl
+                enableQuestionMarks={enableQuestionMarks}
+                setEnableQuestionMarks={setEnableQuestionMarks}
+                questionMarks={questionMarks}
+                setQuestionMarksWithHistory={setQuestionMarksWithHistory}
+                canUndo={qmHistoryIndex > 0}
+                canRedo={qmHistoryIndex < qmHistory.length - 1}
+                onUndo={handleUndoQm}
+                onRedo={handleRedoQm}
+                qmColor={qmColor}
+                setQmColor={setQmColor}
+                qmDefaultSize={qmDefaultSize}
+                setQmDefaultSize={setQmDefaultSize}
+                isPlacingQm={isPlacingQm}
+                setIsPlacingQm={setIsPlacingQm}
+                onClearAll={handleClearAllQm}
+                themeColor="purple"
+              />
+            )}
+          </div>
+
+          {/* NHÓM 5: CON TRỎ & BÀN TAY CHỈ */}
           <PointerSettingsControl
+            isOpen={activeSection === 'pointer'}
+            onToggle={() => toggleSection('pointer')}
             isAccordion={true}
             pointerEmoji={pointerEmoji}
             setPointerEmoji={setPointerEmoji}
@@ -588,125 +1113,8 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             themeColor="purple"
           />
 
-          {/* Target Scale */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Bóng Đen:</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="50"
-                  max="200"
-                  value={targetScale}
-                  onChange={(e) => setTargetScale(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">%</span>
-              </div>
-            </div>
-            <input type="range" min="50" max="200" value={targetScale} onChange={(e) => setTargetScale(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
-          {/* Target OffsetY */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Vị Trí Bóng Đen Lên/Xuống:</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="-300"
-                  max="300"
-                  value={targetOffsetY}
-                  onChange={(e) => setTargetOffsetY(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="-300" max="300" value={targetOffsetY} onChange={(e) => setTargetOffsetY(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
-          <hr className="border-slate-700 my-1" />
-          <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider">🖼️ CÀI ĐẶT KHAY ẢNH THU NHỎ</h3>
-
-          {/* Tray Item Size */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Kích Thước Ảnh Khay:</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="30"
-                  max="300"
-                  value={trayItemSize}
-                  onChange={(e) => setTrayItemSize(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="30" max="300" value={trayItemSize} onChange={(e) => setTrayItemSize(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
-          {/* Tray Gap */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Dãn Cách Giữa Các Hình:</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  max="200"
-                  value={trayGap}
-                  onChange={(e) => setTrayGap(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="0" max="200" value={trayGap} onChange={(e) => setTrayGap(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
-          {/* Tray OffsetX */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Vị Trí Khay (Sang Trái/Phải):</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  max="1150"
-                  value={trayOffsetX}
-                  onChange={(e) => setTrayOffsetX(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="0" max="1150" value={trayOffsetX} onChange={(e) => setTrayOffsetX(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
-          {/* Tray OffsetY */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-slate-400 font-medium">Vị Trí Khay (Lên/Xuống):</label>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="-400"
-                  max="400"
-                  value={trayOffsetY}
-                  onChange={(e) => setTrayOffsetY(Number(e.target.value))}
-                  className="w-16 px-2 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-purple-400"
-                />
-                <span className="text-xs text-slate-400">px</span>
-              </div>
-            </div>
-            <input type="range" min="-350" max="350" value={trayOffsetY} onChange={(e) => setTrayOffsetY(Number(e.target.value))} className="accent-purple-400 cursor-pointer" />
-          </div>
-
           {/* Action Buttons */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 pt-2">
             <button
               onClick={resetGame}
               className="p-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-xs cursor-pointer shadow"
@@ -813,21 +1221,24 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             {/* CANVAS SÂN KHẤU XOAY NẰM NGANG 90 ĐỘ: TỈ LỆ VÀ KÍCH THƯỚC ĐỒNG NHẤT 100% CẢ PREVIEW VÀ 9:16 */}
             <div
               onMouseDown={handleStartDragShadow}
+              onClick={handleCanvasClick}
               className={`transition-all ${stageMode === 'edit' && !is916Mode
                   ? 'cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-purple-400 rounded-2xl'
-                  : ''
+                  : isPlacingQm && !is916Mode
+                    ? 'cursor-crosshair ring-2 ring-rose-400/80 rounded-2xl'
+                    : ''
                 }`}
               style={{
                 transform: `rotate(-90deg) scale(${targetScale / 100})`,
                 transformOrigin: 'center center'
               }}
-              title={stageMode === 'edit' ? 'Giữ chuột và kéo để di chuyển vị trí bóng đen' : ''}
+              title={stageMode === 'edit' ? 'Giữ chuột và kéo để di chuyển vị trí bóng đen' : isPlacingQm ? 'Nhấp vào đây để thêm hoặc xóa dấu ?' : ''}
             >
               <canvas
                 ref={canvasRef}
                 width={540}
                 height={960}
-                className=""
+                className={isPlacingQm && !is916Mode ? 'cursor-crosshair' : ''}
               />
             </div>
 

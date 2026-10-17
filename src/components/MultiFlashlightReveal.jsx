@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Upload, Play, Plus, Trash2, Move, RotateCw, ZoomIn, Eye, EyeOff, Layers, GripVertical, Check, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
+import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
 
 const STORAGE_KEY = 'multi_flashlight_game_settings_v2';
 
@@ -100,6 +101,40 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
   const [qmColor, setQmColor] = useState(initialSettings.qmColor || '#ef4444');
   const [qmDefaultSize, setQmDefaultSize] = useState(initialSettings.qmDefaultSize ?? 48);
   const [isPlacingQm, setIsPlacingQm] = useState(false);
+
+  // Lịch sử Hoàn tác (Undo) và Tiến tới (Redo) cho Dấu Hỏi Chấm
+  const [qmHistory, setQmHistory] = useState([initialSettings.questionMarks || []]);
+  const [qmHistoryIndex, setQmHistoryIndex] = useState(0);
+
+  const setQuestionMarksWithHistory = (newMarks) => {
+    const updated = typeof newMarks === 'function' ? newMarks(questionMarks) : newMarks;
+    setQuestionMarks(updated);
+    setQmHistory((prev) => {
+      const trimmed = prev.slice(0, qmHistoryIndex + 1);
+      return [...trimmed, updated];
+    });
+    setQmHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleUndoQm = () => {
+    if (qmHistoryIndex > 0) {
+      const prevIdx = qmHistoryIndex - 1;
+      setQmHistoryIndex(prevIdx);
+      setQuestionMarks(qmHistory[prevIdx]);
+    }
+  };
+
+  const handleRedoQm = () => {
+    if (qmHistoryIndex < qmHistory.length - 1) {
+      const nextIdx = qmHistoryIndex + 1;
+      setQmHistoryIndex(nextIdx);
+      setQuestionMarks(qmHistory[nextIdx]);
+    }
+  };
+
+  const handleClearAllQm = () => {
+    setQuestionMarksWithHistory([]);
+  };
 
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
   const [lockPointerToCenter, setLockPointerToCenter] = useState(false);
@@ -312,7 +347,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
     );
 
     if (existingIdx !== -1) {
-      setQuestionMarks((prev) => prev.filter((_, idx) => idx !== existingIdx));
+      setQuestionMarksWithHistory((prev) => prev.filter((_, idx) => idx !== existingIdx));
     } else {
       const newQm = {
         id: `mqm-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -320,7 +355,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         y: roundY,
         size: qmDefaultSize
       };
-      setQuestionMarks((prev) => [...prev, newQm]);
+      setQuestionMarksWithHistory((prev) => [...prev, newQm]);
     }
   };
 
@@ -1152,122 +1187,24 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             </button>
 
             {activeSection === 'questionMarks' && (
-              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-300 font-medium">Bật Dấu Hỏi Chấm:</span>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enableQuestionMarks}
-                      onChange={(e) => setEnableQuestionMarks(e.target.checked)}
-                      className="accent-rose-500 cursor-pointer"
-                    />
-                    <span className={enableQuestionMarks ? 'text-rose-400 font-bold' : 'text-slate-400'}>
-                      {enableQuestionMarks ? 'Đang Bật' : 'Đang Tắt'}
-                    </span>
-                  </label>
-                </div>
-
-                {enableQuestionMarks && (
-                  <div className="flex flex-col gap-3 pt-2 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => setIsPlacingQm(!isPlacingQm)}
-                      className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md ${
-                        isPlacingQm
-                          ? 'bg-rose-600 hover:bg-rose-500 text-white ring-2 ring-rose-400 animate-pulse'
-                          : 'bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600'
-                      }`}
-                    >
-                      <Plus size={14} />
-                      {isPlacingQm ? '📍 ĐANG BẬT ĐẶT DẤU ? (Nhấp lên bóng để thêm)' : '➕ Nhấp chuột để đặt dấu ?'}
-                    </button>
-
-                    <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800">
-                      💡 <b>Hướng dẫn:</b> Bật nút trên, sau đó nhấp trực tiếp vào bóng nhân vật trên khung để đặt thêm dấu <b>?</b>. Nhấp trúng dấu <b>?</b> đã có để xóa nó.
-                    </p>
-
-                    {/* Cỡ chữ mặc định & Màu sắc */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Cỡ chữ:</span>
-                          <span className="font-mono text-white text-[11px]">{qmDefaultSize}px</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="20"
-                          max="120"
-                          value={qmDefaultSize}
-                          onChange={(e) => {
-                            const newSize = Number(e.target.value);
-                            setQmDefaultSize(newSize);
-                            setQuestionMarks((prev) => prev.map((q) => ({ ...q, size: newSize })));
-                          }}
-                          className="accent-rose-500 cursor-pointer h-1.5"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Màu chữ:</span>
-                          <input
-                            type="color"
-                            value={qmColor}
-                            onChange={(e) => setQmColor(e.target.value)}
-                            className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1 justify-end pt-1">
-                          {['#ef4444', '#f97316', '#facc15', '#22c55e', '#ffffff'].map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => setQmColor(c)}
-                              className={`w-3.5 h-3.5 rounded-full border ${qmColor === c ? 'border-rose-400 scale-110' : 'border-slate-600'}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Danh sách & nút xóa tất cả */}
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] text-slate-400">
-                        Đang có: <b className="text-white">{questionMarks.length}</b> dấu hỏi
-                      </span>
-                      {questionMarks.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setQuestionMarks([])}
-                          className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 size={12} /> Xóa tất cả dấu ?
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setQuestionMarks([
-                          { id: 'mqm-1', x: 270, y: 350, size: 55 },
-                          { id: 'mqm-2', x: 190, y: 460, size: 45 },
-                          { id: 'mqm-3', x: 350, y: 460, size: 45 },
-                          { id: 'mqm-4', x: 270, y: 550, size: 50 },
-                          { id: 'mqm-5', x: 380, y: 650, size: 45 }
-                        ]);
-                        setQmColor('#ef4444');
-                        setQmDefaultSize(48);
-                      }}
-                      className="text-xs text-sky-400 hover:text-sky-300 hover:underline text-left cursor-pointer pt-0.5"
-                    >
-                      ↺ Khôi phục vị trí 5 dấu ? mẫu
-                    </button>
-                  </div>
-                )}
-              </div>
+              <QuestionMarkSettingsControl
+                enableQuestionMarks={enableQuestionMarks}
+                setEnableQuestionMarks={setEnableQuestionMarks}
+                questionMarks={questionMarks}
+                setQuestionMarksWithHistory={setQuestionMarksWithHistory}
+                canUndo={qmHistoryIndex > 0}
+                canRedo={qmHistoryIndex < qmHistory.length - 1}
+                onUndo={handleUndoQm}
+                onRedo={handleRedoQm}
+                qmColor={qmColor}
+                setQmColor={setQmColor}
+                qmDefaultSize={qmDefaultSize}
+                setQmDefaultSize={setQmDefaultSize}
+                isPlacingQm={isPlacingQm}
+                setIsPlacingQm={setIsPlacingQm}
+                onClearAll={handleClearAllQm}
+                themeColor="rose"
+              />
             )}
           </div>
 
