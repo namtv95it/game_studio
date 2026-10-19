@@ -145,10 +145,6 @@ export default function QuestionMarkSettingsControl({
             </button>
           </div>
 
-          <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-lg border border-slate-800">
-            💡 <b>Hướng dẫn:</b> Nhấp chuột lên bóng đen để đặt thêm dấu <b>?</b>. Nhấp trúng dấu <b>?</b> đã có để xóa. Dùng nút <b>Hoàn tác</b> và <b>Tiến tới</b> để khôi phục nhanh.
-          </p>
-
           {/* 4. MẪU DẤU HỎI CHẤM NỔI BẬT (Màu sắc & Phông chữ nghệ thuật) */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between text-[11px] text-slate-300 font-semibold">

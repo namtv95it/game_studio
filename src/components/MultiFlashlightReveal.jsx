@@ -3,6 +3,7 @@ import { Upload, Play, Plus, Trash2, Move, RotateCw, ZoomIn, Eye, EyeOff, Layers
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
+import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 
 const STORAGE_KEY = 'multi_flashlight_game_settings_v2';
 
@@ -76,6 +77,12 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
   const [beamBgColor, setBeamBgColor] = useState(initialSettings.beamBgColor || '#fef08a');
   const [enableBeamBg, setEnableBeamBg] = useState(initialSettings.enableBeamBg ?? true);
   const [beamOpacity, setBeamOpacity] = useState(initialSettings.beamOpacity ?? 100);
+
+  // Cài đặt Loại Nền Bóng (Shadow Background Style & Pattern)
+  const [shadowStyle, setShadowStyle] = useState(initialSettings.shadowStyle || 'pure-black');
+  const [shadowPattern, setShadowPattern] = useState(initialSettings.shadowPattern || 'none');
+  const [customShadowColor, setCustomShadowColor] = useState(initialSettings.customShadowColor || '#000000');
+  const [shadowOpacity, setShadowOpacity] = useState(initialSettings.shadowOpacity ?? 100);
 
   // Watermark
   const [watermarkText, setWatermarkText] = useState(initialSettings.watermarkText !== undefined ? initialSettings.watermarkText : '@Soonix');
@@ -199,12 +206,15 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         enableQuestionMarks,
         questionMarks,
         qmColor,
-        qmDefaultSize
+        qmDefaultSize,
+        shadowStyle,
+        customShadowColor,
+        shadowOpacity
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt MultiFlashlight:', e);
     }
-  }, [items, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize]);
+  }, [items, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, customShadowColor, shadowOpacity]);
 
   // Phím ESC để thoát 9:16
   useEffect(() => {
@@ -400,10 +410,9 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
     ctx.globalCompositeOperation = 'source-over';
     drawAllColorImages(ctx, width, height);
 
-    // BƯỚC 2: Phủ lớp Đen ĐẶC CHỈ lên các khu vực có ảnh PNG (vùng Alpha > 0)
+    // BƯỚC 2: Phủ lớp Nền Bóng (Màu trơn, Gradient, Pattern, Tùy chỉnh) CHỈ lên các khu vực có ảnh PNG
     ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, width, height);
+    applyShadowBackgroundToCanvas(ctx, width, height, shadowStyle, customShadowColor, shadowOpacity, shadowPattern);
 
     // BƯỚC 2.5: Vẽ các Dấu Hỏi Chấm '?' lên bóng đen (chỉ trên diện tích có bóng đen)
     if (enableQuestionMarks && questionMarks.length > 0) {
@@ -428,54 +437,56 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
 
     // BƯỚC 3 & 4: Đục thủng vệt sáng Đèn Pin SẮC NÉT (chỉ khi ở chế độ Soi Đèn và KHÔNG ở chế độ đặt dấu hỏi ?, hoặc khi quay video 9:16)
     if (((stageMode === 'flashlight' && !isPlacingQm) || is916Mode)) {
+      const createBeamPath = (c) => {
+        c.beginPath();
+        if (spotlightType === 'circle') {
+          c.arc(cursorPos.x, cursorPos.y, radius, 0, Math.PI * 2);
+        } else {
+          const centerRad = (beamAngle * Math.PI) / 180;
+          const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
+          const length = Math.max(width, height) * 3;
+
+          const canvasRect = canvasRef.current?.getBoundingClientRect();
+          const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (height / canvasRect.width) : 1;
+          const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
+
+          const perpX = -Math.sin(centerRad);
+          const perpY = Math.cos(centerRad);
+
+          const p1x = cursorPos.x - hwCanvas * perpX;
+          const p1y = cursorPos.y - hwCanvas * perpY;
+          const p2x = cursorPos.x + hwCanvas * perpX;
+          const p2y = cursorPos.y + hwCanvas * perpY;
+
+          const angle1 = centerRad - halfSpreadRad;
+          const angle2 = centerRad + halfSpreadRad;
+
+          const q1x = p1x + Math.cos(angle1) * length;
+          const q1y = p1y + Math.sin(angle1) * length;
+          const q2x = p2x + Math.cos(angle2) * length;
+          const q2y = p2y + Math.sin(angle2) * length;
+
+          c.moveTo(p1x, p1y);
+          c.lineTo(q1x, q1y);
+          c.lineTo(q2x, q2y);
+          c.lineTo(p2x, p2y);
+          c.closePath();
+        }
+      };
+
+      // Đục thủng lớp bóng tại vị trí đèn rọi
+      ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'black';
+      ctx.fillStyle = '#000000';
+      createBeamPath(ctx);
+      ctx.fill();
+      ctx.restore();
 
-      if (spotlightType === 'circle') {
-        ctx.beginPath();
-        ctx.arc(cursorPos.x, cursorPos.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Vệt Nón / Chùm Chiếu theo beamAngle (Góc Hướng), coneSpread (Độ Mở Góc Chiếu) và beamStartWidth (Bề Rộng Gốc)
-        ctx.save();
-        const centerRad = (beamAngle * Math.PI) / 180;
-        const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
-        const length = Math.max(width, height) * 3;
-
-        // Tính bề rộng gốc quy đổi theo canvas
-        const canvasRect = canvasRef.current?.getBoundingClientRect();
-        const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (height / canvasRect.width) : 1;
-        const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
-
-        const perpX = -Math.sin(centerRad);
-        const perpY = Math.cos(centerRad);
-
-        const p1x = cursorPos.x - hwCanvas * perpX;
-        const p1y = cursorPos.y - hwCanvas * perpY;
-        const p2x = cursorPos.x + hwCanvas * perpX;
-        const p2y = cursorPos.y + hwCanvas * perpY;
-
-        const angle1 = centerRad - halfSpreadRad;
-        const angle2 = centerRad + halfSpreadRad;
-
-        const q1x = p1x + Math.cos(angle1) * length;
-        const q1y = p1y + Math.sin(angle1) * length;
-        const q2x = p2x + Math.cos(angle2) * length;
-        const q2y = p2y + Math.sin(angle2) * length;
-
-        ctx.beginPath();
-        ctx.moveTo(p1x, p1y);
-        ctx.lineTo(q1x, q1y);
-        ctx.lineTo(q2x, q2y);
-        ctx.lineTo(p2x, p2y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // BƯỚC 4: Vẽ lại Ảnh của toàn bộ nhân vật lên các vùng đã được đục thủng (giữ nguyên màu sắc gốc)
+      // BƯỚC 4: Vẽ lại Ảnh của toàn bộ nhân vật CHỈ TRONG VÙNG ĐÈN RỌI
       ctx.save();
       ctx.globalCompositeOperation = 'destination-over';
+      createBeamPath(ctx);
+      ctx.clip();
       drawAllColorImages(ctx, width, height);
       ctx.restore();
     }
@@ -483,7 +494,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, items, is916Mode, globalScale, globalOffsetY, stageMode, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm]);
+  }, [cursorPos, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, items, is916Mode, globalScale, globalOffsetY, stageMode, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity]);
 
   // Upload thêm 1 hoặc nhiều ảnh mới
   const handleMultipleImageUpload = (e) => {
@@ -1139,6 +1150,45 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
                     />
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* NHÓM MỚI: MÀU NỀN BÓNG NHÂN VẬT (SHADOW BACKGROUND STYLE) */}
+          <div className="bg-slate-900/50 rounded-xl border border-sky-500/30 overflow-hidden shadow-sm shrink-0">
+            <button
+              type="button"
+              onClick={() => toggleSection('shadowStyle')}
+              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">🎨</span>
+                <span className="text-xs font-bold text-sky-300">Màu Nền Bóng Nhân Vật</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3.5 h-3.5 rounded-full border border-slate-500 shadow-sm"
+                  style={{
+                    backgroundColor: shadowStyle === 'custom-color' ? customShadowColor : '#000000'
+                  }}
+                />
+                {activeSection === 'shadowStyle' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+              </div>
+            </button>
+
+            {activeSection === 'shadowStyle' && (
+              <div className="p-3.5 border-t border-slate-800">
+                <ShadowStyleSettingsControl
+                  shadowStyle={shadowStyle}
+                  setShadowStyle={setShadowStyle}
+                  shadowPattern={shadowPattern}
+                  setShadowPattern={setShadowPattern}
+                  customShadowColor={customShadowColor}
+                  setCustomShadowColor={setCustomShadowColor}
+                  shadowOpacity={shadowOpacity}
+                  setShadowOpacity={setShadowOpacity}
+                  themeColor="sky"
+                />
               </div>
             )}
           </div>

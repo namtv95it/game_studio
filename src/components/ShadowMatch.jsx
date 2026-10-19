@@ -3,6 +3,7 @@ import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, ChevronDown, Che
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
+import ShadowStyleSettingsControl, { SHADOW_STYLE_PRESETS, applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -11,24 +12,6 @@ const POKEMON_IMAGES = [
 ];
 
 const STORAGE_KEY = 'shadow_game_settings_v3';
-
-// Danh sách các loại nền bóng (Shadow Background Styles)
-export const SHADOW_STYLE_PRESETS = [
-  { id: 'pure-black', name: 'Đen Tuyệt Đối', type: 'color', color: '#000000', label: 'Bóng Đen Chuẩn' },
-  { id: 'charcoal', name: 'Than Chì', type: 'color', color: '#1e293b', label: 'Xám Than Đậm' },
-  { id: 'deep-navy', name: 'Xanh Đêm Sâu', type: 'color', color: '#0f172a', label: 'Navy Huyền Bí' },
-  { id: 'crimson', name: 'Đỏ Thẫm', type: 'color', color: '#881337', label: 'Bóng Đỏ Ma Mị' },
-  { id: 'deep-purple', name: 'Tím Đậm', type: 'color', color: '#4c1d95', label: 'Bóng Tím Ảo Ảnh' },
-  { id: 'emerald', name: 'Xanh Rêu Đậm', type: 'color', color: '#064e3b', label: 'Bóng Rừng Đêm' },
-  { id: 'grad-dark-violet', name: 'Gradient Đen Tím', type: 'gradient', colors: ['#0f051d', '#3b0764', '#0f051d'], label: 'Tím Huyền Bí' },
-  { id: 'grad-fire', name: 'Gradient Hỏa Băng', type: 'gradient', colors: ['#450a0a', '#b91c1c', '#7f1d1d'], label: 'Lửa Đỏ Rực' },
-  { id: 'grad-cyber', name: 'Gradient Cyber', type: 'gradient', colors: ['#030712', '#1e1b4b', '#083344'], label: 'Cyberpunk Đêm' },
-  { id: 'grad-neon-gold', name: 'Gradient Hoàng Kim', type: 'gradient', colors: ['#1c1917', '#78350f', '#b45309'], label: 'Ánh Kim Vàng' },
-  { id: 'grad-silver', name: 'Gradient Kim Loại', type: 'gradient', colors: ['#0f172a', '#475569', '#1e293b'], label: 'Bạc Kim Loại' },
-  { id: 'pattern-dots', name: 'Chấm Bi Huyền Bí', type: 'pattern', pattern: 'dots', color: '#000000', dotColor: '#38bdf8', label: 'Chấm Bi Công Nghệ' },
-  { id: 'pattern-stripes', name: 'Sọc Chéo Bí Ẩn', type: 'pattern', pattern: 'stripes', color: '#0f172a', stripeColor: '#a855f7', label: 'Sọc Chéo Bí Ẩn' },
-  { id: 'custom-color', name: 'Tùy Chỉnh Màu', type: 'color', color: '#000000', label: 'Màu Tự Chọn' }
-];
 
 export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
   const getSavedSettings = () => {
@@ -54,8 +37,9 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   const [targetScale, setTargetScale] = useState(initialSettings.targetScale ?? 100);
   const [targetOffsetY, setTargetOffsetY] = useState(initialSettings.targetOffsetY ?? 0);
 
-  // Cài đặt Loại Nền Bóng (Shadow Background Style)
+  // Cài đặt Loại Nền Bóng (Shadow Background Style & Pattern)
   const [shadowStyle, setShadowStyle] = useState(initialSettings.shadowStyle || 'pure-black');
+  const [shadowPattern, setShadowPattern] = useState(initialSettings.shadowPattern || 'none');
   const [customShadowColor, setCustomShadowColor] = useState(initialSettings.customShadowColor || '#000000');
   const [shadowOpacity, setShadowOpacity] = useState(initialSettings.shadowOpacity ?? 100);
 
@@ -168,13 +152,14 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
         qmColor,
         qmDefaultSize,
         shadowStyle,
+        shadowPattern,
         customShadowColor,
         shadowOpacity
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt ShadowMatch:', e);
     }
-  }, [targetIndex, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, customShadowColor, shadowOpacity]);
+  }, [targetIndex, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, targetScale, targetOffsetY, trayOffsetX, trayOffsetY, trayItemSize, trayGap, images, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity]);
 
   // Tự động tính toán scale đồng nhất cho Theater Container (Khớp hoàn hảo cả chế độ thường và full màn hình 9:16)
   useEffect(() => {
@@ -273,67 +258,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
 
     // BƯỚC 2: Phủ lớp Nền Bóng (Hỗ trợ nhiều loại nền: Màu trơn, Gradient, Pattern)
     ctx.globalCompositeOperation = 'source-in';
-    const currentPreset = SHADOW_STYLE_PRESETS.find((p) => p.id === shadowStyle) || SHADOW_STYLE_PRESETS[0];
-    const opacityAlpha = Math.max(0.05, Math.min(1, (shadowOpacity ?? 100) / 100));
-
-    ctx.save();
-    ctx.globalAlpha = opacityAlpha;
-
-    if (shadowStyle === 'custom-color') {
-      ctx.fillStyle = customShadowColor || '#000000';
-      ctx.fillRect(0, 0, width, height);
-    } else if (currentPreset.type === 'color') {
-      ctx.fillStyle = currentPreset.color || '#000000';
-      ctx.fillRect(0, 0, width, height);
-    } else if (currentPreset.type === 'gradient') {
-      // Linear Gradient từ trên xuống dưới
-      const grad = ctx.createLinearGradient(0, 0, 0, height);
-      const cols = currentPreset.colors || ['#000000', '#1e293b'];
-      cols.forEach((col, idx) => {
-        grad.addColorStop(idx / (cols.length - 1), col);
-      });
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
-    } else if (currentPreset.type === 'pattern') {
-      // Nền chính
-      ctx.fillStyle = currentPreset.color || '#000000';
-      ctx.fillRect(0, 0, width, height);
-
-      // Tạo canvas con để làm Pattern lặp
-      const patCanvas = document.createElement('canvas');
-      const patCtx = patCanvas.getContext('2d');
-      if (currentPreset.pattern === 'dots') {
-        patCanvas.width = 24;
-        patCanvas.height = 24;
-        patCtx.fillStyle = currentPreset.dotColor || '#38bdf8';
-        patCtx.beginPath();
-        patCtx.arc(12, 12, 3.5, 0, Math.PI * 2);
-        patCtx.fill();
-      } else if (currentPreset.pattern === 'stripes') {
-        patCanvas.width = 32;
-        patCanvas.height = 32;
-        patCtx.strokeStyle = currentPreset.stripeColor || '#a855f7';
-        patCtx.lineWidth = 4;
-        patCtx.beginPath();
-        patCtx.moveTo(0, 32);
-        patCtx.lineTo(32, 0);
-        patCtx.stroke();
-      }
-
-      try {
-        const pattern = ctx.createPattern(patCanvas, 'repeat');
-        if (pattern) {
-          ctx.fillStyle = pattern;
-          ctx.fillRect(0, 0, width, height);
-        }
-      } catch (err) {
-        console.error('Pattern fill error:', err);
-      }
-    } else {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, width, height);
-    }
-    ctx.restore();
+    applyShadowBackgroundToCanvas(ctx, width, height, shadowStyle, customShadowColor, shadowOpacity, shadowPattern);
 
     // BƯỚC 2.5: Vẽ các Dấu Hỏi Chấm '?' lên lớp bóng đen (chỉ hiển thị trên phần bóng đen)
     if (enableQuestionMarks && questionMarks.length > 0) {
@@ -359,7 +284,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
 
   useEffect(() => {
     renderCanvas();
-  }, [targetOffsetY, images, targetIndex, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, customShadowColor, shadowOpacity]);
+  }, [targetOffsetY, images, targetIndex, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity]);
 
   const resetGameRef = useRef(null);
 
@@ -870,79 +795,17 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
                     </span>
                   </div>
 
-                  {/* Grid chọn nhanh các kiểu nền bóng */}
-                  <div className="grid grid-cols-2 gap-1.5 max-h-56 overflow-y-auto custom-scrollbar p-1 bg-slate-950/40 rounded-lg border border-slate-800">
-                    {SHADOW_STYLE_PRESETS.map((preset) => {
-                      const isSelected = shadowStyle === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => setShadowStyle(preset.id)}
-                          className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-purple-950/60 border-purple-400 text-white shadow-sm ring-1 ring-purple-400/50'
-                              : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750 hover:text-white'
-                          }`}
-                        >
-                          {/* Preview swatch */}
-                          <div
-                            className="w-5 h-5 rounded-md border border-slate-600 shrink-0 shadow-inner"
-                            style={
-                              preset.type === 'color'
-                                ? { backgroundColor: preset.id === 'custom-color' ? customShadowColor : preset.color }
-                                : preset.type === 'gradient'
-                                ? { background: `linear-gradient(135deg, ${preset.colors.join(', ')})` }
-                                : {
-                                    backgroundColor: preset.color,
-                                    backgroundImage:
-                                      preset.pattern === 'dots'
-                                        ? `radial-gradient(${preset.dotColor} 1.5px, transparent 1.5px)`
-                                        : `repeating-linear-gradient(45deg, ${preset.stripeColor}, ${preset.stripeColor} 2px, transparent 2px, transparent 6px)`,
-                                    backgroundSize: preset.pattern === 'dots' ? '8px 8px' : 'auto'
-                                  }
-                            }
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[11px] font-semibold truncate leading-tight">{preset.name}</span>
-                            <span className="text-[9px] text-slate-400 truncate leading-none">{preset.label}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Chọn màu tùy chỉnh nếu người dùng bấm chọn 'Tùy Chỉnh Màu' */}
-                  {shadowStyle === 'custom-color' && (
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800">
-                      <span className="text-xs text-slate-300 font-medium">Chọn Màu Nền Bóng:</span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={customShadowColor}
-                          onChange={(e) => setCustomShadowColor(e.target.value)}
-                          className="w-7 h-7 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                        />
-                        <span className="text-xs font-mono text-purple-300 uppercase">{customShadowColor}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Độ mờ / Độ đậm của bóng (Shadow Opacity) */}
-                  <div className="flex flex-col gap-1 pt-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Độ đậm bóng:</span>
-                      <span className="text-white font-mono text-[11px]">{shadowOpacity}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={shadowOpacity}
-                      onChange={(e) => setShadowOpacity(Number(e.target.value))}
-                      className="accent-purple-400 cursor-pointer h-1.5"
-                    />
-                  </div>
+                  <ShadowStyleSettingsControl
+                    shadowStyle={shadowStyle}
+                    setShadowStyle={setShadowStyle}
+                    shadowPattern={shadowPattern}
+                    setShadowPattern={setShadowPattern}
+                    customShadowColor={customShadowColor}
+                    setCustomShadowColor={setCustomShadowColor}
+                    shadowOpacity={shadowOpacity}
+                    setShadowOpacity={setShadowOpacity}
+                    themeColor="purple"
+                  />
                 </div>
               </div>
             )}

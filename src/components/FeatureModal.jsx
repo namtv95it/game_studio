@@ -41,46 +41,6 @@ export const GAME_FEATURES = [
     color: 'from-violet-600 to-fuchsia-600',
     badge: 'Chức năng MỚI',
     active: true
-  },
-  {
-    id: 'luckywheel',
-    title: 'Vòng Quay Cửa Bí Mật',
-    subtitle: 'Lucky Wheel Doors',
-    description: 'Thiết lập kịch bản 3 lượt quay vòng 3 cửa màu sắc nhận Quái vật, Hố đen hoặc Quà tặng.',
-    icon: Disc,
-    color: 'from-amber-500 to-orange-600',
-    badge: 'Chức năng 3',
-    active: true
-  },
-  {
-    id: 'imageblend',
-    title: 'Trộn Ảnh Blend & Blend+',
-    subtitle: 'Vortex Pixel Fusion',
-    description: 'Tính năng dung hợp biến đổi ảnh nhân vật + emoji thành dạng mới với hiệu ứng xoáy Pixel Vortex.',
-    icon: Wand2,
-    color: 'from-pink-500 to-purple-600',
-    badge: 'Chức năng 4',
-    active: true
-  },
-  {
-    id: 'redemption',
-    title: 'Ánh Sáng Cứu Rỗi',
-    subtitle: 'The Redemption Effect',
-    description: 'Chúa Jesus soi sáng và cảm hóa nhân vật Demon, chuyển đổi từ bóng tối sang ánh sáng qua 3 giai đoạn.',
-    icon: Wand2,
-    color: 'from-yellow-400 to-amber-600',
-    badge: 'Chức năng 5',
-    active: true
-  },
-  {
-    id: 'bomb_reveal',
-    title: 'Bom Biến Hình (Studio)',
-    subtitle: 'Mystery Bomb Reveal',
-    description: 'Kéo thả 3 loại bom: Cầu vồng, Tình yêu, Ác quỷ. Đếm ngược 3s rung màn hình và nổ chớp sáng hé lộ nhân vật.',
-    icon: Flame,
-    color: 'from-amber-500 via-orange-500 to-red-600',
-    badge: 'Chức năng MỚI',
-    active: true
   }
 ];
 

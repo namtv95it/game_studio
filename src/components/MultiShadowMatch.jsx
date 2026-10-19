@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, Plus, Trash2, Eye, EyeOff, Layers, Palette, Wand2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
+import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 
 const POKEMON_IMAGES = [
   'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png', // Pikachu PNG
@@ -74,6 +75,12 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
   const [pointerOffsetY, setPointerOffsetY] = useState(initialSettings.pointerOffsetY ?? 0);
   const [pointerAnchor, setPointerAnchor] = useState(initialSettings.pointerAnchor || 'tip');
   const [enablePointer, setEnablePointer] = useState(initialSettings.enablePointer ?? true);
+
+  // Cài đặt Loại Nền Bóng (Shadow Background Style & Pattern)
+  const [shadowStyle, setShadowStyle] = useState(initialSettings.shadowStyle || 'pure-black');
+  const [shadowPattern, setShadowPattern] = useState(initialSettings.shadowPattern || 'none');
+  const [customShadowColor, setCustomShadowColor] = useState(initialSettings.customShadowColor || '#000000');
+  const [shadowOpacity, setShadowOpacity] = useState(initialSettings.shadowOpacity ?? 100);
 
   // Cài đặt khay ảnh phía trên (Top Tray)
   const [trayOffsetX, setTrayOffsetX] = useState(initialSettings.trayOffsetX ?? 112);
@@ -163,12 +170,16 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
         bottomImageSize,
         bottomImageOpacity,
         bottomImageRotation,
-        bottomImageCustomUrl
+        bottomImageCustomUrl,
+        shadowStyle,
+        shadowPattern,
+        customShadowColor,
+        shadowOpacity
       }));
     } catch (e) {
       console.error('Không thể lưu cài đặt MultiShadowMatch:', e);
     }
-  }, [images, stageImages, shadowIndex, stageLayers, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, trayOffsetX, trayOffsetY, trayItemSize, trayGap, trayPickEnabled, bottomImageVisible, bottomImageIndex, bottomImageX, bottomImageY, bottomImageSize, bottomImageOpacity, bottomImageRotation, bottomImageCustomUrl]);
+  }, [images, stageImages, shadowIndex, stageLayers, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, trayOffsetX, trayOffsetY, trayItemSize, trayGap, trayPickEnabled, bottomImageVisible, bottomImageIndex, bottomImageX, bottomImageY, bottomImageSize, bottomImageOpacity, bottomImageRotation, bottomImageCustomUrl, shadowStyle, shadowPattern, customShadowColor, shadowOpacity]);
 
   // Load Image Objects for Silhouette / Canvas render (Cả ảnh khay trên và ảnh sân khấu)
   useEffect(() => {
@@ -1228,6 +1239,31 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                               </button>
                             </div>
 
+                            {/* Cài đặt màu nền bóng khi layer là dạng Bóng */}
+                            {selectedImageLayer.type === 'shadow' && (
+                              <div className="p-3 bg-purple-950/40 rounded-xl border border-purple-500/30 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                    <span>🎨</span> Kiểu Nền Bóng
+                                  </span>
+                                  <span className="text-[10px] text-purple-200 bg-purple-900/60 px-1.5 py-0.5 rounded font-mono">
+                                    {shadowStyle}
+                                  </span>
+                                </div>
+                                <ShadowStyleSettingsControl
+                                  shadowStyle={shadowStyle}
+                                  setShadowStyle={setShadowStyle}
+                                  shadowPattern={shadowPattern}
+                                  setShadowPattern={setShadowPattern}
+                                  customShadowColor={customShadowColor}
+                                  setCustomShadowColor={setCustomShadowColor}
+                                  shadowOpacity={shadowOpacity}
+                                  setShadowOpacity={setShadowOpacity}
+                                  themeColor="purple"
+                                />
+                              </div>
+                            )}
+
                             {selectedImageLayer.type === 'movable' && (
                               <div className="text-xs text-emerald-300 bg-emerald-950/50 p-2.5 rounded-xl border border-emerald-800/60 flex items-center gap-2">
                                 <Move size={14} className="text-emerald-400 shrink-0" />
@@ -1718,6 +1754,10 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
                       <SilhouetteCanvas
                         imgUrl={imgUrl}
                         loadedImg={loadedImgObjects.current[imgUrl]}
+                        shadowStyle={shadowStyle}
+                        shadowPattern={shadowPattern}
+                        customShadowColor={customShadowColor}
+                        shadowOpacity={shadowOpacity}
                       />
                     ) : (
                       /* HIỂN THỊ DẠNG ẢNH ĐẦY ĐỦ MÀU SẮC (ẢNH MÀU HOẶC DI CHUYỂN) */
@@ -1887,8 +1927,8 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
   );
 }
 
-// Sub-component vẽ Silhouette Canvas bóng đen đặc #000000
-function SilhouetteCanvas({ imgUrl, loadedImg }) {
+// Sub-component vẽ Silhouette Canvas bóng với nhiều kiểu nền (màu trơn, gradient, pattern, tùy chỉnh)
+function SilhouetteCanvas({ imgUrl, loadedImg, shadowStyle = 'pure-black', customShadowColor = '#000000', shadowOpacity = 100, shadowPattern = 'none' }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -1919,11 +1959,10 @@ function SilhouetteCanvas({ imgUrl, loadedImg }) {
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(loadedImg, drawX, drawY, drawW, drawH);
 
-    // Phủ đen đặc chỉ lên vùng hình ảnh
+    // Phủ nền bóng theo cài đặt chỉ lên vùng hình ảnh
     ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, width, height);
-  }, [imgUrl, loadedImg]);
+    applyShadowBackgroundToCanvas(ctx, width, height, shadowStyle, customShadowColor, shadowOpacity, shadowPattern);
+  }, [imgUrl, loadedImg, shadowStyle, customShadowColor, shadowOpacity, shadowPattern]);
 
   return (
     <canvas
