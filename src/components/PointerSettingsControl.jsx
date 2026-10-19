@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RotateCcw, ChevronDown, ChevronUp, MapPin, Compass } from 'lucide-react';
+import NumberInput from './NumberInput';
 
 export const POINTER_PRESETS = [
   { id: 'finger_up', emoji: '👆', label: 'Ngón tay', rotation: -90, anchor: 'tip' },
@@ -241,12 +242,11 @@ export default function PointerSettingsControl({
               <div className="flex items-center justify-between">
                 <label className="text-[11px] text-slate-400 font-medium">Kích Thước:</label>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="16"
-                    max="500"
+                  <NumberInput
+                    min={10}
+                    max={500}
                     value={pointerSize}
-                    onChange={(e) => setPointerSize(Number(e.target.value))}
+                    onChange={(val) => setPointerSize(val)}
                     className={`w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none ${focusBorder} font-mono`}
                   />
                   <span className="text-[11px] text-slate-400">px</span>
@@ -271,12 +271,11 @@ export default function PointerSettingsControl({
                   <Compass size={13} className={textColor} /> Chỉnh Góc Xoay:
                 </span>
                 <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="-180"
-                    max="180"
+                  <NumberInput
+                    min={-180}
+                    max={180}
                     value={pointerRotation ?? -90}
-                    onChange={(e) => setPointerRotation(Number(e.target.value))}
+                    onChange={(val) => setPointerRotation(val)}
                     className={`w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none ${focusBorder} font-mono`}
                   />
                   <span className="text-xs text-slate-400">°</span>
@@ -360,12 +359,11 @@ export default function PointerSettingsControl({
                   <div className="flex items-center justify-between text-[11px] text-slate-300">
                     <span>Ngang (X - Trái / Phải):</span>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="-200"
-                        max="200"
+                      <NumberInput
+                        min={-300}
+                        max={300}
                         value={pointerOffsetX ?? 0}
-                        onChange={(e) => setPointerOffsetX(Number(e.target.value))}
+                        onChange={(val) => setPointerOffsetX(val)}
                         className={`w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none ${focusBorder} font-mono`}
                       />
                       <span className="text-slate-400">px</span>
@@ -388,12 +386,11 @@ export default function PointerSettingsControl({
                   <div className="flex items-center justify-between text-[11px] text-slate-300">
                     <span>Dọc (Y - Lên / Xuống):</span>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="-200"
-                        max="200"
+                      <NumberInput
+                        min={-300}
+                        max={300}
                         value={pointerOffsetY ?? 0}
-                        onChange={(e) => setPointerOffsetY(Number(e.target.value))}
+                        onChange={(val) => setPointerOffsetY(val)}
                         className={`w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none ${focusBorder} font-mono`}
                       />
                       <span className="text-slate-400">px</span>

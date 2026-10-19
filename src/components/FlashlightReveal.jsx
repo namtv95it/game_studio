@@ -4,6 +4,7 @@ import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
 import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
+import NumberInput from './NumberInput';
 
 // Danh sách các hình dạng hỗ trợ cho Vệt Đèn và Lớp Phủ Màu
 export const SPOTLIGHT_SHAPES = [
@@ -787,12 +788,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To:</label>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="50"
-                        max="200"
+                      <NumberInput
+                        min={10}
+                        max={300}
                         value={scale}
-                        onChange={(e) => setScale(Number(e.target.value))}
+                        onChange={(val) => setScale(val)}
                         className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
                       />
                       <span className="text-xs text-slate-400">%</span>
@@ -813,12 +813,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống:</label>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="-300"
-                        max="300"
+                      <NumberInput
+                        min={-400}
+                        max={400}
                         value={offsetY}
-                        onChange={(e) => setOffsetY(Number(e.target.value))}
+                        onChange={(val) => setOffsetY(val)}
                         className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
                       />
                       <span className="text-xs text-slate-400">px</span>
@@ -931,12 +930,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     <div className="flex items-center justify-between">
                       <label className="text-xs text-slate-400 font-medium">Kích Thước Vệt Sáng:</label>
                       <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="30"
-                          max="250"
+                        <NumberInput
+                          min={20}
+                          max={400}
                           value={radius}
-                          onChange={(e) => setRadius(Number(e.target.value))}
+                          onChange={(val) => setRadius(val)}
                           className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
                         />
                         <span className="text-xs text-slate-400">px</span>
@@ -960,12 +958,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span>Hướng Chiếu:</span>
                           <div className="flex items-center gap-1 font-mono text-white text-xs">
-                            <input
-                              type="number"
-                              min="-180"
-                              max="180"
+                            <NumberInput
+                              min={-180}
+                              max={180}
                               value={beamAngle}
-                              onChange={(e) => setBeamAngle(Number(e.target.value))}
+                              onChange={(val) => setBeamAngle(val)}
                               className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
                             />
                             <span>°</span>
@@ -1002,12 +999,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span className="font-medium text-sky-300">Độ Mở (Góc Loe):</span>
                           <div className="flex items-center gap-1 font-mono text-white text-xs">
-                            <input
-                              type="number"
-                              min="0"
-                              max="120"
+                            <NumberInput
+                              min={0}
+                              max={120}
                               value={coneSpread}
-                              onChange={(e) => setConeSpread(Number(e.target.value))}
+                              onChange={(val) => setConeSpread(val)}
                               className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
                             />
                             <span>°</span>
@@ -1049,12 +1045,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         <div className="flex items-center justify-between text-xs text-slate-400">
                           <span className="font-medium text-sky-300">Bề Rộng Gốc Đèn (Không Nhọn):</span>
                           <div className="flex items-center gap-1 font-mono text-white text-xs">
-                            <input
-                              type="number"
-                              min="0"
-                              max="300"
+                            <NumberInput
+                              min={0}
+                              max={300}
                               value={beamStartWidth}
-                              onChange={(e) => setBeamStartWidth(Number(e.target.value))}
+                              onChange={(val) => setBeamStartWidth(val)}
                               className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400"
                             />
                             <span>px</span>
@@ -1292,12 +1287,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                             >
                               -
                             </button>
-                            <input
-                              type="number"
-                              min="10"
-                              max="400"
+                            <NumberInput
+                              min={10}
+                              max={600}
                               value={radius}
-                              onChange={(e) => setRadius(Math.max(10, Math.min(600, Number(e.target.value) || 10)))}
+                              onChange={(val) => setRadius(val)}
                               className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-purple-400 font-mono font-bold"
                             />
                             <button
@@ -1361,12 +1355,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                               >
                                 -
                               </button>
-                              <input
-                                type="number"
-                                min="20"
-                                max="800"
+                              <NumberInput
+                                min={20}
+                                max={800}
                                 value={coverWidth}
-                                onChange={(e) => setCoverWidth(Math.max(20, Math.min(1000, Number(e.target.value) || 20)))}
+                                onChange={(val) => setCoverWidth(val)}
                                 className="w-14 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-purple-400 font-mono font-bold"
                               />
                               <button
@@ -1403,12 +1396,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                               >
                                 -
                               </button>
-                              <input
-                                type="number"
-                                min="20"
-                                max="800"
+                              <NumberInput
+                                min={20}
+                                max={800}
                                 value={coverHeight}
-                                onChange={(e) => setCoverHeight(Math.max(20, Math.min(1000, Number(e.target.value) || 20)))}
+                                onChange={(val) => setCoverHeight(val)}
                                 className="w-14 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-purple-400 font-mono font-bold"
                               />
                               <button
@@ -1724,12 +1716,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         <div className="flex items-center justify-between text-[11px] text-slate-400">
                           <span>Cỡ chữ:</span>
                           <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              min="8"
-                              max="200"
+                            <NumberInput
+                              min={6}
+                              max={200}
                               value={watermarkFontSize}
-                              onChange={(e) => setWatermarkFontSize(Math.max(1, Number(e.target.value)))}
+                              onChange={(val) => setWatermarkFontSize(val)}
                               className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
                             />
                             <span className="text-[10px] text-slate-400">px</span>
@@ -1775,10 +1766,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         <div className="flex items-center justify-between text-[11px] text-slate-400">
                           <span>Cách mép:</span>
                           <div className="flex items-center gap-1">
-                            <input
-                              type="number"
+                            <NumberInput
+                              min={-300}
+                              max={300}
                               value={watermarkDistance}
-                              onChange={(e) => setWatermarkDistance(Number(e.target.value))}
+                              onChange={(val) => setWatermarkDistance(val)}
                               className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
                             />
                             <span className="text-[10px] text-slate-400">px</span>
