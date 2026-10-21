@@ -86,6 +86,84 @@ export function drawCustomShape(ctx, shape, cx, cy, rx, ry = rx) {
   }
 }
 
+/**
+ * Hàm sinh chuỗi path data SVG cho hình dạng tùy biến (Tròn, Vuông, Tim, Ngôi sao, Đám mây)
+ */
+export function getCustomShapeSvgPath(shape, cx, cy, rx, ry = rx) {
+  const rX = Math.max(5, rx);
+  const rY = Math.max(5, ry);
+
+  if (shape === 'square') {
+    const hw = rX * 0.95;
+    const hh = rY * 0.95;
+    const corner = Math.min(Math.min(hw, hh) * 0.2, 16);
+    return `M ${cx - hw + corner} ${cy - hh} ` +
+      `h ${hw * 2 - corner * 2} ` +
+      `a ${corner} ${corner} 0 0 1 ${corner} ${corner} ` +
+      `v ${hh * 2 - corner * 2} ` +
+      `a ${corner} ${corner} 0 0 1 -${corner} ${corner} ` +
+      `h -${hw * 2 - corner * 2} ` +
+      `a ${corner} ${corner} 0 0 1 -${corner} -${corner} ` +
+      `v -${hh * 2 - corner * 2} ` +
+      `a ${corner} ${corner} 0 0 1 ${corner} -${corner} Z`;
+  }
+
+  if (shape === 'heart') {
+    const sx = rX * 0.95;
+    const sy = rY * 0.95;
+    return `M ${cx} ${cy + sy * 0.65} ` +
+      `C ${cx - sx * 1.1} ${cy - sy * 0.2}, ${cx - sx * 0.9} ${cy - sy * 1.05}, ${cx} ${cy - sy * 0.35} ` +
+      `C ${cx + sx * 0.9} ${cy - sy * 1.05}, ${cx + sx * 1.1} ${cy - sy * 0.2}, ${cx} ${cy + sy * 0.65} Z`;
+  }
+
+  if (shape === 'star') {
+    const points = 5;
+    const outerRx = rX * 1.1;
+    const outerRy = rY * 1.1;
+    const innerRx = rX * 0.48;
+    const innerRy = rY * 0.48;
+    let rot = (Math.PI / 2) * 3;
+    const step = Math.PI / points;
+
+    let d = `M ${cx + Math.cos(rot) * outerRx} ${cy + Math.sin(rot) * outerRy} `;
+    for (let i = 0; i < points; i++) {
+      let x = cx + Math.cos(rot) * outerRx;
+      let y = cy + Math.sin(rot) * outerRy;
+      d += `L ${x} ${y} `;
+      rot += step;
+
+      x = cx + Math.cos(rot) * innerRx;
+      y = cy + Math.sin(rot) * innerRy;
+      d += `L ${x} ${y} `;
+      rot += step;
+    }
+    d += 'Z';
+    return d;
+  }
+
+  if (shape === 'cloud') {
+    // Tỉ lệ scale đám mây chuẩn (gốc 80)
+    const scaleX = rX / 80;
+    const scaleY = rY / 80;
+    const s = 60;
+    // Điểm tính toán theo scale
+    const p = (relX, relY) => `${cx + relX * scaleX} ${cy + relY * scaleY}`;
+    // SVG Path cho đám mây
+    const r1 = s * 0.45;
+    const r2 = s * 0.55;
+    const r3 = s * 0.5;
+    const r4 = s * 0.4;
+    return `M ${p(-s * 0.45, s * 0.6)} ` +
+      `A ${r1 * scaleX} ${r1 * scaleY} 0 0 1 ${p(-s * 0.45, -s * 0.3)} ` +
+      `A ${r2 * scaleX} ${r2 * scaleY} 0 0 1 ${p(s * 0.25, -s * 0.5)} ` +
+      `A ${r3 * scaleX} ${r3 * scaleY} 0 0 1 ${p(s * 0.75, 0)} ` +
+      `A ${r4 * scaleX} ${r4 * scaleY} 0 0 1 ${p(-s * 0.45, s * 0.6)} Z`;
+  }
+
+  // Mặc định hình tròn
+  return `M ${cx - rX} ${cy} a ${rX} ${rY} 0 1 0 ${rX * 2} 0 a ${rX} ${rY} 0 1 0 -${rX * 2} 0 Z`;
+}
+
 const STORAGE_KEY = 'flashlight_game_settings';
 
 const DEFAULT_SETTINGS = {
@@ -2002,51 +2080,6 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
           <StageBackgroundOverlay />
 
-          {/* QUẦNG SÁNG ĐÈN PIN NỀN TRÊN CONTAINER (Chỉ ở chế độ Soi Đèn Chiếu Sáng) - Tắt khi đang ở chế độ đặt dấu hỏi ? */}
-          {gameMode === 'reveal' && enableBeamBg && (!isPlacingQm || is916Mode) && (
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden"
-              style={{ opacity: Math.max(0, Math.min(1, beamOpacity / 100)) }}
-            >
-              {spotlightType === 'circle' ? (
-                <circle
-                  cx={cursorPos.rawX}
-                  cy={cursorPos.rawY}
-                  r={radius * ((scale / 100) * (is916Mode ? 1.25 : 0.95))}
-                  fill={beamBgColor}
-                />
-              ) : (() => {
-                const effectiveR = Math.max(1600, radius * 10);
-                const containerAngle = ((beamAngle - 90) * Math.PI) / 180;
-                const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
-                const hw = (beamStartWidth || 55) / 2;
-
-                const perpX = -Math.sin(containerAngle);
-                const perpY = Math.cos(containerAngle);
-
-                const p1x = cursorPos.rawX - hw * perpX;
-                const p1y = cursorPos.rawY - hw * perpY;
-                const p2x = cursorPos.rawX + hw * perpX;
-                const p2y = cursorPos.rawY + hw * perpY;
-
-                const a1 = containerAngle - halfSpread;
-                const a2 = containerAngle + halfSpread;
-
-                const q1x = p1x + Math.cos(a1) * effectiveR;
-                const q1y = p1y + Math.sin(a1) * effectiveR;
-                const q2x = p2x + Math.cos(a2) * effectiveR;
-                const q2y = p2y + Math.sin(a2) * effectiveR;
-
-                return (
-                  <path
-                    d={`M ${p1x} ${p1y} L ${q1x} ${q1y} L ${q2x} ${q2y} L ${p2x} ${p2y} Z`}
-                    fill={beamBgColor}
-                  />
-                );
-              })()}
-            </svg>
-          )}
-
           {/* CANVAS XOAY NẰM NGANG 90 ĐỘ GIỐNG HỆT KHI ĐANG CHẠY */}
           <div
             className="relative z-10"
@@ -2057,6 +2090,55 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               height: '960px'
             }}
           >
+            {/* QUẦNG SÁNG ĐÈN PIN NỀN (Nằm cùng hệ quy chiếu Canvas - Khớp pixel-perfect 100% mọi hình dạng, tỷ lệ & góc xoay) */}
+            {gameMode === 'reveal' && enableBeamBg && (!isPlacingQm || is916Mode) && (
+              <svg
+                viewBox="0 0 540 960"
+                className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-visible"
+                style={{ opacity: Math.max(0, Math.min(1, beamOpacity / 100)) }}
+              >
+                {spotlightType === 'circle' ? (
+                  <path
+                    d={getCustomShapeSvgPath(
+                      beamShape || 'circle',
+                      cursorPos.x,
+                      cursorPos.y,
+                      radius
+                    )}
+                    fill={beamBgColor}
+                  />
+                ) : (() => {
+                  const effectiveR = Math.max(1600, radius * 10);
+                  const centerRad = (beamAngle * Math.PI) / 180;
+                  const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
+                  const hw = (beamStartWidth || 55) / 2;
+
+                  const perpX = -Math.sin(centerRad);
+                  const perpY = Math.cos(centerRad);
+
+                  const p1x = cursorPos.x - hw * perpX;
+                  const p1y = cursorPos.y - hw * perpY;
+                  const p2x = cursorPos.x + hw * perpX;
+                  const p2y = cursorPos.y + hw * perpY;
+
+                  const a1 = centerRad - halfSpread;
+                  const a2 = centerRad + halfSpread;
+
+                  const q1x = p1x + Math.cos(a1) * effectiveR;
+                  const q1y = p1y + Math.sin(a1) * effectiveR;
+                  const q2x = p2x + Math.cos(a2) * effectiveR;
+                  const q2y = p2y + Math.sin(a2) * effectiveR;
+
+                  return (
+                    <path
+                      d={`M ${p1x} ${p1y} L ${q1x} ${q1y} L ${q2x} ${q2y} L ${p2x} ${p2y} Z`}
+                      fill={beamBgColor}
+                    />
+                  );
+                })()}
+              </svg>
+            )}
+
             <canvas
               ref={canvasRef}
               width={540}
