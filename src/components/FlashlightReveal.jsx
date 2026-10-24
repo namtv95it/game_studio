@@ -200,6 +200,10 @@ const DEFAULT_SETTINGS = {
   questionMarks: [],
   qmColor: '#ef4444',
   qmDefaultSize: 48,
+  qmRandomColor: false,
+  qmRandomSize: false,
+  qmMinSize: 24,
+  qmMaxSize: 80,
   beamStartWidth: 55,
   gameMode: 'reveal', // 'reveal' (Soi Đèn Chiếu Sáng) | 'cover' (Phủ Màu Che Ảnh)
   coverColor: '#000000',
@@ -284,6 +288,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [questionMarks, setQuestionMarks] = useState(initialSettings.questionMarks || []);
   const [qmColor, setQmColor] = useState(initialSettings.qmColor || '#ef4444'); // Đỏ tươi như trong ảnh
   const [qmDefaultSize, setQmDefaultSize] = useState(initialSettings.qmDefaultSize ?? 48);
+  const [qmRandomColor, setQmRandomColor] = useState(initialSettings.qmRandomColor ?? false);
+  const [qmRandomSize, setQmRandomSize] = useState(initialSettings.qmRandomSize ?? false);
+  const [qmMinSize, setQmMinSize] = useState(initialSettings.qmMinSize ?? 24);
+  const [qmMaxSize, setQmMaxSize] = useState(initialSettings.qmMaxSize ?? 80);
   const [isPlacingQm, setIsPlacingQm] = useState(false); // Bật chế độ bấm để thêm dấu ?
   const [lockPointerToCenter, setLockPointerToCenter] = useState(false); // Cố định con trỏ vào tâm để điều chỉnh
 
@@ -381,6 +389,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         questionMarks,
         qmColor,
         qmDefaultSize,
+        qmRandomColor,
+        qmRandomSize,
+        qmMinSize,
+        qmMaxSize,
         shadowStyle,
         shadowPattern,
         customShadowColor,
@@ -398,7 +410,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     } catch (e) {
       console.error('Không thể lưu cài đặt:', e);
     }
-  }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
   // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -500,12 +512,26 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       // Xóa dấu ? vừa bấm trúng
       setQuestionMarksWithHistory((prev) => prev.filter((_, idx) => idx !== existingIdx));
     } else {
-      // Thêm dấu ? mới tại vị trí nhấp
+      // Thêm dấu ? mới tại vị trí nhấp (hỗ trợ tính năng random cỡ chữ và màu sắc)
+      let calculatedSize = qmDefaultSize;
+      if (qmRandomSize) {
+        const vMin = Math.min(qmMinSize, qmMaxSize);
+        const vMax = Math.max(qmMinSize, qmMaxSize);
+        calculatedSize = Math.floor(Math.random() * (vMax - vMin + 1)) + vMin;
+      }
+
+      let calculatedColor = undefined;
+      if (qmRandomColor) {
+        const colorPalette = ['#ef4444', '#facc15', '#f97316', '#ffffff', '#06b6d4', '#22c55e', '#a855f7', '#f472b6', '#3b82f6'];
+        calculatedColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+      }
+
       const newQm = {
         id: `qm-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         x: roundX,
         y: roundY,
-        size: qmDefaultSize
+        size: calculatedSize,
+        ...(calculatedColor ? { color: calculatedColor } : {})
       };
       setQuestionMarksWithHistory((prev) => [...prev, newQm]);
     }
@@ -619,10 +645,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         ctx.globalCompositeOperation = 'source-over';
         questionMarks.forEach((qm) => {
           const qmSize = qm.size || qmDefaultSize;
+          const markColor = qm.color || qmColor;
           ctx.font = `900 ${qmSize}px "Arial Black", "Arial", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillStyle = qmColor;
+          ctx.fillStyle = markColor;
           ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
           ctx.shadowBlur = 4;
           ctx.shadowOffsetX = 1;
@@ -647,13 +674,14 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         ctx.globalCompositeOperation = 'source-over';
         questionMarks.forEach((qm) => {
           const qmSize = qm.size || qmDefaultSize;
+          const markColor = qm.color || qmColor;
           ctx.save();
           ctx.font = `900 ${qmSize}px "Arial Black", "Arial", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
-          // Viền đỏ tươi rực rỡ và đổ bóng nhẹ
-          ctx.fillStyle = qmColor;
+          // Viền đổ bóng nhẹ và màu dấu hỏi (hỗ trợ màu riêng biệt theo từng dấu)
+          ctx.fillStyle = markColor;
           ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
           ctx.shadowBlur = 4;
           ctx.shadowOffsetX = 1;
@@ -1731,6 +1759,14 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 setQmColor={setQmColor}
                 qmDefaultSize={qmDefaultSize}
                 setQmDefaultSize={setQmDefaultSize}
+                qmRandomColor={qmRandomColor}
+                setQmRandomColor={setQmRandomColor}
+                qmRandomSize={qmRandomSize}
+                setQmRandomSize={setQmRandomSize}
+                qmMinSize={qmMinSize}
+                setQmMinSize={setQmMinSize}
+                qmMaxSize={qmMaxSize}
+                setQmMaxSize={setQmMaxSize}
                 isPlacingQm={isPlacingQm}
                 setIsPlacingQm={setIsPlacingQm}
                 onClearAll={handleClearAllQm}

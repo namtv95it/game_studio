@@ -71,6 +71,14 @@ export default function QuestionMarkSettingsControl({
   setQmColor,
   qmDefaultSize = 48,
   setQmDefaultSize,
+  qmRandomColor = false,
+  setQmRandomColor,
+  qmRandomSize = false,
+  setQmRandomSize,
+  qmMinSize = 24,
+  setQmMinSize,
+  qmMaxSize = 80,
+  setQmMaxSize,
   isPlacingQm,
   setIsPlacingQm,
   onClearAll,
@@ -79,6 +87,45 @@ export default function QuestionMarkSettingsControl({
   const activeRingColor = themeColor === 'purple' ? 'ring-purple-400' : 'ring-rose-400';
   const activeBgColor = themeColor === 'purple' ? 'bg-purple-600 hover:bg-purple-500' : 'bg-rose-600 hover:bg-rose-500';
   const activeTextColor = themeColor === 'purple' ? 'text-purple-400' : 'text-rose-400';
+  const accentCheckboxColor = themeColor === 'purple' ? 'accent-purple-500' : 'accent-rose-500';
+  const accentSliderColor = themeColor === 'purple' ? 'accent-purple-500' : 'accent-rose-500';
+
+  // Helper random màu từ bảng presets hoặc màu sắc rực rỡ
+  const getRandomPresetColor = () => {
+    const randomIndex = Math.floor(Math.random() * QUESTION_MARK_STYLE_PRESETS.length);
+    return QUESTION_MARK_STYLE_PRESETS[randomIndex].color;
+  };
+
+  // Helper random kích thước trong khoảng [min, max]
+  const getRandomSizeInRange = (min, max) => {
+    const validMin = Math.min(min, max);
+    const validMax = Math.max(min, max);
+    return Math.floor(Math.random() * (validMax - validMin + 1)) + validMin;
+  };
+
+  // Xử lý áp dụng ngẫu nhiên màu cho toàn bộ dấu ? đang có
+  const handleRandomizeExistingColors = () => {
+    if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+      setQuestionMarksWithHistory(
+        questionMarks.map((q) => ({
+          ...q,
+          color: getRandomPresetColor()
+        }))
+      );
+    }
+  };
+
+  // Xử lý áp dụng ngẫu nhiên cỡ chữ cho toàn bộ dấu ? đang có
+  const handleRandomizeExistingSizes = (min = qmMinSize, max = qmMaxSize) => {
+    if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+      setQuestionMarksWithHistory(
+        questionMarks.map((q) => ({
+          ...q,
+          size: getRandomSizeInRange(min, max)
+        }))
+      );
+    }
+  };
 
   return (
     <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
@@ -149,17 +196,17 @@ export default function QuestionMarkSettingsControl({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between text-[11px] text-slate-300 font-semibold">
               <span className="flex items-center gap-1">✨ Chọn Mẫu Dấu Hỏi:</span>
-              <span className="text-[10px] text-slate-400 font-mono uppercase">{qmColor}</span>
+              <span className="text-[10px] text-slate-400 font-mono uppercase">{qmRandomColor ? '🎲 Ngẫu nhiên' : qmColor}</span>
             </div>
 
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className={`grid grid-cols-4 gap-1.5 transition-opacity ${qmRandomColor ? 'opacity-40 pointer-events-none' : ''}`}>
               {QUESTION_MARK_STYLE_PRESETS.map((style) => {
-                const isSelected = qmColor.toLowerCase() === style.color.toLowerCase();
+                const isSelected = !qmRandomColor && qmColor.toLowerCase() === style.color.toLowerCase();
                 return (
                   <button
                     key={style.id}
                     type="button"
-                    onClick={() => setQmColor(style.color)}
+                    onClick={() => setQmColor && setQmColor(style.color)}
                     className={`p-1.5 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-slate-800 border-white ring-1 ring-white/60 shadow-md scale-105'
@@ -182,42 +229,181 @@ export default function QuestionMarkSettingsControl({
             </div>
           </div>
 
-          {/* 5. Cỡ chữ & Bảng màu tùy chỉnh */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>Cỡ chữ:</span>
-                <span className="font-mono text-white text-[11px]">{qmDefaultSize}px</span>
+          {/* 5. Cài đặt Cỡ chữ & Màu sắc (Hỗ trợ Checkbox Ngẫu nhiên) */}
+          <div className="flex flex-col gap-2.5 pt-1">
+            {/* --- PHẦN MÀU SẮC & CHECKBOX NGẪU NHIÊN --- */}
+            <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800/80 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-300">Màu sắc:</span>
+                <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={qmRandomColor}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      if (setQmRandomColor) setQmRandomColor(checked);
+                      if (checked) {
+                        handleRandomizeExistingColors();
+                      } else {
+                        // Khôi phục lại màu đồng nhất
+                        if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+                          setQuestionMarksWithHistory(questionMarks.map((q) => {
+                            const { color, ...rest } = q;
+                            return rest;
+                          }));
+                        }
+                      }
+                    }}
+                    className={`${accentCheckboxColor} cursor-pointer rounded`}
+                  />
+                  <span className={qmRandomColor ? `${activeTextColor} font-bold flex items-center gap-1` : 'text-slate-400'}>
+                    🎲 Ngẫu nhiên màu
+                  </span>
+                </label>
               </div>
-              <input
-                type="range"
-                min="20"
-                max="120"
-                value={qmDefaultSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setQmDefaultSize(newSize);
-                  if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
-                    setQuestionMarksWithHistory(questionMarks.map((q) => ({ ...q, size: newSize })));
-                  }
-                }}
-                className="accent-rose-500 cursor-pointer h-1.5"
-              />
+
+              {!qmRandomColor ? (
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+                  <span>Màu tùy ý:</span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={qmColor}
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        if (setQmColor) setQmColor(newColor);
+                        if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+                          setQuestionMarksWithHistory(questionMarks.map((q) => ({ ...q, color: undefined })));
+                        }
+                      }}
+                      className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                    />
+                    <span className="text-[10px] font-mono text-slate-300 uppercase">{qmColor}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-[10px] text-emerald-400/90 bg-emerald-950/30 px-2 py-1 rounded border border-emerald-800/30">
+                  <span>✨ Mỗi dấu '?' sẽ có màu sắc ngẫu nhiên rực rỡ</span>
+                  {questionMarks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleRandomizeExistingColors}
+                      className="text-[10px] underline hover:text-emerald-300 cursor-pointer font-medium"
+                    >
+                      Đổi lại màu
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span>Màu tùy ý:</span>
-                <div className="flex items-center gap-1.5">
+            {/* --- PHẦN CỠ CHỮ & CHECKBOX NGẪU NHIÊN TRONG PHẠM VI --- */}
+            <div className="p-2 bg-slate-950/60 rounded-lg border border-slate-800/80 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-300">Cỡ chữ:</span>
+                <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer select-none">
                   <input
-                    type="color"
-                    value={qmColor}
-                    onChange={(e) => setQmColor(e.target.value)}
-                    className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                    type="checkbox"
+                    checked={qmRandomSize}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      if (setQmRandomSize) setQmRandomSize(checked);
+                      if (checked) {
+                        handleRandomizeExistingSizes();
+                      } else {
+                        // Khôi phục lại cỡ chữ chuẩn qmDefaultSize
+                        if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+                          setQuestionMarksWithHistory(questionMarks.map((q) => ({ ...q, size: qmDefaultSize })));
+                        }
+                      }
+                    }}
+                    className={`${accentCheckboxColor} cursor-pointer rounded`}
                   />
-                  <span className="text-[10px] font-mono text-slate-300 uppercase">{qmColor}</span>
-                </div>
+                  <span className={qmRandomSize ? `${activeTextColor} font-bold flex items-center gap-1` : 'text-slate-400'}>
+                    🎲 Cỡ chữ ngẫu nhiên
+                  </span>
+                </label>
               </div>
+
+              {!qmRandomSize ? (
+                /* Slider cỡ chữ cố định */
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Kích thước cố định:</span>
+                    <span className="font-mono text-white text-[11px]">{qmDefaultSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="20"
+                    max="120"
+                    value={qmDefaultSize}
+                    onChange={(e) => {
+                      const newSize = Number(e.target.value);
+                      if (setQmDefaultSize) setQmDefaultSize(newSize);
+                      if (questionMarks.length > 0 && setQuestionMarksWithHistory) {
+                        setQuestionMarksWithHistory(questionMarks.map((q) => ({ ...q, size: newSize })));
+                      }
+                    }}
+                    className={`${accentSliderColor} cursor-pointer h-1.5`}
+                  />
+                </div>
+              ) : (
+                /* 2 Slider phạm vi ngẫu nhiên Min - Max */
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-[10px] text-amber-300 bg-amber-950/30 px-2 py-0.5 rounded border border-amber-800/30">
+                    <span>Phạm vi: <b>{qmMinSize}px</b> → <b>{qmMaxSize}px</b></span>
+                    {questionMarks.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRandomizeExistingSizes(qmMinSize, qmMaxSize)}
+                        className="text-[10px] underline hover:text-amber-200 cursor-pointer font-medium"
+                      >
+                        Đổi lại cỡ
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Min Size Slider */}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Cỡ nhỏ nhất (Min):</span>
+                      <span className="font-mono text-white text-[10px]">{qmMinSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="16"
+                      max="100"
+                      value={qmMinSize}
+                      onChange={(e) => {
+                        const newMin = Math.min(Number(e.target.value), qmMaxSize - 4);
+                        if (setQmMinSize) setQmMinSize(newMin);
+                        handleRandomizeExistingSizes(newMin, qmMaxSize);
+                      }}
+                      className={`${accentSliderColor} cursor-pointer h-1.5`}
+                    />
+                  </div>
+
+                  {/* Max Size Slider */}
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>Cỡ lớn nhất (Max):</span>
+                      <span className="font-mono text-white text-[10px]">{qmMaxSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="24"
+                      max="130"
+                      value={qmMaxSize}
+                      onChange={(e) => {
+                        const newMax = Math.max(Number(e.target.value), qmMinSize + 4);
+                        if (setQmMaxSize) setQmMaxSize(newMax);
+                        handleRandomizeExistingSizes(qmMinSize, newMax);
+                      }}
+                      className={`${accentSliderColor} cursor-pointer h-1.5`}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -225,10 +411,15 @@ export default function QuestionMarkSettingsControl({
           <div className="flex flex-col gap-1.5 p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 shadow-inner">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                👁️ Xem trước mẫu hiện tại:
+                👁️ Xem trước mẫu:
               </span>
               <span className="text-[10px] text-slate-400 font-mono">
-                {qmDefaultSize}px • <span style={{ color: qmColor }}>{qmColor}</span>
+                {qmRandomSize ? `${qmMinSize}~${qmMaxSize}px` : `${qmDefaultSize}px`} •{' '}
+                {qmRandomColor ? (
+                  <span className="text-amber-400 font-medium">Đa sắc</span>
+                ) : (
+                  <span style={{ color: qmColor }}>{qmColor}</span>
+                )}
               </span>
             </div>
 
@@ -242,29 +433,69 @@ export default function QuestionMarkSettingsControl({
                 }}
               />
 
-              {/* Dấu ? hiển thị chính xác kích thước và màu sắc thực tế */}
-              <div className="relative flex items-center justify-center select-none transition-all duration-150">
-                <span
-                  style={{
-                    fontSize: `${Math.min(qmDefaultSize, 90)}px`,
-                    color: qmColor,
-                    fontFamily: '"Arial Black", "Arial", sans-serif',
-                    lineHeight: 1,
-                    textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9)'
-                  }}
-                  className="font-black drop-shadow-lg"
-                >
-                  ?
-                </span>
-              </div>
+              {/* Dấu ? hiển thị hoặc 3 dấu ? đa sắc/kích cỡ nếu bật ngẫu nhiên */}
+              {qmRandomColor || qmRandomSize ? (
+                <div className="relative flex items-center justify-center gap-3 select-none">
+                  <span
+                    style={{
+                      fontSize: `${Math.min(qmRandomSize ? qmMinSize : qmDefaultSize, 70)}px`,
+                      color: qmRandomColor ? '#06b6d4' : qmColor,
+                      fontFamily: '"Arial Black", "Arial", sans-serif',
+                      lineHeight: 1,
+                      textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9)'
+                    }}
+                    className="font-black drop-shadow-lg"
+                  >
+                    ?
+                  </span>
+                  <span
+                    style={{
+                      fontSize: `${Math.min(qmRandomSize ? Math.round((qmMinSize + qmMaxSize) / 2) : qmDefaultSize, 85)}px`,
+                      color: qmRandomColor ? '#facc15' : qmColor,
+                      fontFamily: '"Arial Black", "Arial", sans-serif',
+                      lineHeight: 1,
+                      textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9)'
+                    }}
+                    className="font-black drop-shadow-lg"
+                  >
+                    ?
+                  </span>
+                  <span
+                    style={{
+                      fontSize: `${Math.min(qmRandomSize ? qmMaxSize : qmDefaultSize, 90)}px`,
+                      color: qmRandomColor ? '#ef4444' : qmColor,
+                      fontFamily: '"Arial Black", "Arial", sans-serif',
+                      lineHeight: 1,
+                      textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9)'
+                    }}
+                    className="font-black drop-shadow-lg"
+                  >
+                    ?
+                  </span>
+                </div>
+              ) : (
+                <div className="relative flex items-center justify-center select-none transition-all duration-150">
+                  <span
+                    style={{
+                      fontSize: `${Math.min(qmDefaultSize, 90)}px`,
+                      color: qmColor,
+                      fontFamily: '"Arial Black", "Arial", sans-serif',
+                      lineHeight: 1,
+                      textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.9)'
+                    }}
+                    className="font-black drop-shadow-lg"
+                  >
+                    ?
+                  </span>
+                </div>
+              )}
 
               {/* Tag kích thước thực tế */}
               <div className="absolute bottom-1 right-1.5 text-[9px] font-mono text-slate-500 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800/60 pointer-events-none">
-                Tỉ lệ thật: {qmDefaultSize}px
+                {qmRandomSize ? `Phạm vi: ${qmMinSize}-${qmMaxSize}px` : `Tỉ lệ thật: ${qmDefaultSize}px`}
               </div>
             </div>
           </div>
-
 
           {/* 7. Danh sách các dấu hỏi chấm & nút xóa tất cả */}
           <div className="flex items-center justify-between pt-1 border-t border-slate-800">
