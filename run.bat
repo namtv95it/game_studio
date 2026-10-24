@@ -1,49 +1,48 @@
 @echo off
-chcp 65001 >nul
-title Game Studio - Khởi Động Ứng Dụng
+title Game Studio
 
 echo ==========================================================
-echo               GAME STUDIO - KHỞI ĐỘNG
+echo               GAME STUDIO - KHOI DONG
 echo ==========================================================
 echo.
 
-:: 1. Kiểm tra Node.js
+REM 1. Kiem tra Node.js
 where node >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo [LỖI] Máy tính chưa cài đặt Node.js!
-    echo Dự án cần có Node.js để hoạt động.
+    echo [LOI] May tinh chua cai dat Node.js!
+    echo Vui long tai va cai dat Node.js tai: https://nodejs.org/
     echo.
-    echo Nhấn phím bất kỳ để mở trang tải Node.js (khuyên dùng bản LTS)...
+    echo Nhan phim bat ky de mo trang tai Node.js...
     pause >nul
     start https://nodejs.org/
     exit /b 1
 )
 
-:: 2. Di chuyển vào thư mục của file script
+REM 2. Di chuyen vao thu muc chua file bat
 cd /d "%~dp0"
 
-:: 3. Kiểm tra và cài đặt dependencies nếu chưa có
+REM 3. Kiem tra va cai dat thu vien neu chua co
 if not exist "node_modules\" (
-    echo [THÔNG BÁO] Chưa tìm thấy thư viện (node_modules).
-    echo Đang tự động cài đặt các thư viện cần thiết, vui lòng chờ trong giây lát...
+    echo [THONG BAO] Dang cai dat thu vien cho lan dau chay...
+    echo Vui long cho trong giay lat...
     echo.
     call npm install
     if %ERRORLEVEL% neq 0 (
         echo.
-        echo [LỖI] Cài đặt thư viện thất bại! Vui lòng kiểm tra kết nối mạng.
+        echo [LOI] Cai dat that bai! Vui long kiem tra mang Internet.
         pause
         exit /b 1
     )
     echo.
-    echo [THÀNH CÔNG] Đã cài đặt xong thư viện!
+    echo [THANH CONG] Da cai dat xong thu vien!
     echo.
 )
 
-:: 4. Khởi động ứng dụng và tự động mở trình duyệt
-echo Đang khởi chạy ứng dụng Game Studio...
-echo Trình duyệt web sẽ tự động mở sau vài giây.
+REM 4. Khoi chay ung dung va tu dong mo trinh duyet
+echo Dang khoi chay Game Studio...
+echo Trinh duyet web se tu dong mo sau vai giay.
 echo.
-echo (Để tắt ứng dụng, bạn chỉ cần đóng cửa sổ đen này lại)
+echo [Luu y] De tat ung dung, ban chi can dong cua so nay lai.
 echo ==========================================================
 echo.
 
