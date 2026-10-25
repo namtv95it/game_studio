@@ -1023,13 +1023,6 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
             </button>
           </div>
 
-          {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
-          <button
-            onClick={() => setIs916Mode(true)}
-            className="mt-auto p-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-          >
-            <Play size={18} /> Khởi Chạy
-          </button>
         </div>
       )}
 

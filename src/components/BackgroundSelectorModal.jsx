@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Palette, X, Check, RotateCcw, Sliders, Droplet } from 'lucide-react';
+import { Palette, X, Check, RotateCcw, Sliders, Droplet, Heart } from 'lucide-react';
 import { 
   useStageBackground, 
   SUBTLE_COLOR_PALETTES, 
@@ -16,7 +16,10 @@ export default function BackgroundSelectorModal({ isOpen, onClose }) {
     setSelectedPatternId, 
     patternOpacity, 
     setPatternOpacity,
-    handleResetToWhite 
+    handleResetToWhite,
+    favoritePatternIds,
+    toggleFavoritePattern,
+    isFavoritePattern
   } = useStageBackground();
 
   const [activeTab, setActiveTab] = useState('colors');
@@ -181,17 +184,29 @@ export default function BackgroundSelectorModal({ isOpen, onClose }) {
             )}
 
             {activeTab === 'patterns' && (
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Thanh danh mục cố định ở trên */}
+                <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto pb-2.5 mb-2.5 text-[11px] no-scrollbar border-b border-slate-800/80">
                   {[
                     { id: 'all', name: `Tất cả (${STAGE_PATTERN_OPTIONS.length})` },
+                    ...(favoritePatternIds.length > 0 ? [{ id: 'favorites', name: `❤️ Yêu thích (${favoritePatternIds.length})` }] : []),
+                    { id: 'wood', name: '🪵 Vân gỗ' },
                     { id: 'random', name: '✨ Ngẫu nhiên' },
                     { id: 'grid', name: 'Kẻ ô & Kỹ thuật' },
                     { id: 'dots', name: 'Chấm bi & Matrix' },
                     { id: 'stripes', name: 'Sọc & Kẻ chỉ' },
                     { id: 'geometric', name: 'Hình học & Gạch' },
                     { id: 'artistic', name: 'Nghệ thuật & Sóng' },
-                    { id: 'gradient', name: 'Ánh sáng' }
+                    { id: 'gradient', name: 'Ánh sáng' },
+                    { id: 'nature', name: '🌿 Thiên nhiên' },
+                    { id: 'ocean', name: '🌊 Đại dương' },
+                    { id: 'retro', name: '📺 Retro' },
+                    { id: 'tribal', name: '🏺 Dân tộc' },
+                    { id: 'architecture', name: '🏛️ Kiến trúc' },
+                    { id: 'science', name: '🔬 Khoa học' },
+                    { id: 'game', name: '🎮 Game' },
+                    { id: 'deco', name: '🎨 Trang trí' },
+                    { id: 'special', name: '⭐ Đặc biệt' }
                   ].map((cat) => {
                     const isActive = (patternCategoryFilter || 'all') === cat.id;
                     return (
@@ -211,82 +226,122 @@ export default function BackgroundSelectorModal({ isOpen, onClose }) {
                   })}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {STAGE_PATTERN_OPTIONS
-                    .filter(pat => {
-                      if (!patternCategoryFilter || patternCategoryFilter === 'all') return true;
-                      if (patternCategoryFilter === 'grid') return pat.category === 'grid' || pat.category === '3d';
-                      if (patternCategoryFilter === 'geometric') return pat.category === 'geometric' || pat.category === '3d';
-                      if (patternCategoryFilter === 'artistic') return pat.category === 'artistic' || pat.category === 'tech';
-                      return pat.category === patternCategoryFilter;
-                    })
-                    .map((pat) => {
-                      const isSelected = selectedPatternId === pat.id;
-                      return (
-                        <div
-                          key={pat.id}
-                          onClick={() => setSelectedPatternId(pat.id)}
-                          className={`relative flex flex-col p-2 rounded-xl border-2 transition-all cursor-pointer group ${
-                            isSelected
-                              ? 'border-sky-400 bg-slate-800/90 shadow-lg shadow-sky-500/10 ring-2 ring-sky-400/20'
-                              : 'border-slate-750 bg-slate-850 hover:border-slate-500 hover:bg-slate-800'
-                          }`}
-                        >
-                          <div 
-                            className="w-full h-28 rounded-lg border border-slate-300/40 relative overflow-hidden shadow-inner flex items-center justify-center"
-                            style={{ backgroundColor: stageBgColor }}
+                {/* Danh sách hoa văn cuộn độc lập */}
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pb-2">
+                    {STAGE_PATTERN_OPTIONS
+                      .filter(pat => {
+                        if (!patternCategoryFilter || patternCategoryFilter === 'all') return true;
+                        if (patternCategoryFilter === 'favorites') return favoritePatternIds.includes(pat.id);
+                        if (patternCategoryFilter === 'wood') return pat.category === 'wood' || pat.id.startsWith('wood-');
+                        if (patternCategoryFilter === 'random') return pat.category === 'random' || pat.id.startsWith('random-') || pat.id.startsWith('wood-');
+                        if (patternCategoryFilter === 'grid') return pat.category === 'grid' || pat.category === '3d';
+                        if (patternCategoryFilter === 'geometric') return pat.category === 'geometric' || pat.category === '3d';
+                        if (patternCategoryFilter === 'artistic') return pat.category === 'artistic' || pat.category === 'tech';
+                        if (patternCategoryFilter === 'nature') return pat.id.startsWith('nature-') || pat.category === 'wood' || pat.id.startsWith('wood-');
+                        if (patternCategoryFilter === 'ocean') return pat.id.startsWith('ocean-');
+                        if (patternCategoryFilter === 'retro') return pat.id.startsWith('retro-') || pat.id.startsWith('fabric-');
+                        if (patternCategoryFilter === 'tribal') return pat.id.startsWith('tribal-');
+                        if (patternCategoryFilter === 'architecture') return pat.id.startsWith('arch-');
+                        if (patternCategoryFilter === 'science') return pat.id.startsWith('sci-');
+                        if (patternCategoryFilter === 'game') return pat.id.startsWith('game-');
+                        if (patternCategoryFilter === 'deco') return pat.id.startsWith('deco-');
+                        if (patternCategoryFilter === 'special') return pat.id.startsWith('special-') || pat.id.startsWith('light-');
+                        return pat.category === patternCategoryFilter;
+                      })
+                      .map((pat) => {
+                        const isSelected = selectedPatternId === pat.id;
+                        const isFav = isFavoritePattern(pat.id);
+                        return (
+                          <div
+                            key={pat.id}
+                            onClick={() => setSelectedPatternId(pat.id)}
+                            className={`relative flex flex-col p-2 rounded-xl border-2 transition-all cursor-pointer group ${
+                              isSelected
+                                ? 'border-sky-400 bg-slate-800/90 shadow-lg shadow-sky-500/10 ring-2 ring-sky-400/20'
+                                : 'border-slate-750 bg-slate-850 hover:border-slate-500 hover:bg-slate-800'
+                            }`}
                           >
-                            {pat.id !== 'none' && (
-                              <div
-                                className="absolute inset-0 pointer-events-none"
-                                style={{
-                                  ...pat.style,
-                                  opacity: (pat.style.opacity || 1) * (patternOpacity / 50),
-                                  filter: stageBgColor === '#0f172a' ? 'invert(1) brightness(0.6)' : 'none'
-                                }}
-                              />
-                            )}
-                            {pat.id === 'none' && (
-                              <span className="text-[10px] text-slate-400 font-semibold bg-black/40 px-1.5 py-0.5 rounded">
-                                Trơn
+                            <div 
+                              className="w-full h-28 rounded-lg border border-slate-300/40 relative overflow-hidden shadow-inner flex items-center justify-center"
+                              style={{ backgroundColor: stageBgColor }}
+                            >
+                              {pat.id !== 'none' && (
+                                <div
+                                  className="absolute inset-0 pointer-events-none"
+                                  style={{
+                                    ...pat.style,
+                                    opacity: (pat.style.opacity || 1) * (patternOpacity / 50),
+                                    filter: stageBgColor === '#0f172a' ? 'invert(1) brightness(0.6)' : 'none'
+                                  }}
+                                />
+                              )}
+                              {pat.id === 'none' && (
+                                <span className="text-[10px] text-slate-400 font-semibold bg-black/40 px-1.5 py-0.5 rounded">
+                                  Trơn
+                                </span>
+                              )}
+                              {pat.badge && (
+                                <div className="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-slate-200 pointer-events-none">
+                                  {pat.badge}
+                                </div>
+                              )}
+                              {isSelected && (
+                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shadow">
+                                  <Check size={12} strokeWidth={3} />
+                                </div>
+                              )}
+                              {/* Nút yêu thích */}
+                              {pat.id !== 'none' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavoritePattern(pat.id);
+                                  }}
+                                  className={`absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+                                    isFav
+                                      ? 'bg-rose-500 text-white scale-110 shadow-rose-500/40'
+                                      : 'bg-black/50 text-slate-300 opacity-0 group-hover:opacity-100 hover:bg-rose-500/80 hover:text-white'
+                                  }`}
+                                  title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                                >
+                                  <Heart size={12} className={isFav ? 'fill-white' : ''} strokeWidth={2.5} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="mt-1.5 flex items-center justify-between">
+                              <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-sky-300' : 'text-slate-200'}`}>
+                                {pat.name.split('(')[0].trim()}
                               </span>
-                            )}
-                            {pat.badge && (
-                              <div className="absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-slate-200 pointer-events-none">
-                                {pat.badge}
-                              </div>
-                            )}
-                            {isSelected && (
-                              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shadow">
-                                <Check size={12} strokeWidth={3} />
-                              </div>
-                            )}
+                              {isFav && (
+                                <Heart size={10} className="fill-rose-400 text-rose-400 shrink-0 ml-1" />
+                              )}
+                            </div>
                           </div>
-                          <div className="mt-1.5 flex items-center justify-between">
-                            <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-sky-300' : 'text-slate-200'}`}>
-                              {pat.name.split('(')[0].trim()}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                  </div>
                 </div>
 
+                {/* Thanh điều chỉnh độ đậm hoa văn cố định ở chân */}
                 {selectedPatternId !== 'none' && (
-                  <div className="p-3 bg-slate-950/40 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-300 font-medium">Độ đậm hoa văn:</span>
-                      <span className="text-xs font-mono text-sky-400 font-bold">{patternOpacity}%</span>
-                    </div>
-                    <div className="flex-1 max-w-xs">
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        value={patternOpacity}
-                        onChange={(e) => setPatternOpacity(Number(e.target.value))}
-                        className="w-full accent-sky-400 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
-                      />
+                  <div className="shrink-0 pt-2.5 mt-2 border-t border-slate-800">
+                    <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-300 font-medium">Độ đậm hoa văn:</span>
+                        <span className="text-xs font-mono text-sky-400 font-bold">{patternOpacity}%</span>
+                      </div>
+                      <div className="flex-1 max-w-xs">
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={patternOpacity}
+                          onChange={(e) => setPatternOpacity(Number(e.target.value))}
+                          className="w-full accent-sky-400 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

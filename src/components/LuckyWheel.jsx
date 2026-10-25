@@ -250,9 +250,16 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
         setIs916Mode(false);
       }
     };
+    const handleLaunch = () => {
+      handleStartGame();
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSetup, turnPhase, currentTurn, scenarios]);
+    window.addEventListener('app:launch-916', handleLaunch);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('app:launch-916', handleLaunch);
+    };
+  }, [isSetup, turnPhase, currentTurn, scenarios, setIs916Mode]);
 
   const currentScenario = scenarios[currentTurn] || scenarios[0];
   const activeCharImg = characters[currentScenario.charIndex];
@@ -459,12 +466,6 @@ export default function LuckyWheel({ is916Mode: propIs916Mode, setIs916Mode: pro
                 </div>
               </div>
 
-              <button
-                onClick={() => setIs916Mode(true)}
-                className="mt-2 p-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs"
-              >
-                <Play size={16} /> Khởi Chạy
-              </button>
             </div>
           )}
         </div>

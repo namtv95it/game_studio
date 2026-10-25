@@ -815,12 +815,6 @@ export default function ImageBlend({ is916Mode, setIs916Mode }) {
               </div>
             </div>
 
-            <button
-              onClick={() => setIs916Mode(true)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              <Maximize2 size={13} /> Khởi chạy 9:16
-            </button>
           </div>
 
           {/* TAB BUTTONS */}

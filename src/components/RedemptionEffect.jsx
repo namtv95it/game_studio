@@ -105,11 +105,16 @@ export default function RedemptionEffect({ is916Mode: propIs916Mode, setIs916Mod
   const savedRef    = useRef(0);
   const particleIdRef = useRef(0);
 
-  /* ESC key */
+  /* ESC key & Launch event */
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') { stopAll(); setIs916Mode(false); } };
+    const onLaunch = () => { handleStart(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('app:launch-916', onLaunch);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('app:launch-916', onLaunch);
+    };
   }, [setIs916Mode]);
 
   /* Jesus float */
@@ -344,13 +349,6 @@ export default function RedemptionEffect({ is916Mode: propIs916Mode, setIs916Mod
             ))}
           </div>
 
-          <button
-            onClick={handleStart}
-            id="btn-redemption-launch"
-            className="mt-auto p-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-sm"
-          >
-            <Play size={16} /> Khởi Chạy (ESC Quay Lại)
-          </button>
         </div>
       )}
 

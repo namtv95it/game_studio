@@ -200,23 +200,14 @@ export default function BombRevealStudio({ is916Mode: propIs916Mode, setIs916Mod
   const [shakeIntensity, setShakeIntensity] = useState(saved.shakeIntensity ?? 15);
   const [showQuestionMarks, setShowQuestionMarks] = useState(saved.showQuestionMarks ?? true);
 
-  // Watermark (Đồng bộ chuẩn 100% giống Soi Đèn Pin)
-  const [enableWatermark, setEnableWatermark] = useState(saved.enableWatermark ?? true);
-  const [watermarkText, setWatermarkText] = useState(saved.watermarkText !== undefined ? saved.watermarkText : '@Soonix');
-  const [watermarkFontSize, setWatermarkFontSize] = useState(saved.watermarkFontSize ?? 14);
-  const [watermarkColor, setWatermarkColor] = useState(saved.watermarkColor || '#94a3b8');
-  const [watermarkOpacity, setWatermarkOpacity] = useState(saved.watermarkOpacity ?? 50);
-  const [watermarkDistance, setWatermarkDistance] = useState(saved.watermarkDistance ?? 16);
-  const [enableWatermarkBg, setEnableWatermarkBg] = useState(saved.enableWatermarkBg ?? true);
-  const [watermarkBgColor, setWatermarkBgColor] = useState(saved.watermarkBgColor || '#ffcc00');
-  const [watermarkBgOpacity, setWatermarkBgOpacity] = useState(saved.watermarkBgOpacity ?? 100);
+
 
   // State sân khấu tương tác
   const [internalIs916Mode, setInternalIs916Mode] = useState(false);
   const is916Mode = propIs916Mode !== undefined ? propIs916Mode : internalIs916Mode;
   const setIs916Mode = propSetIs916Mode || setInternalIs916Mode;
 
-  // Active accordion section: 'bombs', 'character', 'effects', 'watermark'
+  // Active accordion section: 'bombs', 'character', 'effects'
   const [activeSection, setActiveSection] = useState('bombs');
   const toggleSection = (key) => setActiveSection(prev => prev === key ? null : key);
 
@@ -265,18 +256,9 @@ export default function BombRevealStudio({ is916Mode: propIs916Mode, setIs916Mod
       enableSound,
       countdownDuration,
       shakeIntensity,
-      showQuestionMarks,
-      enableWatermark,
-      watermarkText,
-      watermarkFontSize,
-      watermarkColor,
-      watermarkOpacity,
-      watermarkDistance,
-      enableWatermarkBg,
-      watermarkBgColor,
-      watermarkBgOpacity
+      showQuestionMarks
     }));
-  }, [bombs, beforeImage, characterScale, characterOffsetY, enableSound, countdownDuration, shakeIntensity, showQuestionMarks, enableWatermark, watermarkText, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkDistance, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity]);
+  }, [bombs, beforeImage, characterScale, characterOffsetY, enableSound, countdownDuration, shakeIntensity, showQuestionMarks]);
 
   // Load before image for silhouette canvas
   useEffect(() => {
@@ -738,199 +720,7 @@ export default function BombRevealStudio({ is916Mode: propIs916Mode, setIs916Mod
             )}
           </div>
 
-          {/* NHÓM 4: WATERMARK / LOGO KÊNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm">
-            <button
-              type="button"
-              onClick={() => toggleSection('watermark')}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🏷️</span>
-                <span className="text-xs font-bold text-emerald-300">Watermark / Logo Kênh</span>
-              </div>
-              {activeSection === 'watermark' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-            </button>
 
-            {activeSection === 'watermark' && (
-              <div className="p-3.5 flex flex-col gap-3.5 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-300 font-medium">Bật Watermark:</span>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enableWatermark}
-                      onChange={(e) => setEnableWatermark(e.target.checked)}
-                      className="accent-emerald-400 cursor-pointer"
-                    />
-                    <span className={enableWatermark ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
-                      {enableWatermark ? 'Đang Bật' : 'Đang Tắt'}
-                    </span>
-                  </label>
-                </div>
-
-                {enableWatermark && (
-                  <div className="flex flex-col gap-3 pt-2 border-t border-slate-800">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] text-slate-400">Nội dung watermark:</label>
-                      <input
-                        type="text"
-                        value={watermarkText}
-                        onChange={(e) => setWatermarkText(e.target.value)}
-                        placeholder="Nhập watermark (ví dụ: @Soonix)"
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
-                      />
-                    </div>
-
-                    {/* Kích thước phông chữ & Màu sắc */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Cỡ chữ:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              min="8"
-                              max="120"
-                              value={watermarkFontSize}
-                              onChange={(e) => setWatermarkFontSize(Math.max(1, Number(e.target.value)))}
-                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                            />
-                            <span className="text-[10px] text-slate-400">px</span>
-                          </div>
-                        </div>
-                        <input
-                          type="range"
-                          min="8"
-                          max="100"
-                          value={watermarkFontSize}
-                          onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
-                          className="accent-emerald-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Màu chữ:</span>
-                          <input
-                            type="color"
-                            value={watermarkColor}
-                            onChange={(e) => setWatermarkColor(e.target.value)}
-                            className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1 justify-end pt-1">
-                          {['#94a3b8', '#ffffff', '#000000', '#facc15', '#38bdf8'].map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => setWatermarkColor(c)}
-                              className={`w-3.5 h-3.5 rounded-full border ${watermarkColor === c ? 'border-emerald-400 scale-110' : 'border-slate-600'}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Khoảng cách cách mép & Độ mờ */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Cách mép:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              value={watermarkDistance}
-                              onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                            />
-                            <span className="text-[10px] text-slate-400">px</span>
-                          </div>
-                        </div>
-                        <input
-                          type="range"
-                          min="-120"
-                          max="200"
-                          value={watermarkDistance}
-                          onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                          className="accent-emerald-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Độ mờ:</span>
-                          <span className="text-white font-mono text-[11px]">{watermarkOpacity}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="10"
-                          max="100"
-                          value={watermarkOpacity}
-                          onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
-                          className="accent-emerald-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Nền Thẻ Watermark (Badge bo góc) */}
-                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
-                          <span>🎨 Màu nền Thẻ Watermark:</span>
-                        </span>
-                        <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={enableWatermarkBg}
-                            onChange={(e) => setEnableWatermarkBg(e.target.checked)}
-                            className="accent-amber-400 cursor-pointer"
-                          />
-                          <span className="text-amber-300 font-medium">{enableWatermarkBg ? 'Bật' : 'Tắt'}</span>
-                        </label>
-                      </div>
-
-                      {enableWatermarkBg && (
-                        <div className="flex flex-col gap-2 pl-2 border-l-2 border-amber-500/30">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Màu nền & Độ đậm:</span>
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="color"
-                                value={watermarkBgColor}
-                                onChange={(e) => setWatermarkBgColor(e.target.value)}
-                                className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                              />
-                              <span className="text-[11px] font-mono text-white">{watermarkBgOpacity}%</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 justify-end">
-                            {[
-                              { name: 'Vàng rực', color: '#ffcc00' },
-                              { name: 'Vàng chanh', color: '#facc15' },
-                              { name: 'Cam', color: '#fb923c' },
-                              { name: 'Đen mờ', color: '#000000' },
-                            ].map((preset) => (
-                              <button
-                                key={preset.name}
-                                type="button"
-                                onClick={() => setWatermarkBgColor(preset.color)}
-                                className={`text-[10px] px-1.5 py-0.5 rounded border ${watermarkBgColor === preset.color ? 'border-amber-400 text-amber-300 font-bold' : 'border-slate-700 text-slate-400 hover:text-slate-300'}`}
-                              >
-                                {preset.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
           {/* CÁC NÚT ĐIỀU KHIỂN HÀNH ĐỘNG */}
           <div className="flex flex-col gap-2 pt-2">
@@ -939,13 +729,6 @@ export default function BombRevealStudio({ is916Mode: propIs916Mode, setIs916Mod
               className="p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-600 shadow"
             >
               <RotateCcw size={15} /> Diễn Lại Từ Đầu (Reset)
-            </button>
-
-            <button
-              onClick={() => setIs916Mode(true)}
-              className="p-3 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer transition-all active:scale-98"
-            >
-              <Play size={18} /> Khởi Chạy (Quay Video 9:16)
             </button>
           </div>
         </div>
@@ -1049,40 +832,6 @@ export default function BombRevealStudio({ is916Mode: propIs916Mode, setIs916Mod
               )}
             </div>
 
-            {/* 3. WATERMARK PHÍA DƯỚI NỘI DUNG (ĐỒNG BỘ 100% GIỐNG SOI ĐÈN PIN) */}
-            {enableWatermark && watermarkText && (
-              <div
-                className="absolute pointer-events-none select-none flex items-center justify-center whitespace-nowrap transition-all duration-150"
-                style={{
-                  left: '270px',
-                  bottom: `${watermarkDistance}px`,
-                  transform: 'translateX(-50%)',
-                  transformOrigin: 'center center',
-                  zIndex: 25,
-                  ...(enableWatermarkBg
-                    ? {
-                      backgroundColor: watermarkBgColor,
-                      opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
-                      padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
-                      borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    }
-                    : {})
-                }}
-              >
-                <span
-                  className="font-bold tracking-normal font-sans select-none transition-all duration-150"
-                  style={{
-                    fontSize: `${watermarkFontSize}px`,
-                    color: watermarkColor,
-                    opacity: enableWatermarkBg ? 1 : (watermarkOpacity / 100),
-                    textShadow: enableWatermarkBg ? 'none' : '0 1px 2px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  {watermarkText}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* 4. HIỆU ỨNG SÁNG TRẮNG TOÀN BỘ MÀN HÌNH (PURE SOLID WHITE FLASH) */}

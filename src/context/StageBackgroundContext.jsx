@@ -642,12 +642,749 @@ export const STAGE_PATTERN_OPTIONS = [
       backgroundPosition: '0 0, 50px 30px, 0 0, 40px 60px, 80px 20px, 20px 80px, 60px 40px, 30px 10px',
       opacity: 0.7
     }
+  },
+  // ===== BỘ SƯU TẬP MỞ RỘNG: HOA VĂN VẢI & DỆT =====
+  {
+    id: 'fabric-tweed',
+    name: 'Vải tweed dệt thô (Tweed Fabric)',
+    category: 'artistic',
+    badge: 'Tweed',
+    style: {
+      backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(100,116,139,0.18) 2px, rgba(100,116,139,0.18) 3px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(100,116,139,0.18) 2px, rgba(100,116,139,0.18) 3px),
+        repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(148,163,184,0.12) 5px, rgba(148,163,184,0.12) 6px),
+        repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(148,163,184,0.12) 5px, rgba(148,163,184,0.12) 6px)`,
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'fabric-denim',
+    name: 'Vải denim nếp gấp (Denim Texture)',
+    category: 'artistic',
+    badge: 'Denim',
+    style: {
+      backgroundImage: `repeating-linear-gradient(135deg, rgba(100,116,139,0.22) 0px, rgba(100,116,139,0.22) 1px, transparent 1px, transparent 3px),
+        repeating-linear-gradient(45deg, rgba(148,163,184,0.15) 0px, rgba(148,163,184,0.15) 1px, transparent 1px, transparent 3px),
+        repeating-linear-gradient(90deg, rgba(100,116,139,0.1) 0px, rgba(100,116,139,0.1) 1px, transparent 1px, transparent 5px)`,
+      opacity: 0.8
+    }
+  },
+  {
+    id: 'fabric-silk',
+    name: 'Lụa óng ánh mềm mại (Silk Sheen)',
+    category: 'gradient',
+    badge: 'Lụa',
+    style: {
+      backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(148,163,184,0.08) 25%, rgba(255,255,255,0.2) 50%, rgba(148,163,184,0.08) 75%, rgba(255,255,255,0.15) 100%),
+        repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(148,163,184,0.06) 40px, rgba(148,163,184,0.06) 42px)`,
+      opacity: 0.85
+    }
+  },
+  // ===== HOA VĂN VÂN GỖ ĐƠN GIẢN NGẪU NHIÊN =====
+  {
+    id: 'wood-natural-grain',
+    name: 'Vân gỗ tự nhiên (Natural Timber Grain)',
+    category: 'wood',
+    badge: 'Gỗ mộc',
+    style: {
+      backgroundImage: `repeating-linear-gradient(90deg, 
+          transparent 0px, 
+          transparent 18px, 
+          rgba(139, 90, 43, 0.14) 19px, 
+          rgba(139, 90, 43, 0.22) 20px, 
+          transparent 22px,
+          transparent 45px,
+          rgba(120, 80, 40, 0.18) 47px,
+          transparent 49px,
+          transparent 80px,
+          rgba(160, 110, 60, 0.25) 83px,
+          rgba(139, 90, 43, 0.12) 85px,
+          transparent 87px,
+          transparent 125px,
+          rgba(110, 70, 35, 0.16) 127px,
+          transparent 129px
+        ),
+        repeating-linear-gradient(90deg,
+          transparent 0px,
+          transparent 5px,
+          rgba(139, 90, 43, 0.06) 6px,
+          transparent 7px,
+          transparent 14px,
+          rgba(160, 110, 60, 0.08) 15px,
+          transparent 16px
+        ),
+        linear-gradient(180deg, 
+          rgba(160, 110, 60, 0.05) 0%, 
+          transparent 50%, 
+          rgba(120, 80, 40, 0.08) 100%
+        )`,
+      backgroundSize: '160px 100%, 32px 100%, 100% 100%',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'wood-rings-rustic',
+    name: 'Vân gỗ mắt xoáy (Rustic Wood Knots)',
+    category: 'wood',
+    badge: 'Mắt gỗ',
+    style: {
+      backgroundImage: `radial-gradient(ellipse 90px 220px at 40% 30%, transparent 22%, rgba(139, 90, 43, 0.16) 24%, transparent 27%, rgba(139, 90, 43, 0.14) 38%, transparent 42%, rgba(110, 70, 35, 0.2) 60%, transparent 64%),
+        radial-gradient(ellipse 60px 160px at 85% 75%, transparent 25%, rgba(160, 110, 60, 0.15) 28%, transparent 32%, rgba(120, 80, 40, 0.18) 50%, transparent 54%),
+        radial-gradient(circle at 40% 30%, rgba(90, 55, 25, 0.35) 0px, rgba(90, 55, 25, 0.2) 6px, transparent 12px),
+        repeating-linear-gradient(90deg, 
+          transparent 0px, 
+          transparent 12px, 
+          rgba(139, 90, 43, 0.08) 13px, 
+          transparent 14px,
+          transparent 28px, 
+          rgba(110, 70, 35, 0.1) 30px, 
+          transparent 32px
+        )`,
+      backgroundSize: '360px 480px, 280px 400px, 360px 480px, 64px 100%',
+      backgroundPosition: '0 0, 140px 200px, 0 0, 0 0',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'wood-parquet-planks',
+    name: 'Sàn gỗ thanh ghép (Timber Planks)',
+    category: 'wood',
+    badge: 'Thanh gỗ',
+    style: {
+      backgroundImage: `linear-gradient(90deg, rgba(100, 65, 30, 0.28) 1.5px, transparent 1.5px),
+        linear-gradient(0deg, rgba(100, 65, 30, 0.22) 1.5px, transparent 1.5px),
+        repeating-linear-gradient(90deg, 
+          transparent 0px, 
+          transparent 7px, 
+          rgba(139, 90, 43, 0.08) 8px, 
+          transparent 9px,
+          transparent 18px,
+          rgba(160, 110, 60, 0.1) 20px,
+          transparent 22px
+        ),
+        linear-gradient(180deg, rgba(160, 110, 60, 0.06) 0%, transparent 60%, rgba(90, 55, 25, 0.08) 100%)`,
+      backgroundSize: '120px 240px, 120px 120px, 36px 100%, 120px 240px',
+      backgroundPosition: '0 0, 0 0, 0 0, 0 0',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'wood-bamboo-slats',
+    name: 'Vân nẹp tre trúc (Bamboo Slats)',
+    category: 'wood',
+    badge: 'Tre trúc',
+    style: {
+      backgroundImage: `repeating-linear-gradient(90deg, 
+          rgba(110, 75, 40, 0.22) 0px, 
+          rgba(110, 75, 40, 0.22) 1px, 
+          transparent 1px, 
+          transparent 28px, 
+          rgba(110, 75, 40, 0.22) 29px, 
+          rgba(110, 75, 40, 0.22) 30px
+        ),
+        repeating-linear-gradient(0deg, 
+          transparent 0px, 
+          transparent 95px, 
+          rgba(120, 80, 40, 0.18) 96px, 
+          rgba(150, 100, 50, 0.25) 98px, 
+          rgba(120, 80, 40, 0.18) 100px, 
+          transparent 102px
+        ),
+        linear-gradient(90deg, 
+          rgba(160, 115, 65, 0.08) 0%, 
+          transparent 50%, 
+          rgba(100, 65, 30, 0.08) 100%
+        )`,
+      backgroundSize: '30px 100%, 100% 120px, 30px 100%',
+      backgroundPosition: '0 0, 0 0, 0 0',
+      opacity: 0.75
+    }
+  },
+  // ===== HOA VĂN THIÊN NHIÊN =====
+  {
+    id: 'nature-leaves',
+    name: 'Lá cây phủ sương (Frost Leaves)',
+    category: 'random',
+    badge: 'Lá cây',
+    style: {
+      backgroundImage: `radial-gradient(ellipse 12px 6px at 20% 30%, rgba(100,116,139,0.35) 100%, transparent),
+        radial-gradient(ellipse 8px 14px at 55% 20%, rgba(148,163,184,0.3) 100%, transparent),
+        radial-gradient(ellipse 10px 5px at 78% 45%, rgba(71,85,105,0.35) 100%, transparent),
+        radial-gradient(ellipse 6px 11px at 35% 70%, rgba(100,116,139,0.3) 100%, transparent),
+        radial-gradient(ellipse 14px 7px at 85% 75%, rgba(148,163,184,0.3) 100%, transparent),
+        radial-gradient(ellipse 9px 4px at 10% 85%, rgba(71,85,105,0.3) 100%, transparent),
+        radial-gradient(ellipse 7px 13px at 60% 60%, rgba(100,116,139,0.25) 100%, transparent)`,
+      backgroundSize: '220px 230px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'nature-rain',
+    name: 'Mưa rơi nặng hạt (Heavy Rain)',
+    category: 'random',
+    badge: 'Mưa',
+    style: {
+      backgroundImage: `linear-gradient(175deg, transparent 45%, rgba(100,116,139,0.3) 45%, rgba(100,116,139,0.3) 46%, transparent 46%),
+        linear-gradient(172deg, transparent 52%, rgba(148,163,184,0.25) 52%, rgba(148,163,184,0.25) 53%, transparent 53%),
+        linear-gradient(178deg, transparent 30%, rgba(71,85,105,0.2) 30%, rgba(71,85,105,0.2) 31%, transparent 31%),
+        linear-gradient(176deg, transparent 68%, rgba(100,116,139,0.22) 68%, rgba(100,116,139,0.22) 69%, transparent 69%)`,
+      backgroundSize: '30px 80px, 45px 90px, 55px 70px, 35px 85px',
+      backgroundPosition: '0 0, 15px 10px, 8px 20px, 25px 5px',
+      opacity: 0.7
+    }
+  },
+  {
+    id: 'nature-clouds',
+    name: 'Mây trôi bồng bềnh (Floating Clouds)',
+    category: 'random',
+    badge: 'Mây trôi',
+    style: {
+      backgroundImage: `radial-gradient(ellipse 80px 35px at 25% 30%, rgba(148,163,184,0.25) 0%, transparent 100%),
+        radial-gradient(ellipse 60px 25px at 70% 20%, rgba(203,213,225,0.3) 0%, transparent 100%),
+        radial-gradient(ellipse 100px 40px at 50% 65%, rgba(148,163,184,0.2) 0%, transparent 100%),
+        radial-gradient(ellipse 50px 20px at 85% 80%, rgba(203,213,225,0.25) 0%, transparent 100%),
+        radial-gradient(ellipse 70px 30px at 15% 75%, rgba(148,163,184,0.2) 0%, transparent 100%)`,
+      backgroundSize: '400px 300px',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'nature-mountain',
+    name: 'Dãy núi xếp lớp (Mountain Layers)',
+    category: 'artistic',
+    badge: 'Núi non',
+    style: {
+      backgroundImage: `linear-gradient(165deg, transparent 60%, rgba(100,116,139,0.15) 60%),
+        linear-gradient(195deg, transparent 55%, rgba(148,163,184,0.12) 55%),
+        linear-gradient(170deg, transparent 70%, rgba(71,85,105,0.18) 70%),
+        linear-gradient(185deg, transparent 75%, rgba(100,116,139,0.1) 75%)`,
+      backgroundSize: '200px 200px, 300px 250px, 250px 180px, 350px 300px',
+      backgroundPosition: '0 0, 80px 30px, 150px 50px, 50px 20px',
+      opacity: 0.7
+    }
+  },
+  // ===== HOA VĂN RETRO & VINTAGE =====
+  {
+    id: 'retro-halftone',
+    name: 'Chấm in retro (Halftone Print)',
+    category: 'dots',
+    badge: 'Retro',
+    style: {
+      backgroundImage: `radial-gradient(circle, rgba(100,116,139,0.45) 20%, transparent 21%),
+        radial-gradient(circle, rgba(100,116,139,0.35) 15%, transparent 16%)`,
+      backgroundSize: '12px 12px, 18px 18px',
+      backgroundPosition: '0 0, 6px 6px',
+      opacity: 0.65
+    }
+  },
+  {
+    id: 'retro-scanlines',
+    name: 'Đường quét TV cổ (CRT Scanlines)',
+    category: 'stripes',
+    badge: 'TV cổ',
+    style: {
+      backgroundImage: `repeating-linear-gradient(0deg, rgba(100,116,139,0.2) 0px, rgba(100,116,139,0.2) 1px, transparent 1px, transparent 3px)`,
+      opacity: 0.7
+    }
+  },
+  {
+    id: 'retro-pixel',
+    name: 'Điểm ảnh Pixel 8-bit (Pixel Grid)',
+    category: 'grid',
+    badge: 'Pixel 8-bit',
+    style: {
+      backgroundImage: `linear-gradient(rgba(100,116,139,0.25) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(100,116,139,0.25) 2px, transparent 2px)`,
+      backgroundSize: '10px 10px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'retro-disco',
+    name: 'Sàn nhảy disco (Disco Floor)',
+    category: 'geometric',
+    badge: 'Disco',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(148,163,184,0.2) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(148,163,184,0.2) 75%),
+        linear-gradient(rgba(100,116,139,0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,116,139,0.15) 1px, transparent 1px)`,
+      backgroundSize: '30px 30px, 30px 30px, 30px 30px, 30px 30px, 30px 30px, 30px 30px',
+      backgroundPosition: '0 0, 0 15px, 15px -15px, -15px 0, 0 0, 0 0',
+      opacity: 0.55
+    }
+  },
+  {
+    id: 'retro-vinyl',
+    name: 'Rãnh đĩa than vinyl (Vinyl Grooves)',
+    category: 'artistic',
+    badge: 'Vinyl',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 50%, transparent 15px, rgba(100,116,139,0.2) 16px, rgba(100,116,139,0.2) 17px, transparent 18px),
+        radial-gradient(circle at 50% 50%, transparent 25px, rgba(148,163,184,0.18) 26px, rgba(148,163,184,0.18) 27px, transparent 28px),
+        radial-gradient(circle at 50% 50%, transparent 35px, rgba(100,116,139,0.15) 36px, rgba(100,116,139,0.15) 37px, transparent 38px),
+        radial-gradient(circle at 50% 50%, transparent 45px, rgba(148,163,184,0.13) 46px, rgba(148,163,184,0.13) 47px, transparent 48px),
+        radial-gradient(circle at 50% 50%, transparent 55px, rgba(100,116,139,0.11) 56px, rgba(100,116,139,0.11) 57px, transparent 58px),
+        radial-gradient(circle at 50% 50%, transparent 65px, rgba(148,163,184,0.1) 66px, rgba(148,163,184,0.1) 67px, transparent 68px)`,
+      backgroundSize: '150px 150px',
+      opacity: 0.65
+    }
+  },
+  // ===== HOA VĂN DÂN TỘC & TRIBAL =====
+  {
+    id: 'tribal-aztec',
+    name: 'Hoa văn Aztec cổ đại (Aztec Pattern)',
+    category: 'geometric',
+    badge: 'Aztec',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.3) 10%, transparent 10%, transparent 20%, rgba(100,116,139,0.3) 20%, rgba(100,116,139,0.3) 30%, transparent 30%),
+        linear-gradient(-45deg, rgba(100,116,139,0.3) 10%, transparent 10%, transparent 20%, rgba(100,116,139,0.3) 20%, rgba(100,116,139,0.3) 30%, transparent 30%),
+        linear-gradient(rgba(148,163,184,0.2) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(148,163,184,0.2) 2px, transparent 2px)`,
+      backgroundSize: '40px 40px, 40px 40px, 20px 20px, 20px 20px',
+      opacity: 0.55
+    }
+  },
+  {
+    id: 'tribal-celtic',
+    name: 'Nút thắt Celtic huyền bí (Celtic Knots)',
+    category: 'geometric',
+    badge: 'Celtic',
+    style: {
+      backgroundImage: `radial-gradient(circle at 0% 0%, transparent 12px, rgba(100,116,139,0.3) 13px, rgba(100,116,139,0.3) 14px, transparent 15px),
+        radial-gradient(circle at 100% 0%, transparent 12px, rgba(100,116,139,0.3) 13px, rgba(100,116,139,0.3) 14px, transparent 15px),
+        radial-gradient(circle at 0% 100%, transparent 12px, rgba(100,116,139,0.3) 13px, rgba(100,116,139,0.3) 14px, transparent 15px),
+        radial-gradient(circle at 100% 100%, transparent 12px, rgba(100,116,139,0.3) 13px, rgba(100,116,139,0.3) 14px, transparent 15px),
+        linear-gradient(rgba(148,163,184,0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.2) 1px, transparent 1px)`,
+      backgroundSize: '30px 30px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'tribal-ikat',
+    name: 'Dệt thổ cẩm Ikat (Ikat Weave)',
+    category: 'stripes',
+    badge: 'Thổ cẩm',
+    style: {
+      backgroundImage: `repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(100,116,139,0.2) 8px, rgba(100,116,139,0.2) 10px, transparent 10px, transparent 14px, rgba(148,163,184,0.15) 14px, rgba(148,163,184,0.15) 16px),
+        repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(100,116,139,0.1) 20px, rgba(100,116,139,0.1) 22px)`,
+      opacity: 0.7
+    }
+  },
+  // ===== HOA VĂN KIẾN TRÚC =====
+  {
+    id: 'arch-brickwall',
+    name: 'Tường gạch xây (Brick Wall)',
+    category: 'geometric',
+    badge: 'Gạch xây',
+    style: {
+      backgroundImage: `linear-gradient(rgba(100,116,139,0.3) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(100,116,139,0.3) 2px, transparent 2px),
+        linear-gradient(rgba(100,116,139,0.3) 2px, transparent 2px)`,
+      backgroundSize: '50px 25px, 50px 25px, 50px 25px',
+      backgroundPosition: '0 0, 0 0, 25px 12.5px',
+      opacity: 0.5
+    }
+  },
+  {
+    id: 'arch-parquet',
+    name: 'Sàn gỗ xương cá (Parquet Floor)',
+    category: 'geometric',
+    badge: 'Sàn gỗ',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.25) 12.5%, transparent 12.5%, transparent 37.5%, rgba(100,116,139,0.25) 37.5%, rgba(100,116,139,0.25) 62.5%, transparent 62.5%, transparent 87.5%, rgba(100,116,139,0.25) 87.5%),
+        linear-gradient(-45deg, rgba(148,163,184,0.2) 12.5%, transparent 12.5%, transparent 37.5%, rgba(148,163,184,0.2) 37.5%, rgba(148,163,184,0.2) 62.5%, transparent 62.5%, transparent 87.5%, rgba(148,163,184,0.2) 87.5%)`,
+      backgroundSize: '24px 24px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'arch-arches',
+    name: 'Vòm cung nhà thờ (Gothic Arches)',
+    category: 'artistic',
+    badge: 'Vòm cung',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 0%, transparent 20px, rgba(100,116,139,0.3) 21px, rgba(100,116,139,0.3) 23px, transparent 24px),
+        radial-gradient(circle at 0% 0%, transparent 20px, rgba(148,163,184,0.2) 21px, rgba(148,163,184,0.2) 23px, transparent 24px),
+        radial-gradient(circle at 100% 0%, transparent 20px, rgba(148,163,184,0.2) 21px, rgba(148,163,184,0.2) 23px, transparent 24px)`,
+      backgroundSize: '50px 35px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'arch-tiles',
+    name: 'Gạch men vuông cổ điển (Classic Tiles)',
+    category: 'grid',
+    badge: 'Gạch men',
+    style: {
+      backgroundImage: `linear-gradient(rgba(100,116,139,0.4) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(100,116,139,0.4) 2px, transparent 2px),
+        linear-gradient(rgba(148,163,184,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148,163,184,0.1) 1px, transparent 1px)`,
+      backgroundSize: '60px 60px, 60px 60px, 15px 15px, 15px 15px',
+      opacity: 0.6
+    }
+  },
+  // ===== HOA VĂN KHOA HỌC & TOÁN HỌC =====
+  {
+    id: 'sci-dna',
+    name: 'Chuỗi xoắn kép DNA (DNA Helix)',
+    category: 'artistic',
+    badge: 'DNA',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 0%, rgba(100,116,139,0.4) 3px, transparent 4px),
+        radial-gradient(circle at 50% 50%, rgba(100,116,139,0.4) 3px, transparent 4px),
+        radial-gradient(circle at 50% 100%, rgba(100,116,139,0.4) 3px, transparent 4px),
+        linear-gradient(0deg, transparent 48%, rgba(148,163,184,0.2) 49%, rgba(148,163,184,0.2) 51%, transparent 52%),
+        linear-gradient(0deg, transparent 23%, rgba(148,163,184,0.15) 24%, rgba(148,163,184,0.15) 26%, transparent 27%),
+        linear-gradient(0deg, transparent 73%, rgba(148,163,184,0.15) 74%, rgba(148,163,184,0.15) 76%, transparent 77%)`,
+      backgroundSize: '30px 60px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'sci-atom',
+    name: 'Quỹ đạo nguyên tử (Atom Orbits)',
+    category: 'artistic',
+    badge: 'Nguyên tử',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 50%, rgba(100,116,139,0.5) 3px, transparent 4px),
+        radial-gradient(circle at 50% 50%, transparent 18px, rgba(100,116,139,0.2) 19px, rgba(100,116,139,0.2) 20px, transparent 21px),
+        radial-gradient(circle at 50% 50%, transparent 28px, rgba(148,163,184,0.18) 29px, rgba(148,163,184,0.18) 30px, transparent 31px),
+        radial-gradient(circle at 50% 50%, transparent 38px, rgba(100,116,139,0.15) 39px, rgba(100,116,139,0.15) 40px, transparent 41px)`,
+      backgroundSize: '100px 100px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'sci-fractal',
+    name: 'Hình học Fractal (Sierpinski Fractal)',
+    category: 'geometric',
+    badge: 'Fractal',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(148,163,184,0.2) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(148,163,184,0.2) 75%),
+        linear-gradient(45deg, rgba(100,116,139,0.15) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(100,116,139,0.15) 25%, transparent 25%)`,
+      backgroundSize: '40px 40px, 40px 40px, 40px 40px, 40px 40px, 20px 20px, 20px 20px',
+      backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0, 10px 10px, 10px 20px',
+      opacity: 0.55
+    }
+  },
+  // ===== HOA VĂN ĐẠI DƯƠNG & BIỂN =====
+  {
+    id: 'ocean-scales',
+    name: 'Vảy cá lấp lánh (Fish Scales)',
+    category: 'geometric',
+    badge: 'Vảy cá',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 100%, transparent 18px, rgba(100,116,139,0.3) 19px, rgba(100,116,139,0.3) 20px, transparent 21px),
+        radial-gradient(circle at 0% 100%, transparent 18px, rgba(100,116,139,0.3) 19px, rgba(100,116,139,0.3) 20px, transparent 21px),
+        radial-gradient(circle at 100% 100%, transparent 18px, rgba(100,116,139,0.3) 19px, rgba(100,116,139,0.3) 20px, transparent 21px)`,
+      backgroundSize: '40px 20px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'ocean-coral',
+    name: 'San hô đại dương (Coral Reef)',
+    category: 'random',
+    badge: 'San hô',
+    style: {
+      backgroundImage: `radial-gradient(circle at 20% 30%, rgba(100,116,139,0.35) 8px, transparent 10px),
+        radial-gradient(circle at 22% 28%, rgba(148,163,184,0.25) 5px, transparent 7px),
+        radial-gradient(circle at 65% 55%, rgba(71,85,105,0.3) 10px, transparent 12px),
+        radial-gradient(circle at 63% 58%, rgba(100,116,139,0.2) 6px, transparent 8px),
+        radial-gradient(circle at 80% 20%, rgba(148,163,184,0.3) 7px, transparent 9px),
+        radial-gradient(circle at 40% 80%, rgba(100,116,139,0.3) 9px, transparent 11px),
+        radial-gradient(circle at 42% 77%, rgba(71,85,105,0.2) 5px, transparent 7px)`,
+      backgroundSize: '250px 260px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'ocean-waves',
+    name: 'Sóng biển cuộn tròn (Ocean Waves)',
+    category: 'artistic',
+    badge: 'Sóng biển',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 120%, transparent 30px, rgba(100,116,139,0.25) 31px, rgba(100,116,139,0.25) 33px, transparent 34px),
+        radial-gradient(circle at 0% 120%, transparent 30px, rgba(148,163,184,0.2) 31px, rgba(148,163,184,0.2) 33px, transparent 34px),
+        radial-gradient(circle at 100% 120%, transparent 30px, rgba(148,163,184,0.2) 31px, rgba(148,163,184,0.2) 33px, transparent 34px)`,
+      backgroundSize: '60px 30px',
+      opacity: 0.65
+    }
+  },
+  // ===== HOA VĂN ÁNH SÁNG & HIỆU ỨNG =====
+  {
+    id: 'light-prism',
+    name: 'Tia lăng kính cầu vồng (Prism Rays)',
+    category: 'gradient',
+    badge: 'Lăng kính',
+    style: {
+      backgroundImage: `linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(234,179,8,0.06) 20%, rgba(34,197,94,0.06) 40%, rgba(59,130,246,0.06) 60%, rgba(168,85,247,0.06) 80%, rgba(236,72,153,0.06) 100%),
+        repeating-linear-gradient(135deg, transparent, transparent 30px, rgba(255,255,255,0.08) 30px, rgba(255,255,255,0.08) 32px)`,
+      opacity: 0.9
+    }
+  },
+  {
+    id: 'light-spotlight-multi',
+    name: 'Đèn sân khấu đôi (Dual Spotlight)',
+    category: 'gradient',
+    badge: 'Đèn sân khấu',
+    style: {
+      backgroundImage: `radial-gradient(ellipse 40% 50% at 25% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(ellipse 40% 50% at 75% 40%, rgba(255,255,255,0.35) 0%, transparent 100%),
+        radial-gradient(circle at 50% 100%, rgba(148,163,184,0.15) 0%, transparent 60%)`,
+      opacity: 0.85
+    }
+  },
+  {
+    id: 'light-aurora',
+    name: 'Cực quang phương Bắc (Aurora Borealis)',
+    category: 'gradient',
+    badge: 'Cực quang',
+    style: {
+      backgroundImage: `linear-gradient(180deg, rgba(52,211,153,0.06) 0%, rgba(59,130,246,0.05) 30%, rgba(168,85,247,0.06) 60%, transparent 100%),
+        radial-gradient(ellipse 80% 30% at 30% 20%, rgba(52,211,153,0.08) 0%, transparent 100%),
+        radial-gradient(ellipse 60% 25% at 70% 35%, rgba(59,130,246,0.08) 0%, transparent 100%),
+        radial-gradient(ellipse 70% 20% at 50% 50%, rgba(168,85,247,0.06) 0%, transparent 100%)`,
+      opacity: 0.9
+    }
+  },
+  {
+    id: 'light-sunburst',
+    name: 'Tia mặt trời bùng nổ (Sunburst Rays)',
+    category: 'gradient',
+    badge: 'Tia mặt trời',
+    style: {
+      backgroundImage: `repeating-conic-gradient(from 0deg at 50% 50%, rgba(148,163,184,0.12) 0deg 10deg, transparent 10deg 20deg)`,
+      opacity: 0.7
+    }
+  },
+  // ===== HOA VĂN VUI NHỘN & GAME =====
+  {
+    id: 'game-hearts',
+    name: 'Trái tim rải rác (Scattered Hearts)',
+    category: 'random',
+    badge: 'Trái tim',
+    style: {
+      backgroundImage: `radial-gradient(circle at 15% 25%, rgba(100,116,139,0.4) 4px, transparent 5px),
+        radial-gradient(circle at 20% 25%, rgba(100,116,139,0.4) 4px, transparent 5px),
+        radial-gradient(circle at 17.5% 30%, rgba(100,116,139,0.35) 3px, transparent 4px),
+        radial-gradient(circle at 65% 60%, rgba(148,163,184,0.35) 4px, transparent 5px),
+        radial-gradient(circle at 70% 60%, rgba(148,163,184,0.35) 4px, transparent 5px),
+        radial-gradient(circle at 67.5% 65%, rgba(148,163,184,0.3) 3px, transparent 4px),
+        radial-gradient(circle at 40% 80%, rgba(71,85,105,0.35) 3.5px, transparent 4.5px),
+        radial-gradient(circle at 45% 80%, rgba(71,85,105,0.35) 3.5px, transparent 4.5px),
+        radial-gradient(circle at 42.5% 84%, rgba(71,85,105,0.3) 2.5px, transparent 3.5px)`,
+      backgroundSize: '200px 200px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'game-stars',
+    name: 'Ngôi sao 5 cánh (Star Field)',
+    category: 'random',
+    badge: 'Ngôi sao',
+    style: {
+      backgroundImage: `radial-gradient(circle at 20% 25%, rgba(100,116,139,0.5) 2px, transparent 3px),
+        radial-gradient(circle at 20% 22%, rgba(100,116,139,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 20% 28%, rgba(100,116,139,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 17% 25%, rgba(100,116,139,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 23% 25%, rgba(100,116,139,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 70% 65%, rgba(148,163,184,0.5) 2px, transparent 3px),
+        radial-gradient(circle at 70% 62%, rgba(148,163,184,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 70% 68%, rgba(148,163,184,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 67% 65%, rgba(148,163,184,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 73% 65%, rgba(148,163,184,0.35) 1px, transparent 2px),
+        radial-gradient(circle at 45% 45%, rgba(71,85,105,0.45) 1.5px, transparent 2.5px)`,
+      backgroundSize: '180px 180px',
+      opacity: 0.65
+    }
+  },
+  {
+    id: 'game-diamonds',
+    name: 'Kim cương xếp hàng (Diamond Grid)',
+    category: 'geometric',
+    badge: 'Kim cương',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.3) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(100,116,139,0.3) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(100,116,139,0.3) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(100,116,139,0.3) 75%)`,
+      backgroundSize: '30px 30px',
+      backgroundPosition: '0 0, 0 15px, 15px -15px, -15px 0',
+      opacity: 0.5
+    }
+  },
+  // ===== HOA VĂN THÊU & TRANG TRÍ =====
+  {
+    id: 'deco-floral',
+    name: 'Hoa lá cổ điển (Floral Damask)',
+    category: 'artistic',
+    badge: 'Hoa lá',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 50%, rgba(100,116,139,0.35) 3px, transparent 4px),
+        radial-gradient(circle at 50% 40%, rgba(100,116,139,0.25) 2px, transparent 3px),
+        radial-gradient(circle at 50% 60%, rgba(100,116,139,0.25) 2px, transparent 3px),
+        radial-gradient(circle at 40% 50%, rgba(100,116,139,0.25) 2px, transparent 3px),
+        radial-gradient(circle at 60% 50%, rgba(100,116,139,0.25) 2px, transparent 3px),
+        radial-gradient(circle at 44% 44%, rgba(148,163,184,0.2) 1.5px, transparent 2.5px),
+        radial-gradient(circle at 56% 44%, rgba(148,163,184,0.2) 1.5px, transparent 2.5px),
+        radial-gradient(circle at 44% 56%, rgba(148,163,184,0.2) 1.5px, transparent 2.5px),
+        radial-gradient(circle at 56% 56%, rgba(148,163,184,0.2) 1.5px, transparent 2.5px)`,
+      backgroundSize: '60px 60px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'deco-artdeco',
+    name: 'Art Deco sang trọng (Art Deco Fan)',
+    category: 'artistic',
+    badge: 'Art Deco',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 100%, transparent 15px, rgba(100,116,139,0.25) 16px, rgba(100,116,139,0.25) 17px, transparent 18px),
+        radial-gradient(circle at 50% 100%, transparent 25px, rgba(100,116,139,0.2) 26px, rgba(100,116,139,0.2) 27px, transparent 28px),
+        radial-gradient(circle at 50% 100%, transparent 35px, rgba(100,116,139,0.15) 36px, rgba(100,116,139,0.15) 37px, transparent 38px),
+        radial-gradient(circle at 0% 100%, transparent 15px, rgba(148,163,184,0.2) 16px, rgba(148,163,184,0.2) 17px, transparent 18px),
+        radial-gradient(circle at 100% 100%, transparent 15px, rgba(148,163,184,0.2) 16px, rgba(148,163,184,0.2) 17px, transparent 18px)`,
+      backgroundSize: '50px 40px',
+      opacity: 0.65
+    }
+  },
+  {
+    id: 'deco-mandala',
+    name: 'Mandala tỏa sáng (Mandala Bloom)',
+    category: 'artistic',
+    badge: 'Mandala',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 50%, rgba(100,116,139,0.4) 3px, transparent 4px),
+        radial-gradient(circle at 50% 50%, transparent 10px, rgba(100,116,139,0.25) 11px, rgba(100,116,139,0.25) 12px, transparent 13px),
+        radial-gradient(circle at 50% 50%, transparent 20px, rgba(148,163,184,0.2) 21px, rgba(148,163,184,0.2) 22px, transparent 23px),
+        radial-gradient(circle at 50% 50%, transparent 30px, rgba(100,116,139,0.15) 31px, rgba(100,116,139,0.15) 32px, transparent 33px),
+        radial-gradient(circle at 50% 35%, rgba(148,163,184,0.2) 2px, transparent 3px),
+        radial-gradient(circle at 50% 65%, rgba(148,163,184,0.2) 2px, transparent 3px),
+        radial-gradient(circle at 35% 50%, rgba(148,163,184,0.2) 2px, transparent 3px),
+        radial-gradient(circle at 65% 50%, rgba(148,163,184,0.2) 2px, transparent 3px)`,
+      backgroundSize: '80px 80px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'deco-paisley',
+    name: 'Hoa văn Paisley lượn sóng (Paisley Swirl)',
+    category: 'artistic',
+    badge: 'Paisley',
+    style: {
+      backgroundImage: `radial-gradient(ellipse 15px 20px at 30% 40%, transparent 8px, rgba(100,116,139,0.3) 9px, rgba(100,116,139,0.3) 10px, transparent 11px),
+        radial-gradient(circle at 30% 35%, rgba(100,116,139,0.35) 2px, transparent 3px),
+        radial-gradient(ellipse 15px 20px at 70% 60%, transparent 8px, rgba(148,163,184,0.25) 9px, rgba(148,163,184,0.25) 10px, transparent 11px),
+        radial-gradient(circle at 70% 55%, rgba(148,163,184,0.3) 2px, transparent 3px),
+        radial-gradient(circle at 50% 50%, rgba(71,85,105,0.2) 1.5px, transparent 2.5px)`,
+      backgroundSize: '120px 120px',
+      opacity: 0.6
+    }
+  },
+  // ===== HOA VĂN KẾT HỢP ĐẶC BIỆT =====
+  {
+    id: 'special-galaxy-grid',
+    name: 'Lưới ngân hà (Cosmic Grid)',
+    category: 'grid',
+    badge: 'Cosmic',
+    style: {
+      backgroundImage: `linear-gradient(rgba(100,116,139,0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100,116,139,0.2) 1px, transparent 1px),
+        radial-gradient(1.5px 1.5px at 25% 30%, rgba(148,163,184,0.6) 100%, transparent),
+        radial-gradient(1px 1px at 60% 45%, rgba(100,116,139,0.5) 100%, transparent),
+        radial-gradient(2px 2px at 80% 70%, rgba(148,163,184,0.7) 100%, transparent),
+        radial-gradient(1px 1px at 40% 80%, rgba(71,85,105,0.5) 100%, transparent)`,
+      backgroundSize: '50px 50px, 50px 50px, 200px 200px, 150px 150px, 180px 180px, 120px 120px',
+      backgroundPosition: '0 0, 0 0, 0 0, 30px 40px, 60px 20px, 80px 70px',
+      opacity: 0.6
+    }
+  },
+  {
+    id: 'special-paper-texture',
+    name: 'Giấy cổ điển nhăn (Vintage Paper)',
+    category: 'random',
+    badge: 'Giấy cổ',
+    style: {
+      backgroundImage: `radial-gradient(ellipse at 20% 30%, rgba(100,116,139,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, rgba(148,163,184,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(71,85,105,0.07) 0%, transparent 50%),
+        repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(100,116,139,0.04) 5px, rgba(100,116,139,0.04) 6px),
+        repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(100,116,139,0.03) 8px, rgba(100,116,139,0.03) 9px)`,
+      opacity: 0.9
+    }
+  },
+  {
+    id: 'special-stainedglass',
+    name: 'Kính màu nhà thờ (Stained Glass)',
+    category: 'geometric',
+    badge: 'Kính màu',
+    style: {
+      backgroundImage: `linear-gradient(60deg, rgba(100,116,139,0.3) 1px, transparent 1px),
+        linear-gradient(-60deg, rgba(100,116,139,0.3) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(100,116,139,0.3) 1px, transparent 1px)`,
+      backgroundSize: '35px 61px, 35px 61px, 35px 61px',
+      opacity: 0.55
+    }
+  },
+  {
+    id: 'special-topography',
+    name: 'Bản đồ địa hình (Topography Map)',
+    category: 'artistic',
+    badge: 'Địa hình',
+    style: {
+      backgroundImage: `radial-gradient(circle at 50% 50%, transparent 20px, rgba(100,116,139,0.2) 21px, rgba(100,116,139,0.2) 22px, transparent 23px),
+        radial-gradient(circle at 50% 50%, transparent 35px, rgba(148,163,184,0.18) 36px, rgba(148,163,184,0.18) 37px, transparent 38px),
+        radial-gradient(circle at 50% 50%, transparent 50px, rgba(100,116,139,0.15) 51px, rgba(100,116,139,0.15) 52px, transparent 53px),
+        radial-gradient(circle at 30% 30%, transparent 15px, rgba(71,85,105,0.18) 16px, rgba(71,85,105,0.18) 17px, transparent 18px),
+        radial-gradient(circle at 30% 30%, transparent 30px, rgba(100,116,139,0.14) 31px, rgba(100,116,139,0.14) 32px, transparent 33px)`,
+      backgroundSize: '120px 120px, 120px 120px, 120px 120px, 120px 120px, 120px 120px',
+      backgroundPosition: '0 0, 0 0, 0 0, 60px 60px, 60px 60px',
+      opacity: 0.65
+    }
+  },
+  {
+    id: 'special-bamboo',
+    name: 'Rèm tre phương Đông (Bamboo Curtain)',
+    category: 'stripes',
+    badge: 'Rèm tre',
+    style: {
+      backgroundImage: `repeating-linear-gradient(90deg, rgba(100,116,139,0.25) 0px, rgba(100,116,139,0.25) 2px, transparent 2px, transparent 4px, rgba(148,163,184,0.15) 4px, rgba(148,163,184,0.15) 5px, transparent 5px, transparent 10px),
+        repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(100,116,139,0.1) 30px, rgba(100,116,139,0.1) 31px)`,
+      opacity: 0.7
+    }
+  },
+  {
+    id: 'special-moroccan-star',
+    name: 'Ngôi sao Ma-rốc 8 cánh (Moroccan Star)',
+    category: 'geometric',
+    badge: 'Sao 8 cánh',
+    style: {
+      backgroundImage: `linear-gradient(45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(100,116,139,0.25) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(100,116,139,0.25) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(100,116,139,0.25) 75%),
+        linear-gradient(0deg, rgba(148,163,184,0.2) 50%, transparent 50%),
+        linear-gradient(90deg, rgba(148,163,184,0.2) 50%, transparent 50%)`,
+      backgroundSize: '24px 24px',
+      opacity: 0.5
+    }
   }
 ];
 
 const STORAGE_BG_COLOR_KEY = 'game_studio_stage_bg_color_v2';
 const STORAGE_PATTERN_KEY = 'game_studio_stage_bg_pattern_v2';
 const STORAGE_OPACITY_KEY = 'game_studio_stage_bg_opacity_v2';
+const STORAGE_FAVORITES_KEY = 'game_studio_stage_bg_favorites_v1';
 
 const StageBackgroundContext = createContext({
   stageBgColor: '#ffffff',
@@ -657,7 +1394,10 @@ const StageBackgroundContext = createContext({
   currentPattern: STAGE_PATTERN_OPTIONS[1],
   patternOpacity: 50,
   setPatternOpacity: () => {},
-  handleResetToWhite: () => {}
+  handleResetToWhite: () => {},
+  favoritePatternIds: [],
+  toggleFavoritePattern: () => {},
+  isFavoritePattern: () => false
 });
 
 export function StageBackgroundProvider({ children }) {
@@ -691,6 +1431,32 @@ export function StageBackgroundProvider({ children }) {
 
   const currentPattern = STAGE_PATTERN_OPTIONS.find(p => p.id === selectedPatternId) || STAGE_PATTERN_OPTIONS[0];
 
+  // Danh sách yêu thích hoa văn nền
+  const [favoritePatternIds, setFavoritePatternIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_FAVORITES_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_FAVORITES_KEY, JSON.stringify(favoritePatternIds));
+  }, [favoritePatternIds]);
+
+  const toggleFavoritePattern = (patternId) => {
+    setFavoritePatternIds(prev => {
+      if (prev.includes(patternId)) {
+        return prev.filter(id => id !== patternId);
+      } else {
+        return [...prev, patternId];
+      }
+    });
+  };
+
+  const isFavoritePattern = (patternId) => favoritePatternIds.includes(patternId);
+
   // Reset về trắng hoàn toàn (Không hoa văn)
   const handleResetToWhite = () => {
     setStageBgColor('#ffffff');
@@ -707,7 +1473,10 @@ export function StageBackgroundProvider({ children }) {
       currentPattern,
       patternOpacity,
       setPatternOpacity,
-      handleResetToWhite
+      handleResetToWhite,
+      favoritePatternIds,
+      toggleFavoritePattern,
+      isFavoritePattern
     }}>
       {children}
     </StageBackgroundContext.Provider>

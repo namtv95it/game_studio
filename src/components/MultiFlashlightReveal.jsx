@@ -84,23 +84,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
   const [customShadowColor, setCustomShadowColor] = useState(initialSettings.customShadowColor || '#000000');
   const [shadowOpacity, setShadowOpacity] = useState(initialSettings.shadowOpacity ?? 100);
 
-  // Watermark
-  const [watermarkText, setWatermarkText] = useState(initialSettings.watermarkText !== undefined ? initialSettings.watermarkText : '@Soonix');
-  const [enableWatermark, setEnableWatermark] = useState(initialSettings.enableWatermark ?? true);
-  const [watermarkFontSize, setWatermarkFontSize] = useState(initialSettings.watermarkFontSize ?? 14);
-  const [watermarkColor, setWatermarkColor] = useState(initialSettings.watermarkColor || '#94a3b8');
-  const [watermarkOpacity, setWatermarkOpacity] = useState(initialSettings.watermarkOpacity ?? 50);
-  const [watermarkOffset, setWatermarkOffset] = useState(initialSettings.watermarkOffset ?? 0); // Vị trí căn dọc theo mép (-200 đến 200px)
-  const [watermarkDistance, setWatermarkDistance] = useState(initialSettings.watermarkDistance ?? 16); // Khoảng cách tới mép phải (4px đến 120px)
 
-  // Hiệu ứng đổi màu Watermark khi chiếu đèn
-  const [enableWatermarkBeamEffect, setEnableWatermarkBeamEffect] = useState(initialSettings.enableWatermarkBeamEffect ?? true);
-  const [watermarkActiveColor, setWatermarkActiveColor] = useState(initialSettings.watermarkActiveColor || '#facc15');
-
-  // Màu nền Watermark (dạng thẻ/badge bo góc)
-  const [enableWatermarkBg, setEnableWatermarkBg] = useState(initialSettings.enableWatermarkBg ?? true);
-  const [watermarkBgColor, setWatermarkBgColor] = useState(initialSettings.watermarkBgColor || '#facc15'); // Màu vàng giống trong ảnh
-  const [watermarkBgOpacity, setWatermarkBgOpacity] = useState(initialSettings.watermarkBgOpacity ?? 100);
 
   // Trạng thái Dấu Hỏi Chấm trên bóng đen (mặc định trống để người dùng tự bấm thêm)
   const [enableQuestionMarks, setEnableQuestionMarks] = useState(initialSettings.enableQuestionMarks ?? true);
@@ -195,18 +179,6 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
         beamBgColor,
         enableBeamBg,
         beamOpacity,
-        watermarkText,
-        enableWatermark,
-        watermarkFontSize,
-        watermarkColor,
-        watermarkOpacity,
-        watermarkOffset,
-        watermarkDistance,
-        enableWatermarkBeamEffect,
-        watermarkActiveColor,
-        enableWatermarkBg,
-        watermarkBgColor,
-        watermarkBgOpacity,
         enableQuestionMarks,
         questionMarks,
         qmColor,
@@ -222,17 +194,24 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
     } catch (e) {
       console.error('Không thể lưu cài đặt MultiFlashlight:', e);
     }
-  }, [items, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, watermarkText, enableWatermark, watermarkFontSize, watermarkColor, watermarkOpacity, watermarkOffset, watermarkDistance, enableWatermarkBeamEffect, watermarkActiveColor, enableWatermarkBg, watermarkBgColor, watermarkBgOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, customShadowColor, shadowOpacity]);
+  }, [items, radius, spotlightType, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, globalScale, globalOffsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, customShadowColor, shadowOpacity]);
 
-  // Phím ESC để thoát 9:16
+  // Phím ESC để thoát 9:16 & sự kiện Khởi Chạy từ Header
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.code === 'Escape') {
         setIs916Mode(false);
       }
     };
+    const handleLaunch = () => {
+      setStageMode('flashlight');
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('app:launch-916', handleLaunch);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('app:launch-916', handleLaunch);
+    };
   }, [setIs916Mode]);
 
   // Load toàn bộ Image objects khi items thay đổi
@@ -607,41 +586,7 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
 
   const selectedItem = items.find((item) => item.id === selectedItemId) || items[0];
 
-  // Tính toán xem đèn pin có đang chiếu trúng Watermark hay không (tính trực tiếp trên hệ tọa độ Canvas 540x960)
-  const isWatermarkLit = (() => {
-    if (!enableWatermark || !enableWatermarkBeamEffect) return false;
 
-    // Tọa độ Watermark trên canvas (Canvas: X=270, Y = 960 - watermarkDistance)
-    const wmCanvasX = 270 + (watermarkOffset || 0);
-    const wmCanvasY = 960 - watermarkDistance;
-
-    if (spotlightType === 'circle') {
-      const dist = Math.hypot(cursorPos.x - wmCanvasX, cursorPos.y - wmCanvasY);
-      return dist <= (radius + 20);
-    } else {
-      const dx = wmCanvasX - cursorPos.x;
-      const dy = wmCanvasY - cursorPos.y;
-      const centerRad = (beamAngle * Math.PI) / 180;
-
-      const canvasRect = canvasRef.current?.getBoundingClientRect();
-      const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (960 / canvasRect.width) : 1;
-      const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
-
-      const cosA = Math.cos(centerRad);
-      const sinA = Math.sin(centerRad);
-
-      const s = dx * cosA + dy * sinA;
-      const p = Math.abs(-dx * sinA + dy * cosA);
-
-      const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
-      const wAtS = hwCanvas + Math.max(0, s) * Math.tan(halfSpread);
-
-      return s >= -20 && p <= (wAtS + 25);
-    }
-  })();
-
-  const currentWatermarkColor = (enableWatermarkBeamEffect && isWatermarkLit) ? watermarkActiveColor : watermarkColor;
-  const currentWatermarkOpacity = (enableWatermarkBeamEffect && isWatermarkLit) ? 1 : (watermarkOpacity / 100);
 
   return (
     <div className={`flex w-full bg-slate-900 relative ${is916Mode ? 'h-full' : 'h-[calc(100vh-56px)]'}`}>
@@ -1289,293 +1234,8 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
             )}
           </div>
 
-          {/* NHÓM 4: WATERMARK / LOGO KÊNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
-            <button
-              type="button"
-              onClick={() => toggleSection('watermark')}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🏷️</span>
-                <span className="text-xs font-bold text-sky-300">Watermark / Logo Kênh</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableWatermark ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'}`}>
-                  {enableWatermark ? 'Bật' : 'Tắt'}
-                </span>
-                {activeSection === 'watermark' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-              </div>
-            </button>
 
-            {activeSection === 'watermark' && (
-              <div className="p-3.5 flex flex-col gap-3 border-t border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-300 font-medium">Bật Watermark:</span>
-                  <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={enableWatermark}
-                      onChange={(e) => setEnableWatermark(e.target.checked)}
-                      className="accent-sky-400 cursor-pointer"
-                    />
-                    <span className={enableWatermark ? 'text-sky-300 font-bold' : 'text-slate-400'}>
-                      {enableWatermark ? 'Đang Bật' : 'Đang Tắt'}
-                    </span>
-                  </label>
-                </div>
 
-                {enableWatermark && (
-                  <div className="flex flex-col gap-3 pt-2 border-t border-slate-800">
-                    <input
-                      type="text"
-                      value={watermarkText}
-                      onChange={(e) => setWatermarkText(e.target.value)}
-                      placeholder="Nhập watermark (ví dụ: @Soonix)"
-                      className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
-                    />
-
-                    {/* Kích thước phông chữ & Màu sắc */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Cỡ chữ:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              min="8"
-                              max="200"
-                              value={watermarkFontSize}
-                              onChange={(e) => setWatermarkFontSize(Math.max(1, Number(e.target.value)))}
-                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                            />
-                            <span className="text-[10px] text-slate-400">px</span>
-                          </div>
-                        </div>
-                        <input
-                          type="range"
-                          min="8"
-                          max="120"
-                          value={Math.min(120, Math.max(8, watermarkFontSize))}
-                          onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
-                          className="accent-sky-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Màu chữ:</span>
-                          <input
-                            type="color"
-                            value={watermarkColor}
-                            onChange={(e) => setWatermarkColor(e.target.value)}
-                            className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1 justify-end pt-1">
-                          {['#94a3b8', '#ffffff', '#000000', '#facc15', '#38bdf8'].map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => setWatermarkColor(c)}
-                              className={`w-3.5 h-3.5 rounded-full border ${watermarkColor === c ? 'border-sky-400 scale-110' : 'border-slate-600'}`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Khoảng cách cách mép & Độ mờ */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Cách mép:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              value={watermarkDistance}
-                              onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                              className="w-12 px-1 py-0.5 bg-slate-700 text-white rounded text-[11px] text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                            />
-                            <span className="text-[10px] text-slate-400">px</span>
-                          </div>
-                        </div>
-                        <input
-                          type="range"
-                          min="-120"
-                          max="200"
-                          value={watermarkDistance}
-                          onChange={(e) => setWatermarkDistance(Number(e.target.value))}
-                          className="accent-sky-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400">
-                          <span>Độ mờ:</span>
-                          <span className="text-white font-mono text-[11px]">{watermarkOpacity}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="10"
-                          max="100"
-                          value={watermarkOpacity}
-                          onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
-                          className="accent-sky-400 cursor-pointer h-1.5"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Nền Thẻ Watermark (Badge bo góc) */}
-                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
-                          <span>🎨 Màu nền Thẻ:</span>
-                        </span>
-                        <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={enableWatermarkBg}
-                            onChange={(e) => setEnableWatermarkBg(e.target.checked)}
-                            className="accent-amber-400 cursor-pointer"
-                          />
-                          <span className="text-amber-300 font-medium">{enableWatermarkBg ? 'Bật' : 'Tắt'}</span>
-                        </label>
-                      </div>
-
-                      {enableWatermarkBg && (
-                        <div className="flex flex-col gap-2 pl-2 border-l-2 border-amber-500/30">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Màu & Độ đậm:</span>
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="color"
-                                value={watermarkBgColor}
-                                onChange={(e) => setWatermarkBgColor(e.target.value)}
-                                className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                              />
-                              <span className="text-[11px] font-mono text-white">{watermarkBgOpacity}%</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 justify-end">
-                            {[
-                              { name: 'Vàng rực', color: '#ffcc00' },
-                              { name: 'Vàng chanh', color: '#facc15' },
-                              { name: 'Cam', color: '#fb923c' },
-                              { name: 'Đen mờ', color: '#0f172a' },
-                              { name: 'Trắng', color: '#ffffff' },
-                              { name: 'Đỏ', color: '#ef4444' },
-                              { name: 'Xanh ngọc', color: '#06b6d4' }
-                            ].map((p) => (
-                              <button
-                                key={p.color}
-                                type="button"
-                                onClick={() => setWatermarkBgColor(p.color)}
-                                className={`w-4 h-4 rounded-full border transition-transform hover:scale-125 ${
-                                  watermarkBgColor.toLowerCase() === p.color.toLowerCase() ? 'border-white ring-1 ring-amber-400 scale-110' : 'border-slate-600'
-                                }`}
-                                style={{ backgroundColor: p.color }}
-                                title={p.name}
-                              />
-                            ))}
-                          </div>
-
-                          <input
-                            type="range"
-                            min="10"
-                            max="100"
-                            value={watermarkBgOpacity}
-                            onChange={(e) => setWatermarkBgOpacity(Number(e.target.value))}
-                            className="accent-amber-400 cursor-pointer h-1.5"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Hiệu ứng đổi màu Watermark khi đèn pin soi qua */}
-                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-amber-300 font-semibold flex items-center gap-1">
-                          <span>💡 Đổi màu khi chiếu đèn:</span>
-                        </span>
-                        <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={enableWatermarkBeamEffect}
-                            onChange={(e) => setEnableWatermarkBeamEffect(e.target.checked)}
-                            className="accent-amber-400 cursor-pointer"
-                          />
-                          <span className="text-amber-300 font-medium">{enableWatermarkBeamEffect ? 'Bật' : 'Tắt'}</span>
-                        </label>
-                      </div>
-
-                      {enableWatermarkBeamEffect && (
-                        <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-amber-500/30">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Màu khi soi vào:</span>
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="color"
-                                value={watermarkActiveColor}
-                                onChange={(e) => setWatermarkActiveColor(e.target.value)}
-                                className="w-5 h-5 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                              />
-                              <span className="text-xs font-mono text-white uppercase">{watermarkActiveColor}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 justify-end pt-0.5">
-                            {['#facc15', '#f97316', '#ef4444', '#22c55e', '#06b6d4', '#a855f7', '#ffffff'].map((c) => (
-                              <button
-                                key={c}
-                                type="button"
-                                onClick={() => setWatermarkActiveColor(c)}
-                                className={`w-3.5 h-3.5 rounded-full border transition-transform ${watermarkActiveColor === c ? 'border-amber-400 scale-125' : 'border-slate-600'}`}
-                                style={{ backgroundColor: c }}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                      <span>Mẫu: Thẻ Vàng @Snake Magic</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setWatermarkText('@Snake Magic');
-                          setWatermarkFontSize(18);
-                          setWatermarkColor('#000000');
-                          setWatermarkOpacity(100);
-                          setEnableWatermarkBg(true);
-                          setWatermarkBgColor('#ffcc00');
-                          setWatermarkBgOpacity(100);
-                          setWatermarkDistance(20);
-                          setEnableWatermarkBeamEffect(false);
-                        }}
-                        className="text-amber-400 hover:text-amber-300 cursor-pointer underline font-medium"
-                      >
-                        Dùng mẫu Thẻ Vàng
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Nút Chuyển Sang Trạng Thái 1: Ẩn Hết Để Quay Video */}
-          <button
-            onClick={() => {
-              setStageMode('flashlight');
-              setIs916Mode(true);
-            }}
-            className="mt-2 p-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer text-xs active:scale-98"
-          >
-            <Play size={16} /> Khởi Chạy
-          </button>
         </div>
       )}
 
@@ -1688,43 +1348,6 @@ export default function MultiFlashlightReveal({ is916Mode: propIs916Mode, setIs9
               className="block"
             />
 
-            {/* WATERMARK PHÍA DƯỚI NỘI DUNG (Nằm trực tiếp trong hệ quy chiếu tranh 540x960, xoay và phóng to đồng bộ 100% với bức tranh) */}
-            {enableWatermark && watermarkText && (
-              <div
-                className="absolute pointer-events-none select-none flex items-center justify-center whitespace-nowrap transition-all duration-150"
-                style={{
-                  left: `${watermarkOffset !== undefined ? 270 + watermarkOffset : 270}px`,
-                  bottom: `${watermarkDistance}px`,
-                  transform: 'translateX(-50%)',
-                  transformOrigin: 'center center',
-                  zIndex: 25,
-                  ...(enableWatermarkBg
-                    ? {
-                      backgroundColor: watermarkBgColor,
-                      opacity: Math.max(0.1, Math.min(1, watermarkBgOpacity / 100)),
-                      padding: `${Math.max(4, Math.round(watermarkFontSize * 0.35))}px ${Math.max(12, Math.round(watermarkFontSize * 0.9))}px`,
-                      borderRadius: `${Math.max(8, Math.round(watermarkFontSize * 0.65))}px`,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    }
-                    : {})
-                }}
-              >
-                <span
-                  className="font-bold tracking-normal font-sans select-none transition-all duration-150"
-                  style={{
-                    fontSize: `${watermarkFontSize}px`,
-                    color: currentWatermarkColor,
-                    opacity: enableWatermarkBg ? 1 : currentWatermarkOpacity,
-                    textShadow: (enableWatermarkBeamEffect && isWatermarkLit)
-                      ? `0 0 10px ${currentWatermarkColor}, 0 0 20px ${currentWatermarkColor}88`
-                      : (enableWatermarkBg ? 'none' : '0 1px 2px rgba(0,0,0,0.3)'),
-                    filter: (enableWatermarkBeamEffect && isWatermarkLit) ? 'brightness(1.2)' : 'none'
-                  }}
-                >
-                  {watermarkText}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* CÁC ĐỐI TƯỢNG HÌNH ẢNH TRỰC QUAN ĐỂ CHỌN VÀ KÉO THẢ TRỰC TIẾP TRÊN KHUNG QUAY (CHẾ ĐỘ EDIT) */}

@@ -1604,12 +1604,6 @@ export default function MultiShadowMatch({ is916Mode: propIs916Mode, setIs916Mod
             >
               ↺ Khôi Phục Căn Chỉnh Mặc Định
             </button>
-            <button
-              onClick={() => setIs916Mode(true)}
-              className="p-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
-            >
-              <Play size={16} /> Khởi Chạy
-            </button>
           </div>
         </div>
       )}
