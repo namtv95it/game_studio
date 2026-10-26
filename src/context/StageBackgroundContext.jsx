@@ -156,8 +156,8 @@ export const STAGE_PATTERN_OPTIONS = [
     category: 'geometric',
     badge: 'Gạch bông',
     style: {
-      backgroundImage: 'radial-gradient(circle at 100% 150%, #cbd5e1 24%, #e2e8f0 25%, #e2e8f0 28%, #cbd5e1 29%, #cbd5e1 36%, #e2e8f0 36%, #e2e8f0 40%, transparent 40%, transparent), radial-gradient(circle at 0 150%, #cbd5e1 24%, #e2e8f0 25%, #e2e8f0 28%, #cbd5e1 29%, #cbd5e1 36%, #e2e8f0 36%, #e2e8f0 40%, transparent 40%, transparent), radial-gradient(circle at 50% 100%, #e2e8f0 10%, #cbd5e1 11%, #cbd5e1 23%, #e2e8f0 24%, #e2e8f0 30%, #cbd5e1 31%, #cbd5e1 43%, #e2e8f0 44%, #e2e8f0 50%, transparent 50%, transparent), radial-gradient(circle at 100% 50%, #cbd5e1 5%, #e2e8f0 6%, #e2e8f0 15%, #cbd5e1 16%, #cbd5e1 20%, #e2e8f0 21%, #e2e8f0 30%, transparent 30%, transparent), radial-gradient(circle at 0 50%, #cbd5e1 5%, #e2e8f0 6%, #e2e8f0 15%, #cbd5e1 16%, #cbd5e1 20%, #e2e8f0 21%, #e2e8f0 30%, transparent 30%, transparent)',
-      backgroundSize: '50px 25px',
+      backgroundImage: 'radial-gradient(circle at 150% 0%, #cbd5e1 24%, #e2e8f0 25%, #e2e8f0 28%, #cbd5e1 29%, #cbd5e1 36%, #e2e8f0 36%, #e2e8f0 40%, transparent 40%, transparent), radial-gradient(circle at 150% 100%, #cbd5e1 24%, #e2e8f0 25%, #e2e8f0 28%, #cbd5e1 29%, #cbd5e1 36%, #e2e8f0 36%, #e2e8f0 40%, transparent 40%, transparent), radial-gradient(circle at 100% 50%, #e2e8f0 10%, #cbd5e1 11%, #cbd5e1 23%, #e2e8f0 24%, #e2e8f0 30%, #cbd5e1 31%, #cbd5e1 43%, #e2e8f0 44%, #e2e8f0 50%, transparent 50%, transparent), radial-gradient(circle at 50% 0%, #cbd5e1 5%, #e2e8f0 6%, #e2e8f0 15%, #cbd5e1 16%, #cbd5e1 20%, #e2e8f0 21%, #e2e8f0 30%, transparent 30%, transparent), radial-gradient(circle at 50% 100%, #cbd5e1 5%, #e2e8f0 6%, #e2e8f0 15%, #cbd5e1 16%, #cbd5e1 20%, #e2e8f0 21%, #e2e8f0 30%, transparent 30%, transparent)',
+      backgroundSize: '25px 50px',
       opacity: 0.5
     }
   },
