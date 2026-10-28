@@ -5,6 +5,7 @@ import { Sparkles, Palette } from 'lucide-react';
 // Danh sách các màu nền bóng (Shadow Base Colors)
 export const SHADOW_COLOR_PRESETS = [
   { id: 'pure-black', name: 'Đen Tuyệt Đối', color: '#000000', label: 'Bóng Đen Chuẩn' },
+  { id: 'grayscale', name: 'Đen Trắng (Grayscale)', type: 'grayscale', color: '#71717a', label: 'Ảnh Đen Trắng' },
   { id: 'charcoal', name: 'Than Chì', color: '#1e293b', label: 'Xám Than Đậm' },
   { id: 'deep-navy', name: 'Xanh Đêm', color: '#0f172a', label: 'Navy Huyền Bí' },
   { id: 'crimson', name: 'Đỏ Thẫm', color: '#881337', label: 'Bóng Đỏ Ma Mị' },
@@ -74,37 +75,28 @@ function getCachedPattern(patternId) {
     }
     patCtx.putImageData(imgData, 0, 0);
   } else if (patternId === 'pattern-dots') {
-    // Chấm bi sắc nét, hạt viền phát sáng nhẹ tương phản nổi bật trên mọi nền màu
+    // Chấm bi màu trắng tinh khiết nổi bật rực rỡ trên bóng đen
     patCanvas.width = 16;
     patCanvas.height = 16;
     const patCtx = patCanvas.getContext('2d');
-    // Hạt chấm bi trắng tinh khiết viền mờ tương phản cao
-    patCtx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    patCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     patCtx.beginPath();
-    patCtx.arc(8, 8, 2.5, 0, Math.PI * 2);
-    patCtx.fill();
-    // Chấm tâm sáng 80%
-    patCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    patCtx.beginPath();
-    patCtx.arc(8, 8, 1.2, 0, Math.PI * 2);
+    patCtx.arc(8, 8, 3.5, 0, Math.PI * 2);
     patCtx.fill();
   } else if (patternId === 'pattern-stripes') {
-    // Sọc chéo 45 độ tương phản nghệ thuật
+    // Sọc chéo 45 độ màu trắng tinh khiết dày dặn trên bóng đen
     patCanvas.width = 20;
     patCanvas.height = 20;
     const patCtx = patCanvas.getContext('2d');
-    patCtx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    patCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
     patCtx.lineWidth = 3.5;
     patCtx.beginPath();
+    patCtx.moveTo(-5, 15);
+    patCtx.lineTo(15, -5);
     patCtx.moveTo(0, 20);
     patCtx.lineTo(20, 0);
-    patCtx.stroke();
-    // Đường sọc phụ viền phát quang
-    patCtx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
-    patCtx.lineWidth = 1;
-    patCtx.beginPath();
-    patCtx.moveTo(0, 20);
-    patCtx.lineTo(20, 0);
+    patCtx.moveTo(5, 25);
+    patCtx.lineTo(25, 5);
     patCtx.stroke();
   }
 
@@ -140,8 +132,29 @@ export function applyShadowBackgroundToCanvas(
   ctx.save();
   ctx.globalAlpha = opacityAlpha;
 
-  // BƯỚC 1: TÔ MÀU NỀN BÓNG KÍN 100%
-  if (effectiveColorStyle === 'custom-color') {
+  // BƯỚC 1: TÔ MÀU NỀN BÓNG KÍN 100% HOẶC CHUYỂN THÀNH ĐEN TRẮNG (GRAYSCALE)
+  if (effectiveColorStyle === 'grayscale') {
+    // Biến hình ảnh thành đen trắng CHỈ trên pixel có nội dung hình ảnh (alpha > 0)
+    // Giữ nguyên 100% độ trong suốt ở ngoài nền, không làm đổi màu nền trong suốt
+    try {
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const data = imgData.data;
+      const len = data.length;
+      for (let i = 0; i < len; i += 4) {
+        const a = data[i + 3];
+        if (a > 0) {
+          // Tính độ sáng theo chuẩn Rec. 709 / sRGB (Luminance)
+          const gray = Math.round(0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]);
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    } catch (err) {
+      console.error('Grayscale processing error:', err);
+    }
+  } else if (effectiveColorStyle === 'custom-color') {
     ctx.fillStyle = customShadowColor || '#000000';
     ctx.fillRect(0, 0, width, height);
   } else if (colorPreset.type === 'gradient') {
@@ -157,12 +170,14 @@ export function applyShadowBackgroundToCanvas(
     ctx.fillRect(0, 0, width, height);
   }
 
-  // BƯỚC 2: PHỦ HỌA TIẾT BÁN TRONG SUỐT NỔI BẬT LÊN TRÊN LỚP MÀU NỀN
+  // BƯỚC 2: PHỦ HỌA TIẾT LÊN TRÊN LỚP MÀU NỀN
   if (effectivePattern && effectivePattern !== 'none') {
     const patCanvas = getCachedPattern(effectivePattern);
     try {
       const pattern = ctx.createPattern(patCanvas, 'repeat');
       if (pattern) {
+        // Sử dụng 'source-atop' để họa tiết chỉ vẽ đè lên lớp nền màu đã có, bảo toàn 100% màu nền bên dưới
+        ctx.globalCompositeOperation = 'source-atop';
         ctx.fillStyle = pattern;
         ctx.fillRect(0, 0, width, height);
       }
@@ -214,12 +229,12 @@ export default function ShadowStyleSettingsControl({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* KHU VỰC CHIA 2 PHẦN: BÊN TRÁI MÀU BÓNG - BÊN PHẢI HỌA TIẾT */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {/* KHU VỰC 2 PHẦN XẾP THÀNH 2 HÀNG NGANG: HÀNG 1 MÀU BÓNG, HÀNG 2 HỌA TIẾT */}
+      <div className="flex flex-col gap-3">
         
         {/* PHẦN 1: CHỌN MÀU NỀN BÓNG */}
-        <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <div className="flex items-center justify-between px-0.5 pb-1 border-b border-slate-800/80">
+        <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between px-0.5 pb-1.5 border-b border-slate-800/80">
             <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
               1. Màu Nền Bóng
@@ -229,7 +244,7 @@ export default function ShadowStyleSettingsControl({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+          <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5 custom-scrollbar">
             {SHADOW_COLOR_PRESETS.map((preset) => {
               const isSelected = effectiveColorId === preset.id;
               return (
@@ -237,23 +252,28 @@ export default function ShadowStyleSettingsControl({
                   key={preset.id}
                   type="button"
                   onClick={() => setShadowStyle(preset.id)}
-                  className={`flex items-center gap-1.5 p-1 rounded-lg border text-left transition-all cursor-pointer ${
+                  title={preset.name}
+                  className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg border text-center transition-all cursor-pointer ${
                     isSelected
                       ? `${selectedBgClass} ${ringClass} text-white shadow-sm ring-1`
                       : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750 hover:text-white'
                   }`}
                 >
                   <div
-                    className="w-4 h-4 rounded border border-slate-600 shrink-0 shadow-inner"
+                    className="w-6 h-6 rounded-md border border-slate-600 shrink-0 shadow-inner overflow-hidden flex items-center justify-center"
                     style={
                       preset.type === 'custom'
                         ? { backgroundColor: customShadowColor }
+                        : preset.type === 'grayscale'
+                        ? { background: 'linear-gradient(135deg, #ffffff 0%, #71717a 50%, #18181b 100%)' }
                         : preset.type === 'gradient'
                         ? { background: `linear-gradient(135deg, ${preset.colors.join(', ')})` }
                         : { backgroundColor: preset.color }
                     }
                   />
-                  <span className="text-[10.5px] font-medium truncate leading-tight">{preset.name}</span>
+                  <span className="text-[10px] font-medium leading-tight w-full px-0.5 break-words">
+                    {preset.name}
+                  </span>
                 </button>
               );
             })}
@@ -277,8 +297,8 @@ export default function ShadowStyleSettingsControl({
         </div>
 
         {/* PHẦN 2: CHỌN HỌA TIẾT PHỦ */}
-        <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-900/60 border border-slate-800">
-          <div className="flex items-center justify-between px-0.5 pb-1 border-b border-slate-800/80">
+        <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between px-0.5 pb-1.5 border-b border-slate-800/80">
             <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
               2. Họa Tiết Phủ
@@ -288,7 +308,7 @@ export default function ShadowStyleSettingsControl({
             </span>
           </div>
 
-          <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+          <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5 custom-scrollbar">
             {SHADOW_PATTERN_PRESETS.map((pat) => {
               const isSelected = activePattern === pat.id;
               return (
@@ -296,14 +316,15 @@ export default function ShadowStyleSettingsControl({
                   key={pat.id}
                   type="button"
                   onClick={() => handleSelectPattern(pat.id)}
-                  className={`flex items-center gap-2 p-1.5 rounded-lg border text-left transition-all cursor-pointer ${
+                  title={`${pat.name} - ${pat.label}`}
+                  className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg border text-center transition-all cursor-pointer ${
                     isSelected
                       ? `${selectedBgClass} ${ringClass} text-white shadow-sm ring-1`
                       : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:bg-slate-750 hover:text-white'
                   }`}
                 >
                   <div
-                    className="w-5 h-5 rounded border border-slate-600 shrink-0 shadow-inner overflow-hidden"
+                    className="w-6 h-6 rounded-md border border-slate-600 shrink-0 shadow-inner overflow-hidden"
                     style={{
                       backgroundColor:
                         effectiveColorId === 'custom-color'
@@ -317,8 +338,8 @@ export default function ShadowStyleSettingsControl({
                           : pat.id === 'tv-noise-color'
                           ? 'radial-gradient(circle, rgba(255,0,85,0.7) 1px, transparent 1px), radial-gradient(circle, rgba(0,255,102,0.7) 1px, transparent 1px), radial-gradient(circle, rgba(0,153,255,0.7) 1px, transparent 1px)'
                           : pat.id === 'pattern-dots'
-                          ? 'radial-gradient(circle, rgba(255,255,255,0.8) 1.5px, transparent 1.5px)'
-                          : 'repeating-linear-gradient(45deg, rgba(255,255,255,0.5), rgba(255,255,255,0.5) 2px, transparent 2px, transparent 6px)',
+                          ? 'radial-gradient(circle, rgba(255,255,255,0.95) 2px, transparent 2px)'
+                          : 'repeating-linear-gradient(45deg, rgba(255,255,255,0.9), rgba(255,255,255,0.9) 2px, transparent 2px, transparent 5px)',
                       backgroundSize:
                         pat.id === 'tv-noise' || pat.id === 'tv-noise-color'
                           ? '3px 3px'
@@ -327,10 +348,9 @@ export default function ShadowStyleSettingsControl({
                           : 'auto'
                     }}
                   />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-semibold truncate leading-tight">{pat.name}</span>
-                    <span className="text-[9px] text-slate-400 truncate leading-none">{pat.label}</span>
-                  </div>
+                  <span className="text-[10px] font-medium leading-tight w-full px-0.5 break-words">
+                    {pat.name}
+                  </span>
                 </button>
               );
             })}
