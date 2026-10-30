@@ -590,8 +590,8 @@ export const STAGE_PATTERN_OPTIONS = [
     category: 'random',
     badge: 'Nét chì',
     style: {
-      backgroundImage: `repeating-linear-gradient(35deg, rgba(100, 116, 139, 0.25) 0px, rgba(100, 116, 139, 0.25) 1px, transparent 1px, transparent 14px),
-        repeating-linear-gradient(-35deg, rgba(100, 116, 139, 0.2) 0px, rgba(100, 116, 139, 0.2) 1px, transparent 1px, transparent 14px)`,
+      backgroundImage: `repeating-linear-gradient(55deg, rgba(100, 116, 139, 0.25) 0px, rgba(100, 116, 139, 0.25) 1px, transparent 1px, transparent 14px),
+        repeating-linear-gradient(-55deg, rgba(100, 116, 139, 0.2) 0px, rgba(100, 116, 139, 0.2) 1px, transparent 1px, transparent 14px)`,
       opacity: 0.7
     }
   },
