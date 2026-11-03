@@ -718,6 +718,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     const file = e.target.files[0];
     if (file) {
       setImageSrc(URL.createObjectURL(file));
+      setQuestionMarksWithHistory([]);
+      setIsPlacingQm(false);
     }
   };
 
