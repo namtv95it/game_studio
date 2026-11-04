@@ -251,7 +251,7 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
       drawX = (width - drawW) / 2;
       drawY = (height - drawH) / 2 + targetOffsetY;
     } else {
-      drawH = height * 0.85;
+      drawH = height * 0.76; // Giảm xuống 0.76 để tạo lề an toàn 24% cho ảnh cao không bị cắt
       drawW = drawH * imgRatio;
       drawX = (width - drawW) / 2;
       drawY = (height - drawH) / 2 + targetOffsetY;

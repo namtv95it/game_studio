@@ -179,7 +179,8 @@ const DEFAULT_SETTINGS = {
   pointerOffsetY: 0,
   pointerAnchor: 'tip',
   enablePointer: true,
-  scale: 100,
+  scale: 95,
+  offsetX: 0,
   offsetY: 0,
   beamBgColor: '#fef08a',
   enableBeamBg: true,
@@ -240,7 +241,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [pointerOffsetY, setPointerOffsetY] = useState(initialSettings.pointerOffsetY ?? 0);
   const [pointerAnchor, setPointerAnchor] = useState(initialSettings.pointerAnchor || 'tip');
   const [enablePointer, setEnablePointer] = useState(initialSettings.enablePointer ?? true);
-  const [scale, setScale] = useState(initialSettings.scale ?? 100);
+  const [scale, setScale] = useState(initialSettings.scale ?? 95);
+  const [offsetX, setOffsetX] = useState(initialSettings.offsetX ?? 0);
   const [offsetY, setOffsetY] = useState(initialSettings.offsetY ?? 0);
   // Màu nền của quầng sáng đèn pin (phần không có nhân vật trong vùng chiếu)
   const [beamBgColor, setBeamBgColor] = useState(initialSettings.beamBgColor || '#fef08a'); // Mặc định vàng nhạt rực rỡ
@@ -317,13 +319,43 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     setImageSrc('');
     setQuestionMarks([]);
     setIsPlacingQm(false);
+    setScale(95);
+    setOffsetX(0);
+    setOffsetY(0);
   };
 
+  const stageWrapperRef = useRef(null);
+  const [stageScale, setStageScale] = useState(0.95);
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
 
-  // Tự động lưu cài đặt vào localStorage khi thay đổi
+    // Tự động tính toán scale để Phần Canvas và Phần Nền bằng nhau 100% (Khớp pixel-perfect)
+  useEffect(() => {
+    const updateScale = () => {
+      if (!stageWrapperRef.current) return;
+      const rect = stageWrapperRef.current.getBoundingClientRect();
+      const pad = is916Mode ? 0 : 32;
+      const availW = Math.max(100, rect.width - pad);
+      const availH = Math.max(100, rect.height - pad);
+
+      // Sân khấu xoay ngang 16:9 (ngang 960, dọc 540)
+      const scaleW = availW / 960;
+      const scaleH = availH / 540;
+      const s = Math.min(scaleW, scaleH);
+      setStageScale(s);
+    };
+
+    updateScale();
+    const timer = setTimeout(updateScale, 50);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [is916Mode]);
+
+// Tự động lưu cài đặt vào localStorage khi thay đổi
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -340,6 +372,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         pointerAnchor,
         enablePointer,
         scale,
+        offsetX,
         offsetY,
         imageSrc,
         beamBgColor,
@@ -370,7 +403,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     } catch (e) {
       console.error('Không thể lưu cài đặt:', e);
     }
-  }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
   // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -511,22 +544,26 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       return;
     }
 
-    // Aspect ratio fit (contain mode) - giữ tỉ lệ gốc của ảnh PNG, không bị méo hay cắt mép ở chân/đầu
-    const imgRatio = activeImg.width / activeImg.height;
-    const canvasRatio = width / height;
+    // Tỉ lệ cơ sở (Fit chuẩn 100% không cắt bất kỳ mép nào):
+    // Khống chế an toàn ban đầu để cả chiều cao (đầu/chân) lẫn chiều rộng (đuôi/lưng) nằm trọn vẹn trong khung
+    const maxBoxW = width * 0.82;   // 540 * 0.82 = 442px
+    const maxBoxH = height * 0.78;  // 960 * 0.78 = 748px
 
-    let drawW, drawH, drawX, drawY;
-    if (imgRatio > canvasRatio) {
-      drawW = width * 0.85; // Thu vừa vặn 85% để tạo khoảng lùi an toàn
-      drawH = drawW / imgRatio;
-      drawX = (width - drawW) / 2;
-      drawY = (height - drawH) / 2 + offsetY;
-    } else {
-      drawH = height * 0.85;
-      drawW = drawH * imgRatio;
-      drawX = (width - drawW) / 2;
-      drawY = (height - drawH) / 2 + offsetY;
-    }
+    const scaleW = maxBoxW / activeImg.width;
+    const scaleH = maxBoxH / activeImg.height;
+    const fitScale = Math.min(scaleW, scaleH);
+
+    const baseW = activeImg.width * fitScale;
+    const baseH = activeImg.height * fitScale;
+
+    // PHÓNG TO / THU NHỎ TỰ DO HOÀN TOÀN THEO Ý NGƯỜI DÙNG (KHÔNG HỀ BỊ GIỚI HẠN)
+    const charScale = Math.max(0.1, (scale || 100) / 100);
+    const drawW = baseW * charScale;
+    const drawH = baseH * charScale;
+
+    // Căn giữa từ tâm và dịch chuyển theo Offset người dùng chỉnh
+    const drawX = (width - drawW) / 2 + (offsetX || 0);
+    const drawY = (height - drawH) / 2 + (offsetY || 0);
 
     // Clear background
     ctx.clearRect(0, 0, width, height);
@@ -712,7 +749,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [cursorPos, radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -720,6 +757,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       setImageSrc(URL.createObjectURL(file));
       setQuestionMarksWithHistory([]);
       setIsPlacingQm(false);
+      setScale(100);
+      setOffsetX(0);
+      setOffsetY(0);
     }
   };
 
@@ -800,7 +840,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-400 font-mono">
-                  {scale}% • Y:{offsetY}px
+                  {scale}% • X:{offsetX} • Y:{offsetY}
                 </span>
                 {activeSection === 'character' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
               </div>
@@ -817,14 +857,28 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   </label>
                 </div>
 
-                {/* Scale */}
+                {/* Nút Khôi Phục Vị Trí Vừa Vặn 100% */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScale(100);
+                    setOffsetX(0);
+                    setOffsetY(0);
+                  }}
+                  className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  title="Tự động thu phóng vừa khít 100% toàn bộ nhân vật (đầu, chân, đuôi) không bị cắt"
+                >
+                  🎯 Căn Vừa Khít Toàn Bộ (100% Chuẩn)
+                </button>
+
+                {/* Scale (Phóng to / Thu nhỏ không giới hạn) */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400 font-medium">Tỉ Lệ Phóng To:</label>
+                    <label className="text-xs text-slate-400 font-medium">Phóng To / Thu Nhỏ (Tự Do):</label>
                     <div className="flex items-center gap-1">
                       <NumberInput
                         min={10}
-                        max={300}
+                        max={500}
                         value={scale}
                         onChange={(val) => setScale(val)}
                         className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
@@ -834,22 +888,29 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   </div>
                   <input
                     type="range"
-                    min="50"
-                    max="200"
+                    min="30"
+                    max="250"
                     value={scale}
                     onChange={(e) => setScale(Number(e.target.value))}
                     className="accent-sky-400 cursor-pointer h-1.5"
                   />
+                  <div className="flex justify-between text-[10px] text-slate-400">
+                    <span>30% (Thu nhỏ)</span>
+                    <span className="text-emerald-400 font-semibold">100% (Vừa vặn)</span>
+                    <span>250% (Phóng cực đại)</span>
+                  </div>
                 </div>
 
-                {/* Offset Y */}
+                {/* Offset Y: Dịch chuyển Đầu ◄► Chân */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs text-slate-400 font-medium">Vị Trí Lên/Xuống:</label>
+                    <label className="text-xs text-slate-400 font-medium">
+                      Dịch Chuyển [Đầu ◄► Chân]:
+                    </label>
                     <div className="flex items-center gap-1">
                       <NumberInput
-                        min={-400}
-                        max={400}
+                        min={-500}
+                        max={500}
                         value={offsetY}
                         onChange={(val) => setOffsetY(val)}
                         className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
@@ -859,12 +920,49 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   </div>
                   <input
                     type="range"
-                    min="-300"
-                    max="300"
+                    min="-400"
+                    max="400"
                     value={offsetY}
                     onChange={(e) => setOffsetY(Number(e.target.value))}
                     className="accent-sky-400 cursor-pointer h-1.5"
                   />
+                  <div className="flex justify-between text-[10px] text-slate-400">
+                    <span>◄ Về phía Đầu</span>
+                    <span>0 (Giữa)</span>
+                    <span>Về phía Chân ►</span>
+                  </div>
+                </div>
+
+                {/* Offset X: Dịch chuyển Lên ▲▼ Xuống */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-slate-400 font-medium">
+                      Dịch Chuyển [Lên ▲▼ Xuống]:
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <NumberInput
+                        min={-400}
+                        max={400}
+                        value={offsetX}
+                        onChange={(val) => setOffsetX(val)}
+                        className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
+                      />
+                      <span className="text-xs text-slate-400">px</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="-300"
+                    max="300"
+                    value={offsetX}
+                    onChange={(e) => setOffsetX(Number(e.target.value))}
+                    className="accent-sky-400 cursor-pointer h-1.5"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400">
+                    <span>▲ Dịch Lên</span>
+                    <span>0 (Giữa)</span>
+                    <span>Dịch Xuống ▼</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1717,9 +1815,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       )}
 
       {/* KHUNG HIỂN THỊ KHU VỰC SÂN KHẤU (LUÔN LUÔN HIỂN THỊ GIỐNG KHI ĐANG CHẠY) */}
-      <div className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
-        }`}>
-        {/* CONTAINER KHUNG NẰM NGANG NỀN GRID TRẮNG GIỐNG HỆT KHI ĐANG CHẠY */}
+      <div 
+        ref={stageWrapperRef}
+        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all ${is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
+        }`}
+      >
+        {/* CONTAINER KHUNG NỀN SÂN KHẤU (KÍCH THƯỚC BẰNG 100% VỚI PHẦN CANVAS) */}
         <div
           ref={containerRef}
           onMouseMove={handleMouseMove}
@@ -1727,9 +1828,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           className={`relative overflow-hidden transition-all duration-300 ${
             isPlacingQm && !is916Mode ? 'cursor-crosshair' : 'cursor-none'
           } ${is916Mode
-            ? 'w-full h-full bg-white flex items-center justify-center'
-            : 'w-full h-full max-w-[1200px] max-h-[700px] bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
+            ? 'bg-white flex items-center justify-center'
+            : 'bg-white rounded-2xl border border-slate-700 shadow-2xl flex items-center justify-center'
             }`}
+          style={{
+            width: `${Math.round(960 * stageScale)}px`,
+            height: `${Math.round(540 * stageScale)}px`
+          }}
         >
           {/* BANNER HƯỚNG DẪN KHI ĐANG BẬT CHẾ ĐỘ ĐẶT DẤU HỎI ? */}
           {isPlacingQm && !is916Mode && (
@@ -1757,11 +1862,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
           <StageBackgroundOverlay />
 
-          {/* CANVAS XOAY NẰM NGANG 90 ĐỘ GIỐNG HỆT KHI ĐANG CHẠY */}
+          {/* CANVAS XOAY NẰM NGANG 90 ĐỘ (BẰNG 100% VỚI PHẦN NỀN) */}
           <div
             className="relative z-10"
             style={{
-              transform: `rotate(-90deg) scale(${(scale / 100) * (is916Mode ? 1.25 : 0.95)})`,
+              transform: `rotate(-90deg) scale(${stageScale})`,
               transformOrigin: 'center center',
               width: '540px',
               height: '960px'
