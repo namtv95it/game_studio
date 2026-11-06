@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flashlight, Ghost, Disc, Wand2, Flame, X, ArrowRight } from 'lucide-react';
+import { Flashlight, Ghost, FileText, X, ArrowRight } from 'lucide-react';
 
 export const GAME_FEATURES = [
   {
@@ -13,18 +13,8 @@ export const GAME_FEATURES = [
     active: true
   },
   {
-    id: 'multi_flashlight',
-    title: 'Soi Đèn Đa Tầng (Pro)',
-    subtitle: 'Multi-Layer Flashlight',
-    description: 'Chức năng soi đèn mở rộng, tùy biến nhiều ảnh layer, tự do chỉnh vị trí X, Y, Scale và góc xoay.',
-    icon: Flashlight,
-    color: 'from-cyan-500 to-blue-600',
-    badge: 'Chức năng MỚI',
-    active: true
-  },
-  {
     id: 'shadow',
-    title: 'Ghép Bóng',
+    title: 'Đoán Bóng',
     subtitle: 'Shadow Match',
     description: 'Thử thách tìm và kéo ghép hình ảnh chính xác vào bóng đen silhouette nhân vật.',
     icon: Ghost,
@@ -33,13 +23,13 @@ export const GAME_FEATURES = [
     active: true
   },
   {
-    id: 'multi_shadow',
-    title: 'Ghép Bóng Mở Rộng (Pro)',
-    subtitle: 'Multi Shadow & Layers',
-    description: 'Chức năng ghép bóng nâng cao: khay ảnh gốc phía trên, khu vực hiển thị phía dưới kết hợp linh hoạt cả bóng đen và ảnh đầy đủ màu sắc.',
-    icon: Ghost,
-    color: 'from-violet-600 to-fuchsia-600',
-    badge: 'Chức năng MỚI',
+    id: 'folded_paper',
+    title: 'Tờ Giấy Gập Bí Mật',
+    subtitle: 'Folded Paper Reveal',
+    description: 'Hiệu ứng tờ giấy gập giấu ảnh bí mật, bấm Space để hé mở khe giấy tò mò và mở toang bất ngờ.',
+    icon: FileText,
+    color: 'from-amber-500 via-orange-500 to-rose-500',
+    badge: 'Chức năng 3 (Mới)',
     active: true
   }
 ];
@@ -61,7 +51,6 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
           <X size={20} />
         </button>
 
-
         {/* MODAL HEADER */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
@@ -72,8 +61,8 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
           </p>
         </div>
 
-        {/* FEATURES GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* FEATURES GRID (3 TÍNH NĂNG DUY NHẤT) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {GAME_FEATURES.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -85,22 +74,14 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
                     onClose();
                   }
                 }}
-                className={`group relative bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 transition-all duration-300 flex flex-col ${
-                  feature.active 
-                    ? 'hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 hover:-translate-y-1 cursor-pointer' 
-                    : 'opacity-50 cursor-not-allowed'
-                }`}
+                className="group relative bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 transition-all duration-300 flex flex-col hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 hover:-translate-y-1 cursor-pointer"
               >
                 {/* Badge Header */}
-                <div className="flex justify-between items-center mb-3">
-                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-md`}>
-                    <Icon size={20} />
+                <div className="flex justify-between items-center mb-4">
+                  <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-md`}>
+                    <Icon size={22} />
                   </div>
-                  <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                    feature.active 
-                      ? 'bg-slate-700 text-sky-300 border-slate-600' 
-                      : 'bg-slate-800 text-amber-400 border-amber-500/30'
-                  }`}>
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border bg-slate-700 text-sky-300 border-slate-600">
                     {feature.badge}
                   </span>
                 </div>
@@ -110,20 +91,14 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
                   {feature.title}
                 </h3>
                 <p className="text-[11px] font-medium text-slate-400 mb-2">{feature.subtitle}</p>
-                <p className="text-slate-300 text-xs leading-relaxed mb-4">
+                <p className="text-slate-300 text-xs leading-relaxed mb-6">
                   {feature.description}
                 </p>
 
                 {/* Action Link */}
                 <div className="flex items-center text-xs font-semibold text-sky-400 group-hover:text-sky-300 gap-1 mt-auto">
-                  {feature.active ? (
-                    <>
-                      <span>Mở chức năng</span>
-                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                    </>
-                  ) : (
-                    <span className="text-slate-500">Đang phát triển...</span>
-                  )}
+                  <span>Mở chức năng</span>
+                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             );

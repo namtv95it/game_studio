@@ -7,6 +7,7 @@ import LuckyWheel from './components/LuckyWheel';
 import ImageBlend from './components/ImageBlend';
 import RedemptionEffect from './components/RedemptionEffect';
 import BombRevealStudio from './components/BombRevealStudio';
+import FoldedPaperReveal from './components/FoldedPaperReveal';
 import FeatureModal, { GAME_FEATURES } from './components/FeatureModal';
 import BackgroundSelectorModal from './components/BackgroundSelectorModal';
 import { StageBackgroundProvider } from './context/StageBackgroundContext';
@@ -100,6 +101,9 @@ export default function App() {
         )}
         {activeTab === 'bomb_reveal' && (
           <BombRevealStudio is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'folded_paper' && (
+          <FoldedPaperReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
         )}
       </main>
 

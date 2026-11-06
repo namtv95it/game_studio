@@ -5,6 +5,8 @@ import PointerSettingsControl, { getPointerStyle } from './PointerSettingsContro
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
 import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 import NumberInput from './NumberInput';
+import heroImg from '../assets/hero.png';
+import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage } from '../utils/imageStorage';
 
 // Danh sách các hình dạng hỗ trợ cho Vệt Đèn và Lớp Phủ Màu
 export const SPOTLIGHT_SHAPES = [
@@ -167,7 +169,7 @@ export function getCustomShapeSvgPath(shape, cx, cy, rx, ry = rx) {
 const STORAGE_KEY = 'flashlight_game_settings';
 
 const DEFAULT_SETTINGS = {
-  imageSrc: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+  imageSrc: heroImg,
   radius: 80,
   spotlightType: 'circle',
   beamAngle: -135,
@@ -206,10 +208,15 @@ const DEFAULT_SETTINGS = {
 };
 
 export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
-  const getSavedSettings = () => {
+    const getSavedSettings = () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      if (parsed.imageSrc && parsed.imageSrc.startsWith('blob:')) {
+        delete parsed.imageSrc;
+      }
+      return parsed;
     } catch {
       return {};
     }
@@ -227,7 +234,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [coverHeight, setCoverHeight] = useState(initialSettings.coverHeight ?? (initialSettings.radius ? initialSettings.radius * 2 : 160));
   const [coverBlendMode, setCoverBlendMode] = useState(initialSettings.coverBlendMode || 'color');
 
-  const [imageSrc, setImageSrc] = useState(initialSettings.imageSrc || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png');
+  const [imageSrc, setImageSrc] = useState(initialSettings.imageSrc || heroImg);
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
   const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
   const [beamShape, setBeamShape] = useState(initialSettings.beamShape || 'circle');
@@ -315,8 +322,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     setActiveSection((prev) => (prev === key ? null : key));
   };
 
-  const handleResetSettings = () => {
-    setImageSrc('');
+    const handleResetSettings = () => {
+    clearFlashlightImage();
+    setImageSrc(heroImg);
     setQuestionMarks([]);
     setIsPlacingQm(false);
     setScale(95);
@@ -326,6 +334,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   const stageWrapperRef = useRef(null);
   const [stageScale, setStageScale] = useState(0.95);
+
+  // Tự động khôi phục ảnh người dùng đã tải lên từ IndexedDB khi mở hoặc reload trang
+  useEffect(() => {
+    let mounted = true;
+    loadFlashlightImage().then((storedBlob) => {
+      if (mounted && storedBlob) {
+        const url = URL.createObjectURL(storedBlob);
+        setImageSrc(url);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
@@ -355,53 +377,63 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     };
   }, [is916Mode]);
 
-// Tự động lưu cài đặt vào localStorage khi thay đổi
+// Tự động lưu cài đặt vào localStorage khi thay đổi (an toàn, không lưu blob url và chống tràn quota)
   useEffect(() => {
+    const safeImageSrc = (imageSrc && !imageSrc.startsWith('blob:')) ? imageSrc : null;
+    const settingsPayload = {
+      radius,
+      spotlightType,
+      beamAngle,
+      coneSpread,
+      beamStartWidth,
+      handSize,
+      pointerEmoji,
+      pointerRotation,
+      pointerOffsetX,
+      pointerOffsetY,
+      pointerAnchor,
+      enablePointer,
+      scale,
+      offsetX,
+      offsetY,
+      imageSrc: safeImageSrc,
+      hasCustomImage: Boolean(imageSrc && imageSrc.startsWith('blob:')),
+      beamBgColor,
+      enableBeamBg,
+      beamOpacity,
+      enableQuestionMarks,
+      questionMarks,
+      qmColor,
+      qmDefaultSize,
+      qmRandomColor,
+      qmRandomSize,
+      qmMinSize,
+      qmMaxSize,
+      shadowStyle,
+      shadowPattern,
+      customShadowColor,
+      shadowOpacity,
+      gameMode,
+      coverColor,
+      coverOpacity,
+      coverShape,
+      beamShape,
+      useCoverDimensions,
+      coverWidth,
+      coverHeight,
+      coverBlendMode
+    };
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        radius,
-        spotlightType,
-        beamAngle,
-        coneSpread,
-        beamStartWidth,
-        handSize,
-        pointerEmoji,
-        pointerRotation,
-        pointerOffsetX,
-        pointerOffsetY,
-        pointerAnchor,
-        enablePointer,
-        scale,
-        offsetX,
-        offsetY,
-        imageSrc,
-        beamBgColor,
-        enableBeamBg,
-        beamOpacity,
-        enableQuestionMarks,
-        questionMarks,
-        qmColor,
-        qmDefaultSize,
-        qmRandomColor,
-        qmRandomSize,
-        qmMinSize,
-        qmMaxSize,
-        shadowStyle,
-        shadowPattern,
-        customShadowColor,
-        shadowOpacity,
-        gameMode,
-        coverColor,
-        coverOpacity,
-        coverShape,
-        beamShape,
-        useCoverDimensions,
-        coverWidth,
-        coverHeight,
-        coverBlendMode
-      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settingsPayload));
     } catch (e) {
-      console.error('Không thể lưu cài đặt:', e);
+      console.warn('Lỗi bộ nhớ localStorage, đang lưu phiên bản rút gọn:', e);
+      try {
+        const minimalPayload = { ...settingsPayload, questionMarks: [] };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalPayload));
+      } catch (err2) {
+        console.error('Không thể lưu cài đặt vào localStorage:', err2);
+      }
     }
   }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
@@ -751,15 +783,15 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     renderCanvas();
   }, [cursorPos, radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
-  const handleImageUpload = (e) => {
+    const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImageSrc(URL.createObjectURL(file));
+      const url = URL.createObjectURL(file);
+      setImageSrc(url);
       setQuestionMarksWithHistory([]);
       setIsPlacingQm(false);
-      setScale(100);
-      setOffsetX(0);
-      setOffsetY(0);
+      // Lưu ảnh vào IndexedDB để reload trang không bị mất
+      saveFlashlightImage(file);
     }
   };
 
