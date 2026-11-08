@@ -142,3 +142,4 @@ export async function removeLocalImage(key) {
     return false;
   }
 }
+
