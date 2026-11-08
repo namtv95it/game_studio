@@ -3,6 +3,7 @@ import { Upload, RefreshCw, Play, GripVertical, Move, Sparkles, ChevronDown, Che
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
+import { saveLocalImage, loadLocalImage, removeLocalImage, getLocalImageSync } from '../utils/localImageStorage';
 import ShadowStyleSettingsControl, { SHADOW_STYLE_PRESETS, applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 
 const POKEMON_IMAGES = [
@@ -25,7 +26,14 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
 
   const initialSettings = getSavedSettings();
 
-  const [images, setImages] = useState(initialSettings.images || POKEMON_IMAGES);
+  const [images, setImages] = useState(() => {
+    const img0 = getLocalImageSync('shadow_match_image_0');
+    const img1 = getLocalImageSync('shadow_match_image_1');
+    const img2 = getLocalImageSync('shadow_match_image_2');
+    const loaded = [img0, img1, img2].filter(Boolean);
+    if (loaded.length > 0) return loaded;
+    return initialSettings.images || POKEMON_IMAGES;
+  });
   const [targetIndex, setTargetIndex] = useState(initialSettings.targetIndex ?? 0);
   const [handSize, setHandSize] = useState(initialSettings.handSize ?? 48);
   const [pointerEmoji, setPointerEmoji] = useState(initialSettings.pointerEmoji || '👆');
@@ -540,13 +548,15 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   resetGameRef.current = resetGame;
 
   // Handle Multiple Image Upload (1 ô chọn duy nhất, tải nhiều ảnh 2-3 ảnh)
-  const handleMultipleImageUpload = (e) => {
+  const handleMultipleImageUpload = async (e) => {
     const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
     if (files.length === 0) return;
 
-    const newUrls = files.map((file) => URL.createObjectURL(file));
-    setImages(newUrls);
-    setTargetIndex(0); // Đặt bóng mục tiêu về ảnh đầu tiên tải lên
+    const dataUrls = await Promise.all(
+      files.map((file, idx) => saveLocalImage(`shadow_match_image_${idx}`, file))
+    );
+    setImages(dataUrls);
+    setTargetIndex(0);
     setPlacedItems([]);
     setPickedItem(null);
   };
@@ -605,12 +615,12 @@ export default function ShadowMatch({ is916Mode: propIs916Mode, setIs916Mode: pr
   };
 
   // Handle Single Image Upload fallback
-  const handleImageUpload = (e, index) => {
+  const handleImageUpload = async (e, index) => {
     const file = e.target.files[0];
     if (file) {
-      const url = URL.createObjectURL(file);
+      const dataUrl = await saveLocalImage(`shadow_match_image_${index}`, file);
       const updated = [...images];
-      updated[index] = url;
+      updated[index] = dataUrl;
       setImages(updated);
     }
   };

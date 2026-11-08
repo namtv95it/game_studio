@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import NumberInput from './NumberInput';
+import { saveLocalImage, loadLocalImage, removeLocalImage, getLocalImageSync } from '../utils/localImageStorage';
 
 /* --- WEB AUDIO API: SYNTHESIZER ÂM THANH GIẤY CHÂN THỰC --- */
 const getAudioCtx = () => {
@@ -132,6 +133,8 @@ const DEFAULT_COVER_IMAGE = 'https://raw.githubusercontent.com/PokeAPI/sprites/m
 const DEFAULT_SECRET_IMAGE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/26.png'; // Raichu mạnh mẽ
 
 const STORAGE_KEY = 'folded_paper_settings_v2';
+const COVER_KEY = 'folded_paper_cover';
+const SECRET_KEY = 'folded_paper_secret';
 
 export default function FoldedPaperReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
   const getSaved = () => {
@@ -145,8 +148,8 @@ export default function FoldedPaperReveal({ is916Mode: propIs916Mode, setIs916Mo
   const saved = getSaved();
 
   // State cấu hình ảnh
-  const [coverImage, setCoverImage] = useState(saved.coverImage || DEFAULT_COVER_IMAGE);
-  const [secretImage, setSecretImage] = useState(saved.secretImage || DEFAULT_SECRET_IMAGE);
+  const [coverImage, setCoverImage] = useState(() => getLocalImageSync('folded_paper_cover') || saved.coverImage || DEFAULT_COVER_IMAGE);
+  const [secretImage, setSecretImage] = useState(() => getLocalImageSync('folded_paper_secret') || saved.secretImage || DEFAULT_SECRET_IMAGE);
 
   // State điều khiển độ mở giấy (0% -> 100%)
   const [openPercent, setOpenPercent] = useState(0);
@@ -178,12 +181,28 @@ export default function FoldedPaperReveal({ is916Mode: propIs916Mode, setIs916Mo
   const flashTimerRef = useRef(null);
   const stageWrapperRef = useRef(null);
 
+  // Tự động khôi phục ảnh bìa và ảnh bí mật từ bộ nhớ local khi mở trang
+  useEffect(() => {
+    let mounted = true;
+    loadLocalImage(COVER_KEY).then((img) => {
+      if (mounted && img) setCoverImage(img);
+    });
+    loadLocalImage(SECRET_KEY).then((img) => {
+      if (mounted && img) setSecretImage(img);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Tự động lưu cấu hình vào localStorage
   useEffect(() => {
     try {
+      const safeCover = coverImage && !coverImage.startsWith('blob:') && !coverImage.startsWith('data:') ? coverImage : null;
+      const safeSecret = secretImage && !secretImage.startsWith('blob:') && !secretImage.startsWith('data:') ? secretImage : null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        coverImage,
-        secretImage,
+        coverImage: safeCover,
+        secretImage: safeSecret,
         peekPercent,
         flashHoldDuration,
         enableSound,
@@ -280,22 +299,24 @@ export default function FoldedPaperReveal({ is916Mode: propIs916Mode, setIs916Mo
   }, [actionState, peekPercent, flashHoldDuration, enableSound]);
 
   // Upload ảnh 1 (Ảnh Ngoài khi Gập)
-  const handleUploadCover = (e) => {
+  const handleUploadCover = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setCoverImage(URL.createObjectURL(file));
       setOpenPercent(0);
       setActionState('idle');
+      const dataUrl = await saveLocalImage(COVER_KEY, file);
+      setCoverImage(dataUrl);
     }
   };
 
   // Upload ảnh 2 (Ảnh Bí Mật Lộ Ra)
-  const handleUploadSecret = (e) => {
+  const handleUploadSecret = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSecretImage(URL.createObjectURL(file));
       setOpenPercent(0);
       setActionState('idle');
+      const dataUrl = await saveLocalImage(SECRET_KEY, file);
+      setSecretImage(dataUrl);
     }
   };
 
@@ -303,6 +324,10 @@ export default function FoldedPaperReveal({ is916Mode: propIs916Mode, setIs916Mo
   const handleReset = () => {
     if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    removeLocalImage(COVER_KEY);
+    removeLocalImage(SECRET_KEY);
+    setCoverImage(DEFAULT_COVER_IMAGE);
+    setSecretImage(DEFAULT_SECRET_IMAGE);
     setActionState('idle');
     setOpenPercent(0);
     setPaperScale(95);

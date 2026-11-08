@@ -6,7 +6,7 @@ import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
 import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './ShadowStyleSettingsControl';
 import NumberInput from './NumberInput';
 import heroImg from '../assets/hero.png';
-import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage } from '../utils/imageStorage';
+import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage, getFlashlightImageSync } from '../utils/imageStorage';
 
 // Danh sách các hình dạng hỗ trợ cho Vệt Đèn và Lớp Phủ Màu
 export const SPOTLIGHT_SHAPES = [
@@ -234,7 +234,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [coverHeight, setCoverHeight] = useState(initialSettings.coverHeight ?? (initialSettings.radius ? initialSettings.radius * 2 : 160));
   const [coverBlendMode, setCoverBlendMode] = useState(initialSettings.coverBlendMode || 'color');
 
-  const [imageSrc, setImageSrc] = useState(initialSettings.imageSrc || heroImg);
+  const [imageSrc, setImageSrc] = useState(() => getFlashlightImageSync() || initialSettings.imageSrc || heroImg);
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
   const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
   const [beamShape, setBeamShape] = useState(initialSettings.beamShape || 'circle');
@@ -338,10 +338,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   // Tự động khôi phục ảnh người dùng đã tải lên từ IndexedDB khi mở hoặc reload trang
   useEffect(() => {
     let mounted = true;
-    loadFlashlightImage().then((storedBlob) => {
-      if (mounted && storedBlob) {
-        const url = URL.createObjectURL(storedBlob);
-        setImageSrc(url);
+    loadFlashlightImage().then((stored) => {
+      if (mounted && stored) {
+        setImageSrc(stored);
       }
     });
     return () => {
@@ -783,15 +782,14 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     renderCanvas();
   }, [cursorPos, radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setImageSrc(url);
       setQuestionMarksWithHistory([]);
       setIsPlacingQm(false);
-      // Lưu ảnh vào IndexedDB để reload trang không bị mất
-      saveFlashlightImage(file);
+      // Lưu ảnh vào bộ nhớ local (IndexedDB + localStorage cache)
+      const dataUrl = await saveFlashlightImage(file);
+      setImageSrc(dataUrl);
     }
   };
 
