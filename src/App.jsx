@@ -8,6 +8,7 @@ import ImageBlend from './components/ImageBlend';
 import RedemptionEffect from './components/RedemptionEffect';
 import BombRevealStudio from './components/BombRevealStudio';
 import FoldedPaperReveal from './components/FoldedPaperReveal';
+import MissingPiecePuzzle from './components/MissingPiecePuzzle';
 import FireBurnReveal from './components/FireBurnReveal';
 import ShadowClueQuiz from './components/ShadowClueQuiz';
 import FeatureModal, { GAME_FEATURES } from './components/FeatureModal';
@@ -106,6 +107,9 @@ export default function App() {
         )}
         {activeTab === 'folded_paper' && (
           <FoldedPaperReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+        )}
+        {activeTab === 'missing_piece' && (
+          <MissingPiecePuzzle is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
         )}
         {activeTab === 'fire_burn' && (
           <FireBurnReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />

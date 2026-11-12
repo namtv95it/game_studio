@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flashlight, Ghost, FileText, Flame, Eye, X, ArrowRight } from 'lucide-react';
+import { Flashlight, Ghost, FileText, Flame, Eye, Puzzle, X, ArrowRight } from 'lucide-react';
 
 export const GAME_FEATURES = [
   {
@@ -33,13 +33,23 @@ export const GAME_FEATURES = [
     active: true
   },
   {
+    id: 'missing_piece',
+    title: 'Mảnh Ghép Bí Mật',
+    subtitle: 'Missing Piece Puzzle',
+    description: 'Bôi đen vùng khuyết trên ảnh, hiển thị 3 mảnh ghép để kéo thả thử thách tìm đáp án đúng.',
+    icon: Puzzle,
+    color: 'from-rose-500 via-pink-500 to-violet-600',
+    badge: 'Chức năng 4 (Mới - Shorts)',
+    active: true
+  },
+  {
     id: 'fire_burn',
     title: 'Thiêu Cháy Bí Mật',
     subtitle: 'Fire Burn Reveal',
     description: 'Ngọn lửa thiêu rụi màn đêm bí ẩn, lộ ra nhân vật ẩn bên dưới với vệt cháy tự động.',
     icon: Flame,
     color: 'from-orange-500 via-amber-500 to-red-600',
-    badge: 'Chức năng 4 (Shorts)',
+    badge: 'Chức năng 5 (Shorts)',
     active: true
   },
   {
@@ -49,7 +59,7 @@ export const GAME_FEATURES = [
     description: 'Đố vui bóng đen tự động theo series nhiều nhân vật, hé lộ từng ô màu gợi ý cho video dài 16:9.',
     icon: Eye,
     color: 'from-teal-500 via-emerald-500 to-sky-600',
-    badge: 'Chức năng 5 (Video Dài)',
+    badge: 'Chức năng 6 (Video Dài)',
     active: true
   }
 ];
