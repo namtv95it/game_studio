@@ -129,6 +129,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const [pieces, setPieces] = useState([]);
   const [isSolved, setIsSolved] = useState(false);
   const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
+  const [isHoveringPiece, setIsHoveringPiece] = useState(false);
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -136,6 +137,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const animRef = useRef(null);
   const activeDragIndexRef = useRef(-1);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const hoveredIndexRef = useRef(-1);
+  const hoverScalesRef = useRef([1, 1, 1]);
   const piecesRef = useRef([]);
   const audioCtxRef = useRef(null);
 
@@ -386,20 +389,47 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     }
 
     const idx = activeDragIndexRef.current;
-    if (idx < 0) return;
+    if (idx >= 0) {
+      hoveredIndexRef.current = idx;
+      const offset = dragOffsetRef.current;
+      setPieces(prev => {
+        const updated = [...prev];
+        if (updated[idx]) {
+          updated[idx] = {
+            ...updated[idx],
+            currentX: canvasX + offset.x,
+            currentY: canvasY + offset.y,
+          };
+        }
+        return updated;
+      });
+      return;
+    }
 
-    const offset = dragOffsetRef.current;
-    setPieces(prev => {
-      const updated = [...prev];
-      if (updated[idx]) {
-        updated[idx] = {
-          ...updated[idx],
-          currentX: canvasX + offset.x,
-          currentY: canvasY + offset.y,
-        };
+    // Kiểm tra hover trên các mảnh phía trên khay
+    const { pieceSize } = getSlotPositions(settings);
+    const pList = piecesRef.current;
+    let foundHover = -1;
+    for (let i = pList.length - 1; i >= 0; i--) {
+      const p = pList[i];
+      if (p.isPlacedInHole) continue;
+      const currentScale = hoverScalesRef.current[i] || 1;
+      const half = (pieceSize * currentScale) / 2;
+      if (
+        canvasX >= p.currentX - half &&
+        canvasX <= p.currentX + half &&
+        canvasY >= p.currentY - half &&
+        canvasY <= p.currentY + half
+      ) {
+        foundHover = i;
+        break;
       }
-      return updated;
-    });
+    }
+
+    if (hoveredIndexRef.current !== foundHover) {
+      hoveredIndexRef.current = foundHover;
+      setIsHoveringPiece(foundHover !== -1);
+    }
   };
 
   const handlePointerUp = () => {
@@ -408,6 +438,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
     const piece = piecesRef.current[idx];
     activeDragIndexRef.current = -1;
+    setIsHoveringPiece(false);
 
     if (!piece) return;
 
@@ -465,6 +496,12 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       });
       setIsSolved(false);
     }
+  };
+
+  const handlePointerLeave = () => {
+    handlePointerUp();
+    hoveredIndexRef.current = -1;
+    setIsHoveringPiece(false);
   };
 
   // Nhấn Space: Trả mảnh đang ở chỗ khuyết về vị trí phía trên
@@ -551,13 +588,18 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       const { slotX, slotY, pieceSize } = getSlotPositions(settings);
 
       for (let i = 0; i < 3; i++) {
+        const isSlotHovered = hoveredIndexRef.current === i && !currentPieces[i]?.isPlacedInHole;
         ctx.save();
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+        ctx.fillStyle = isSlotHovered ? 'rgba(56, 189, 248, 0.22)' : 'rgba(15, 23, 42, 0.45)';
         ctx.beginPath();
         ctx.roundRect(slotX[i] - pieceSize / 2 - 4, slotY - pieceSize / 2 - 4, pieceSize + 8, pieceSize + 8, 12);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = isSlotHovered ? '#38bdf8' : 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = isSlotHovered ? 2 : 1.5;
+        if (isSlotHovered) {
+          ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+          ctx.shadowBlur = 12;
+        }
         ctx.stroke();
         ctx.restore();
       }
@@ -623,7 +665,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       };
 
       // Vẽ các mảnh ghép
-      currentPieces.forEach((piece) => {
+      currentPieces.forEach((piece, idx) => {
         if (piece.isPlacedInHole) {
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
 
@@ -638,22 +680,66 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         }
 
         const isDragging = piece.isDragging;
-        const currentPSize = isDragging ? pieceSize * 1.08 : pieceSize;
+        const isHovered = hoveredIndexRef.current === idx && !isDragging;
+
+        // Smooth scale interpolation: 1.0 (bình thường), 1.08 (hover), 1.10 (kéo thả)
+        const targetScale = isDragging ? 1.10 : (isHovered ? 1.08 : 1.0);
+        if (!hoverScalesRef.current[idx]) hoverScalesRef.current[idx] = 1;
+        hoverScalesRef.current[idx] += (targetScale - hoverScalesRef.current[idx]) * 0.25;
+
+        const currentPSize = pieceSize * hoverScalesRef.current[idx];
 
         ctx.save();
         if (isDragging) {
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-          ctx.shadowBlur = 18;
-          ctx.shadowOffsetY = 8;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+          ctx.shadowBlur = 24;
+          ctx.shadowOffsetY = 10;
+        } else if (isHovered) {
+          ctx.shadowColor = 'rgba(56, 189, 248, 0.75)';
+          ctx.shadowBlur = 20;
+          ctx.shadowOffsetY = 6;
         }
 
         drawPieceContent(piece, piece.currentX, piece.currentY, currentPSize);
 
-        ctx.strokeStyle = isDragging ? '#38bdf8' : '#ffffff';
-        ctx.lineWidth = isDragging ? 2.5 : 1.5;
+        // Viền nổi bật và hiệu ứng ánh sáng
+        if (isDragging) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+        } else if (isHovered) {
+          ctx.strokeStyle = '#67e8f9';
+          ctx.lineWidth = 2.5;
+        } else {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.lineWidth = 1.5;
+        }
+
         ctx.beginPath();
-        ctx.roundRect(piece.currentX - currentPSize / 2, piece.currentY - currentPSize / 2, currentPSize, currentPSize, 8);
+        ctx.roundRect(
+          piece.currentX - currentPSize / 2, 
+          piece.currentY - currentPSize / 2, 
+          currentPSize, 
+          currentPSize, 
+          10
+        );
         ctx.stroke();
+
+        // Viền neon phụ mềm mại bao quanh khi hover
+        if (isHovered) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.roundRect(
+            piece.currentX - currentPSize / 2 - 2, 
+            piece.currentY - currentPSize / 2 - 2, 
+            currentPSize + 4, 
+            currentPSize + 4, 
+            12
+          );
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.restore();
       });
@@ -736,8 +822,12 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         {/* CONTAINER CHÍNH CHỨA SÂN KHẤU */}
         <div 
           ref={containerRef}
-          className={`relative overflow-hidden select-none transition-all duration-300 flex items-center justify-center cursor-grab active:cursor-grabbing ${
-            settings.enablePointer ? 'cursor-none' : ''
+          className={`relative overflow-hidden select-none transition-all duration-300 flex items-center justify-center ${
+            settings.enablePointer 
+              ? 'cursor-none' 
+              : isHoveringPiece 
+                ? 'cursor-grab active:cursor-grabbing' 
+                : 'cursor-default'
           } ${
             is916Mode
               ? 'bg-white flex items-center justify-center'
@@ -750,7 +840,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
         >
           {/* Lớp nền sân khấu linh hoạt */}
           <StageBackgroundOverlay />
@@ -776,7 +866,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           {/* HAND / EMOJI CURSOR OVERLAY (GIỐNG SOI ĐÈN PIN) */}
           {settings.enablePointer && (
             <div
-              className="absolute pointer-events-none select-none z-30 transition-transform"
+              className={`absolute pointer-events-none select-none z-30 transition-all duration-150 ${
+                isHoveringPiece ? 'scale-115 drop-shadow-[0_4px_14px_rgba(56,189,248,0.6)]' : 'scale-100'
+              }`}
               style={getPointerStyle({
                 x: cursorPos.rawX,
                 y: cursorPos.rawY,
