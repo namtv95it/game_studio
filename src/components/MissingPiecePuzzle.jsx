@@ -26,6 +26,8 @@ const DEFAULT_SETTINGS = {
   topPieceSize: 115, // kích thước của 3 ảnh
   topSpacing: 155,   // khoảng cách giữa các ảnh
   topOffsetX: 0,     // dịch chuyển ngang X của cả hàng 3 ảnh
+  pieceGrayscale: true,      // Mặc định đen trắng cho ảnh phía trên và khi kéo xuống
+  revealColorOnHole: true,   // Khi khớp đúng ô khuyết thì hiển thị màu gốc sắc nét
 
   // Chế độ tạo mảnh sai
   distractorMode: 'auto', // 'auto' | 'custom'
@@ -106,7 +108,13 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem('missing_piece_settings_v1');
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+      const parsed = saved ? JSON.parse(saved) : {};
+      return { 
+        ...DEFAULT_SETTINGS, 
+        ...parsed,
+        pieceGrayscale: parsed.pieceGrayscale !== undefined ? parsed.pieceGrayscale : true,
+        revealColorOnHole: parsed.revealColorOnHole !== undefined ? parsed.revealColorOnHole : true
+      };
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -628,6 +636,17 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           return;
         }
 
+        // Áp dụng bộ lọc đen trắng cho ảnh phía trên và khi kéo xuống
+        const isGrayscale = settings.pieceGrayscale && (
+          !piece.isPlacedInHole || 
+          !piece.isCorrect || 
+          (piece.isCorrect && !settings.revealColorOnHole)
+        );
+
+        if (isGrayscale) {
+          ctx.filter = 'grayscale(100%) contrast(105%)';
+        }
+
         const srcSize = holeSize / scale;
         const maxSrcX = Math.max(0, mainImg.naturalWidth - srcSize);
         const maxSrcY = Math.max(0, mainImg.naturalHeight - srcSize);
@@ -1046,6 +1065,49 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
                     unit="px"
                     color="purple"
                   />
+
+                  {/* TÙY CHỌN MÀU SẮC ĐEN TRẮNG */}
+                  <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 font-semibold">Màu sắc 3 mảnh ghép:</span>
+                      <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setSettings(p => ({ ...p, pieceGrayscale: true }))}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                            settings.pieceGrayscale
+                              ? 'bg-purple-600 text-white shadow'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Đen trắng
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSettings(p => ({ ...p, pieceGrayscale: false }))}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-all cursor-pointer ${
+                            !settings.pieceGrayscale
+                              ? 'bg-purple-600 text-white shadow'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Màu gốc
+                        </button>
+                      </div>
+                    </div>
+
+                    {settings.pieceGrayscale && (
+                      <label className="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer pt-1 hover:text-white transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={settings.revealColorOnHole}
+                          onChange={(e) => setSettings(p => ({ ...p, revealColorOnHole: e.target.checked }))}
+                          className="accent-purple-500 rounded cursor-pointer"
+                        />
+                        <span>Khớp đúng ô khuyết: Đổi sang màu thật</span>
+                      </label>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
