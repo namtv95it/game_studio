@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   Upload, Play, RotateCcw, Shuffle, ChevronDown, ChevronUp, 
   Volume2, VolumeX, Sparkles, Image as ImageIcon, HelpCircle, 
-  Sliders
+  Sliders, Move
 } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import NumberInput from './NumberInput';
@@ -27,6 +27,40 @@ const DEFAULT_SETTINGS = {
 
   soundEnabled: true,
 };
+
+// Component điều khiển thanh trượt kết hợp ô nhập số chuẩn chỉ
+function SliderControl({ label, value, onChange, min, max, step = 1, unit = '', color = 'rose' }) {
+  const accentColor = color === 'rose' ? 'accent-rose-500' : color === 'amber' ? 'accent-amber-500' : 'accent-sky-500';
+  const borderColor = color === 'rose' ? 'focus:border-rose-400' : color === 'amber' ? 'focus:border-amber-400' : 'focus:border-sky-400';
+
+  return (
+    <div className="flex flex-col gap-1.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] text-slate-300 font-semibold">{label}</label>
+        <div className="flex items-center gap-1">
+          <NumberInput
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={onChange}
+            className={`w-14 px-1.5 py-0.5 bg-slate-800 text-white rounded text-xs text-right border border-slate-700 focus:outline-none ${borderColor} font-mono`}
+          />
+          {unit && <span className="text-[10px] text-slate-400 font-medium">{unit}</span>}
+        </div>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className={`w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer ${accentColor}`}
+      />
+    </div>
+  );
+}
 
 export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const [settings, setSettings] = useState(() => {
@@ -167,7 +201,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       gain.connect(ctx.destination);
 
       if (type === 'snap') {
-        // Âm thanh snap khít nhẹ nhàng khi thả vào ô khuyết
         osc.type = 'sine';
         osc.frequency.setValueAtTime(440, now);
         osc.frequency.exponentialRampToValueAtTime(700, now + 0.1);
@@ -176,7 +209,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         osc.start(now);
         osc.stop(now + 0.15);
       } else if (type === 'return') {
-        // Âm thanh khi mảnh bay trở lại khay trên (Space)
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(600, now);
         osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
@@ -207,9 +239,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const cRawX = e.clientX - canvasRect.left;
     const cRawY = e.clientY - canvasRect.top;
 
-    // Khi xoay -90deg:
-    // Trục X màn hình = Trục Y Canvas (0 -> 960)
-    // Trục Y màn hình = Trục X ngược Canvas (540 -> 0)
     const canvasY = (cRawX / canvasRect.width) * 960;
     const canvasX = (1 - (cRawY / canvasRect.height)) * 540;
 
@@ -244,7 +273,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           updated[i] = { 
             ...updated[i], 
             isDragging: true,
-            isPlacedInHole: false, // Nhấc ra khỏi ô khuyết
+            isPlacedInHole: false,
             isSnapped: false
           };
           return updated;
@@ -294,7 +323,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const snapThreshold = settings.holeSize * 0.8;
 
     if (dist <= snapThreshold) {
-      // DÙ ĐÚNG HAY SAI: Giữ nguyên vị trí ngay tại chỗ khuyết!
       setPieces(prev => {
         return prev.map((p, i) => {
           if (i === idx) {
@@ -303,11 +331,10 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               currentX: holeCenterX,
               currentY: holeCenterY,
               isDragging: false,
-              isPlacedInHole: true, // Đặt giữ nguyên tại chỗ khuyết
+              isPlacedInHole: true,
               isSnapped: p.isCorrect,
             };
           } else if (p.isPlacedInHole) {
-            // Nếu trước đó đã có mảnh khác ở chỗ khuyết thì trả mảnh cũ về khay trên
             return {
               ...p,
               currentX: p.homeX,
@@ -329,7 +356,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
       playSound('snap');
     } else {
-      // Thả ngoài ô khuyết -> Trả về khay trên
       setPieces(prev => {
         const updated = [...prev];
         updated[idx] = {
@@ -352,7 +378,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const hasPlacedPiece = currentPieces.some(p => p.isPlacedInHole);
 
     if (hasPlacedPiece) {
-      // Trả mảnh đang ở chỗ khuyết về vị trí khay phía trên
       setPieces(prev =>
         prev.map(p =>
           p.isPlacedInHole
@@ -363,7 +388,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       setIsSolved(false);
       playSound('return');
     } else {
-      // Nếu tất cả các mảnh đều đang ở phía trên -> Xáo trộn vị trí
       initPieces(true);
     }
   }, [initPieces, playSound]);
@@ -432,9 +456,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       }
 
-      // 3. VÙNG KHOÉT (HOLE) TRÊN BỨC ẢNH:
-      // QUAN TRỌNG: LUÔN LUÔN TÔ Ô ĐEN TẠI HOLE ĐỂ XÓA SẠCH ẢNH GỐC BÊN DƯỚI!
-      // Không bao giờ để ảnh gốc bên dưới lộ ra trừ khi chính mảnh đúng được ghép vào.
+      // 3. VÙNG KHOÉT (HOLE) TRÊN BỨC ẢNH: LUÔN TÔ Ô ĐEN ĐỂ CHE KÍN ẢNH GỐC
       ctx.save();
       ctx.fillStyle = '#05070a';
       ctx.fillRect(holeX, holeY, holeSize, holeSize);
@@ -465,15 +487,13 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       }
 
-      // 5. Tính toán tọa độ nguồn ảnh cho từng mảnh (ĐÚNG vs SAI 1 vs SAI 2)
-      // Hàm vẽ nội dung mảnh ghép
+      // 5. Hàm vẽ nội dung mảnh ghép
       const drawPieceContent = (piece, px, py, pSize) => {
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(px - pSize / 2, py - pSize / 2, pSize, pSize, piece.isPlacedInHole ? 0 : 8);
         ctx.clip();
 
-        // Luôn tô nền tối đệm kín để mảnh không bao giờ bị trong suốt
         ctx.fillStyle = '#0a0d14';
         ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
 
@@ -486,24 +506,19 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         const maxSrcX = Math.max(0, mainImg.naturalWidth - srcSize);
         const maxSrcY = Math.max(0, mainImg.naturalHeight - srcSize);
 
-        // Tọa độ nguồn của Mảnh ĐÚNG
         const correctSrcX = Math.max(0, Math.min(maxSrcX, (holeX - dx) / scale));
         const correctSrcY = Math.max(0, Math.min(maxSrcY, (holeY - dy) / scale));
 
         if (piece.isCorrect) {
-          // MẢNH ĐÚNG: Cắt CHÍNH XÁC từ vị trí hole của ảnh chính
           ctx.drawImage(
             mainImg,
             correctSrcX, correctSrcY, srcSize, srcSize,
             px - pSize / 2, py - pSize / 2, pSize, pSize
           );
         } else if (piece.id === 'd1') {
-          // MẢNH SAI 1
           if (settings.distractorMode === 'custom' && customDistractor1) {
             ctx.drawImage(customDistractor1, px - pSize / 2, py - pSize / 2, pSize, pSize);
           } else {
-            // Tự động: Cắt từ một vùng KHÁC RÕ RỆT trên ảnh chính
-            // Dịch chuyển ít nhất 35% kích thước ảnh để đảm bảo hình ảnh khác biệt hoàn toàn
             const fakeSrcX1 = (correctSrcX + maxSrcX * 0.38 + 50) % (maxSrcX || 1);
             const fakeSrcY1 = (correctSrcY + maxSrcY * 0.42 + 40) % (maxSrcY || 1);
 
@@ -514,11 +529,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
             );
           }
         } else if (piece.id === 'd2') {
-          // MẢNH SAI 2
           if (settings.distractorMode === 'custom' && customDistractor2) {
             ctx.drawImage(customDistractor2, px - pSize / 2, py - pSize / 2, pSize, pSize);
           } else {
-            // Tự động: Cắt từ một góc khác nữa
             const fakeSrcX2 = (correctSrcX + maxSrcX * 0.72 + 90) % (maxSrcX || 1);
             const fakeSrcY2 = (correctSrcY + maxSrcY * 0.68 + 70) % (maxSrcY || 1);
 
@@ -535,14 +548,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
       // Vẽ các mảnh ghép
       currentPieces.forEach((piece) => {
-        // NẾU MẢNH ĐANG NẰM TRONG Ô KHUYẾT (DÙ ĐÚNG HAY SAI)
         if (piece.isPlacedInHole) {
-          // Vẽ khớp kín ô khuyết với kích thước holeSize
-          // Nếu là mảnh sai: Hình ảnh của Mảnh Sai sẽ hiển thị ngay tại ô khuyết (rõ ràng là hình sai/lệch!)
-          // Nếu là mảnh đúng: Khớp hoàn hảo với tranh
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
 
-          // Nếu là mảnh sai, vẽ thêm đường viền mảnh nhẹ để thấy rõ ranh giới ô ghép sai
           if (!piece.isCorrect) {
             ctx.save();
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
@@ -553,7 +561,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           return;
         }
 
-        // Mảnh đang ở trên khay hoặc đang được kéo rê
         const isDragging = piece.isDragging;
         const currentPSize = isDragging ? pieceSize * 1.08 : pieceSize;
 
@@ -566,7 +573,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
         drawPieceContent(piece, piece.currentX, piece.currentY, currentPSize);
 
-        // Viền mảnh ghép trên khay
         ctx.strokeStyle = isDragging ? '#38bdf8' : '#ffffff';
         ctx.lineWidth = isDragging ? 2.5 : 1.5;
         ctx.beginPath();
@@ -726,22 +732,37 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
                     <input type="file" accept="image/*" onChange={handleMainUpload} className="hidden" />
                   </label>
 
-                  <NumberInput
-                    label="Kích thước ảnh (%):"
+                  <SliderControl
+                    label="Phóng to / Thu nhỏ ảnh:"
                     value={settings.imgScale}
                     onChange={(val) => setSettings(p => ({ ...p, imgScale: val }))}
                     min={40}
-                    max={200}
+                    max={250}
                     step={5}
+                    unit="%"
+                    color="rose"
                   />
 
-                  <NumberInput
-                    label="Dịch chuyển Y (px):"
+                  <SliderControl
+                    label="Vị trí ngang X (Ảnh):"
+                    value={settings.imgOffsetX}
+                    onChange={(val) => setSettings(p => ({ ...p, imgOffsetX: val }))}
+                    min={-300}
+                    max={300}
+                    step={5}
+                    unit="px"
+                    color="rose"
+                  />
+
+                  <SliderControl
+                    label="Vị trí dọc Y (Ảnh):"
                     value={settings.imgOffsetY}
                     onChange={(val) => setSettings(p => ({ ...p, imgOffsetY: val }))}
                     min={-300}
                     max={300}
-                    step={10}
+                    step={5}
+                    unit="px"
+                    color="rose"
                   />
                 </div>
               )}
@@ -761,31 +782,37 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
               {openSections.hole && (
                 <div className="p-3 pt-0 space-y-3">
-                  <NumberInput
-                    label="Vị trí X (px):"
+                  <SliderControl
+                    label="Vị trí ngang X (Vùng che):"
                     value={settings.holeX}
                     onChange={(val) => setSettings(p => ({ ...p, holeX: val }))}
-                    min={30}
-                    max={380}
-                    step={10}
+                    min={20}
+                    max={390}
+                    step={5}
+                    unit="px"
+                    color="amber"
                   />
 
-                  <NumberInput
-                    label="Vị trí Y (px):"
+                  <SliderControl
+                    label="Vị trí dọc Y (Vùng che):"
                     value={settings.holeY}
                     onChange={(val) => setSettings(p => ({ ...p, holeY: val }))}
-                    min={260}
+                    min={250}
                     max={780}
-                    step={10}
+                    step={5}
+                    unit="px"
+                    color="amber"
                   />
 
-                  <NumberInput
-                    label="Kích thước ô vuông (px):"
+                  <SliderControl
+                    label="Kích thước ô vuông bị che:"
                     value={settings.holeSize}
                     onChange={(val) => setSettings(p => ({ ...p, holeSize: val }))}
-                    min={70}
-                    max={220}
+                    min={60}
+                    max={240}
                     step={5}
+                    unit="px"
+                    color="amber"
                   />
                 </div>
               )}
