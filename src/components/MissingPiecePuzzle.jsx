@@ -136,8 +136,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       currentX: slotX[idx],
       currentY: slotY,
       isDragging: false,
+      isPlacedInHole: false,
       isSnapped: false,
-      shakeTimer: 0,
     }));
 
     setPieces(newPieces);
@@ -166,28 +166,28 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      if (type === 'correct') {
-        // Âm thanh snap khít nhẹ nhàng
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.15);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      } else if (type === 'wrong') {
-        // Âm thanh buzz nhẹ khi sai
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(130, now);
-        osc.frequency.linearRampToValueAtTime(75, now + 0.25);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-        osc.start(now);
-        osc.stop(now + 0.28);
-      } else if (type === 'pickup') {
+      if (type === 'snap') {
+        // Âm thanh snap khít nhẹ nhàng khi thả vào ô khuyết
         osc.type = 'sine';
         osc.frequency.setValueAtTime(440, now);
-        osc.frequency.exponentialRampToValueAtTime(580, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(700, now + 0.1);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'return') {
+        // Âm thanh khi mảnh bay trở lại khay trên (Space)
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'pickup') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(380, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.08);
         gain.gain.setValueAtTime(0.12, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
         osc.start(now);
@@ -207,6 +207,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const cRawX = e.clientX - canvasRect.left;
     const cRawY = e.clientY - canvasRect.top;
 
+    // Khi xoay -90deg:
+    // Trục X màn hình = Trục Y Canvas (0 -> 960)
+    // Trục Y màn hình = Trục X ngược Canvas (540 -> 0)
     const canvasY = (cRawX / canvasRect.width) * 960;
     const canvasX = (1 - (cRawY / canvasRect.height)) * 540;
 
@@ -215,16 +218,16 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
   // Xử lý sự kiện kéo thả (Pointer Events)
   const handlePointerDown = (e) => {
-    if (isSolved) return;
     const { canvasX, canvasY } = getCanvasCoords(e);
     const pieceSize = settings.holeSize * 0.85;
 
     const pList = piecesRef.current;
     for (let i = pList.length - 1; i >= 0; i--) {
       const p = pList[i];
-      if (p.isSnapped) continue;
+      // Nếu mảnh đang ở ô khuyết thì kích thước là holeSize, nếu ở khay là pieceSize
+      const currentSize = p.isPlacedInHole ? settings.holeSize : pieceSize;
+      const half = currentSize / 2;
 
-      const half = pieceSize / 2;
       if (
         canvasX >= p.currentX - half &&
         canvasX <= p.currentX + half &&
@@ -239,10 +242,16 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
         setPieces(prev => {
           const updated = [...prev];
-          updated[i] = { ...updated[i], isDragging: true };
+          updated[i] = { 
+            ...updated[i], 
+            isDragging: true,
+            isPlacedInHole: false, // Nhấc ra khỏi ô khuyết
+            isSnapped: false
+          };
           return updated;
         });
 
+        setIsSolved(false);
         playSound('pickup');
         e.preventDefault();
         break;
@@ -283,54 +292,82 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const holeCenterY = settings.holeY + settings.holeSize / 2;
 
     const dist = Math.hypot(piece.currentX - holeCenterX, piece.currentY - holeCenterY);
-    const snapThreshold = settings.holeSize * 0.75;
+    const snapThreshold = settings.holeSize * 0.8;
 
     if (dist <= snapThreshold) {
-      if (piece.isCorrect) {
-        // KÉO ĐÚNG -> Snap khít chính xác vào vị trí ô bị cắt
-        setPieces(prev => {
-          const updated = [...prev];
-          updated[idx] = {
-            ...updated[idx],
-            currentX: holeCenterX,
-            currentY: holeCenterY,
-            isDragging: false,
-            isSnapped: true,
-          };
-          return updated;
+      // DÙ ĐÚNG HAY SAI: Giữ nguyên vị trí ngay tại chỗ khuyết!
+      setPieces(prev => {
+        return prev.map((p, i) => {
+          if (i === idx) {
+            return {
+              ...p,
+              currentX: holeCenterX,
+              currentY: holeCenterY,
+              isDragging: false,
+              isPlacedInHole: true, // Đặt giữ nguyên tại chỗ khuyết
+              isSnapped: p.isCorrect,
+            };
+          } else if (p.isPlacedInHole) {
+            // Nếu trước đó đã có mảnh khác ở chỗ khuyết thì trả mảnh cũ về khay trên
+            return {
+              ...p,
+              currentX: p.homeX,
+              currentY: p.homeY,
+              isDragging: false,
+              isPlacedInHole: false,
+              isSnapped: false,
+            };
+          }
+          return p;
         });
+      });
 
+      if (piece.isCorrect) {
         setIsSolved(true);
-        playSound('correct');
       } else {
-        // KÉO SAI -> Rung lắc nhẹ và trả về khay
-        playSound('wrong');
-        setPieces(prev => {
-          const updated = [...prev];
-          updated[idx] = {
-            ...updated[idx],
-            isDragging: false,
-            shakeTimer: 0.4,
-            currentX: piece.homeX,
-            currentY: piece.homeY,
-          };
-          return updated;
-        });
+        setIsSolved(false);
       }
+
+      playSound('snap');
     } else {
-      // Thả ngoài ô -> Trả về khay
+      // Thả ngoài ô khuyết -> Trả về khay trên
       setPieces(prev => {
         const updated = [...prev];
         updated[idx] = {
           ...updated[idx],
           isDragging: false,
+          isPlacedInHole: false,
+          isSnapped: false,
           currentX: piece.homeX,
           currentY: piece.homeY,
         };
         return updated;
       });
+      setIsSolved(false);
     }
   };
+
+  // Nhấn Space: Trả mảnh đang ở chỗ khuyết về vị trí phía trên
+  const handleSpaceAction = useCallback(() => {
+    const currentPieces = piecesRef.current;
+    const hasPlacedPiece = currentPieces.some(p => p.isPlacedInHole);
+
+    if (hasPlacedPiece) {
+      // Trả mảnh đang ở chỗ khuyết về vị trí khay phía trên
+      setPieces(prev =>
+        prev.map(p =>
+          p.isPlacedInHole
+            ? { ...p, currentX: p.homeX, currentY: p.homeY, isPlacedInHole: false, isSnapped: false }
+            : p
+        )
+      );
+      setIsSolved(false);
+      playSound('return');
+    } else {
+      // Nếu tất cả các mảnh đều đang ở phía trên -> Xáo trộn vị trí
+      initPieces(true);
+    }
+  }, [initPieces, playSound]);
 
   // Keyboard controls
   useEffect(() => {
@@ -338,7 +375,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.code === 'Space') {
         e.preventDefault();
-        initPieces(true);
+        handleSpaceAction();
       } else if (e.code === 'KeyR') {
         e.preventDefault();
         initPieces(false);
@@ -348,7 +385,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [initPieces, is916Mode, setIs916Mode]);
+  }, [handleSpaceAction, initPieces, is916Mode, setIs916Mode]);
 
   // Main Render Loop (Canvas 2D) - 100% SẠCH SẼ, KHÔNG CHỮ THÔNG BÁO HOẶC HƯỚNG DẪN
   useEffect(() => {
@@ -358,12 +395,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const W = 540;
     const H = 960;
 
-    let lastTime = performance.now();
-
-    function render(currentTime) {
-      const dt = Math.min((currentTime - lastTime) / 1000, 0.05);
-      lastTime = currentTime;
-
+    function render() {
       // 1. Clear nền canvas
       ctx.clearRect(0, 0, W, H);
       const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
@@ -395,26 +427,24 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
       // 3. Vùng Khoét (Hole) trên bức ảnh
       const { holeX, holeY, holeSize } = settings;
+      const currentPieces = piecesRef.current;
+      const pieceInHole = currentPieces.find(p => p.isPlacedInHole);
 
-      // Chỉ vẽ vùng che đen khi CHƯA xếp đúng
-      if (!isSolved) {
+      // Nếu KHÔNG có mảnh nào ở trong ô khuyết -> Vẽ ô che đen
+      if (!pieceInHole) {
         ctx.save();
-        // Tô đen vùng khoét
         ctx.fillStyle = '#05070a';
         ctx.beginPath();
         ctx.roundRect(holeX, holeY, holeSize, holeSize, 8);
         ctx.fill();
 
-        // Viền nét đứt thanh mảnh nhấp nháy định vị
-        const dashOffset = (currentTime / 40) % 20;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.lineWidth = 2;
+        // Viền nét đứt thanh mảnh định vị
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1.5;
         ctx.setLineDash([8, 6]);
-        ctx.lineDashOffset = -dashOffset;
         ctx.stroke();
         ctx.restore();
       }
-      // KHI ĐÃ SOLVED: Không vẽ bất kỳ viền hay lớp che nào -> Ảnh tự nhiên hoàn chỉnh 100%!
 
       // 4. Vẽ 3 Khay Chứa phía trên
       const pieceSize = holeSize * 0.85;
@@ -423,7 +453,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
       for (let i = 0; i < 3; i++) {
         ctx.save();
-        // Khung nền khay trơn tinh tế
         ctx.fillStyle = 'rgba(30, 41, 59, 0.45)';
         ctx.beginPath();
         ctx.roundRect(slotX[i] - pieceSize / 2 - 4, slotY - pieceSize / 2 - 4, pieceSize + 8, pieceSize + 8, 12);
@@ -434,9 +463,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       }
 
-      // 5. Vẽ 3 Mảnh Ghép (Trích xuất ảnh sạch sẽ, KHÔNG có chữ A B C)
-      const currentPieces = piecesRef.current;
-
+      // 5. Vẽ từng Mảnh Ghép
       const drawPieceContent = (piece, px, py, pSize) => {
         ctx.save();
         ctx.beginPath();
@@ -517,20 +544,17 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       };
 
       currentPieces.forEach((piece) => {
-        // Nếu mảnh đúng đã snap vào vùng khuyết thì không cần vẽ lại viền nổi, để nó hòa vào ảnh chính
-        if (piece.isSnapped) {
+        // NẾU MẢNH ĐANG NẰM TRONG Ô KHUYẾT (DÙ ĐÚNG HAY SAI)
+        if (piece.isPlacedInHole) {
+          // Vẽ khớp kín kích thước holeSize
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
+
+          // Nếu là mảnh sai: Không vẽ viền để nó hiện nguyên hình ảnh sai lấp vào chỗ khuyết
+          // Nếu là mảnh đúng: Khớp hoàn hảo với tranh
           return;
         }
 
-        let drawX = piece.currentX;
-        let drawY = piece.currentY;
-
-        if (piece.shakeTimer > 0) {
-          piece.shakeTimer -= dt;
-          drawX += Math.sin(currentTime / 20) * 10;
-        }
-
+        // Mảnh đang ở trên khay hoặc đang được kéo rê
         const isDragging = piece.isDragging;
         const currentPSize = isDragging ? pieceSize * 1.08 : pieceSize;
 
@@ -541,13 +565,13 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           ctx.shadowOffsetY = 8;
         }
 
-        drawPieceContent(piece, drawX, drawY, currentPSize);
+        drawPieceContent(piece, piece.currentX, piece.currentY, currentPSize);
 
         // Viền mảnh ghép
-        ctx.strokeStyle = piece.shakeTimer > 0 ? '#ef4444' : isDragging ? '#38bdf8' : '#ffffff';
-        ctx.lineWidth = piece.shakeTimer > 0 ? 3 : isDragging ? 2.5 : 1.5;
+        ctx.strokeStyle = isDragging ? '#38bdf8' : '#ffffff';
+        ctx.lineWidth = isDragging ? 2.5 : 1.5;
         ctx.beginPath();
-        ctx.roundRect(drawX - currentPSize / 2, drawY - currentPSize / 2, currentPSize, currentPSize, 8);
+        ctx.roundRect(piece.currentX - currentPSize / 2, piece.currentY - currentPSize / 2, currentPSize, currentPSize, 8);
         ctx.stroke();
 
         ctx.restore();
@@ -650,11 +674,11 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           {!is916Mode && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-30 pointer-events-auto bg-slate-950/80 backdrop-blur-md px-4 py-2 rounded-full border border-slate-700/80 shadow-2xl">
               <button
-                onClick={() => initPieces(true)}
+                onClick={handleSpaceAction}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                title="Xáo trộn lại 3 mảnh ghép (Space)"
+                title="Trả mảnh về khay hoặc Xáo trộn (Space)"
               >
-                <Shuffle size={14} /> Xáo Trộn (Space)
+                <Shuffle size={14} /> Trả về / Xáo Trộn (Space)
               </button>
 
               <button
@@ -865,10 +889,10 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               <div className="font-semibold text-slate-200 flex items-center gap-1.5">
                 🎬 Mẹo quay YouTube Shorts:
               </div>
-              <div>• Bấm nút <b>"Khởi Chạy"</b> ở header: Màn hình sẽ ẩn 100% tất cả các nút và chữ hướng dẫn.</div>
-              <div>• Kéo thử mảnh sai vào chỗ khuyết để tạo kịch tính.</div>
-              <div>• Khi kéo đúng mảnh vào chỗ bị cắt, mảnh sẽ snap khớp liền lạc vào tranh tự nhiên mà không hiện bất kỳ thông báo chữ nào!</div>
-              <div>• Nhấn phím <b>Space</b> để xáo trộn chơi lại, nhấn <b>ESC</b> để thoát.</div>
+              <div>• Kéo thử mảnh sai vào chỗ khuyết: Mảnh sẽ <b>giữ nguyên vị trí</b> tại chỗ khuyết để khán giả thấy sai.</div>
+              <div>• Nhấn phím <b>Space</b>: Mảnh đó sẽ lập tức bay trở lại vị trí trên khay!</div>
+              <div>• Sau đó bạn kéo mảnh đúng vào để hoàn thiện bức tranh.</div>
+              <div>• Nhấn <b>ESC</b> để thoát chế độ Khởi Chạy.</div>
             </div>
           </div>
         </aside>
