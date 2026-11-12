@@ -726,19 +726,22 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       {/* SÂN KHẤU TRUNG TÂM (Cấu trúc pixel-perfect chuẩn 100% giống FlashlightReveal) */}
       <div 
         ref={stageWrapperRef}
-        className={`flex-1 relative flex items-center justify-center overflow-hidden transition-all duration-300 ${
-          is916Mode ? 'p-0 w-full h-full bg-slate-950' : 'p-4 bg-slate-900/60'
+        className={`flex-1 flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
+          is916Mode ? 'fixed inset-0 z-50 bg-white' : 'bg-slate-950 p-4'
         }`}
       >
+        {/* Lớp nền toàn màn hình khi ở chế độ Khởi Chạy 9:16 */}
+        {is916Mode && <StageBackgroundOverlay />}
+
         {/* CONTAINER CHÍNH CHỨA SÂN KHẤU */}
         <div 
           ref={containerRef}
-          className={`relative overflow-hidden select-none shadow-2xl transition-all duration-300 flex items-center justify-center cursor-grab active:cursor-grabbing ${
+          className={`relative overflow-hidden select-none transition-all duration-300 flex items-center justify-center cursor-grab active:cursor-grabbing ${
             settings.enablePointer ? 'cursor-none' : ''
           } ${
             is916Mode
-              ? 'rounded-none border-0'
-              : 'rounded-2xl border border-slate-700/80'
+              ? 'bg-white flex items-center justify-center'
+              : 'bg-white rounded-2xl border border-slate-700/80 shadow-2xl flex items-center justify-center'
           }`}
           style={{
             width: `${Math.round(960 * stageScale)}px`,
