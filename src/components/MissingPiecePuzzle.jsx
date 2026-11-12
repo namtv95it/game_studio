@@ -22,8 +22,8 @@ const DEFAULT_SETTINGS = {
 
   // Chế độ tạo mảnh sai
   distractorMode: 'auto', // 'auto' | 'custom'
-  autoSeed1: 0.25,
-  autoSeed2: 0.75,
+  autoSeed1: 0.35,
+  autoSeed2: 0.7,
 
   soundEnabled: true,
 };
@@ -113,7 +113,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, [is916Mode]);
 
-  // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên (Y ≈ 140)
+  // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên (Y ≈ 145)
   const initPieces = useCallback((shuffle = true) => {
     const slotX = [105, 270, 435];
     const slotY = 145;
@@ -224,7 +224,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const pList = piecesRef.current;
     for (let i = pList.length - 1; i >= 0; i--) {
       const p = pList[i];
-      // Nếu mảnh đang ở ô khuyết thì kích thước là holeSize, nếu ở khay là pieceSize
       const currentSize = p.isPlacedInHole ? settings.holeSize : pieceSize;
       const half = currentSize / 2;
 
@@ -387,7 +386,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSpaceAction, initPieces, is916Mode, setIs916Mode]);
 
-  // Main Render Loop (Canvas 2D) - 100% SẠCH SẼ, KHÔNG CHỮ THÔNG BÁO HOẶC HƯỚNG DẪN
+  // Main Render Loop (Canvas 2D)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -407,6 +406,14 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       // 2. Vùng bức ảnh chính (Khung từ Y = 250 đến Y = 920)
       const photoArea = { x: 20, y: 250, w: 500, h: 670 };
 
+      const { holeX, holeY, holeSize } = settings;
+      const currentPieces = piecesRef.current;
+      const pieceInHole = currentPieces.find(p => p.isPlacedInHole);
+
+      let scale = 1;
+      let dx = photoArea.x;
+      let dy = photoArea.y;
+
       // Vẽ Ảnh Chính
       if (mainImg) {
         ctx.save();
@@ -415,36 +422,31 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.clip();
 
         const baseFit = Math.min(photoArea.w / mainImg.naturalWidth, photoArea.h / mainImg.naturalHeight);
-        const scale = baseFit * (settings.imgScale / 100);
+        scale = baseFit * (settings.imgScale / 100);
         const dw = mainImg.naturalWidth * scale;
         const dh = mainImg.naturalHeight * scale;
-        const dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
-        const dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
+        dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
+        dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
 
         ctx.drawImage(mainImg, dx, dy, dw, dh);
         ctx.restore();
       }
 
-      // 3. Vùng Khoét (Hole) trên bức ảnh
-      const { holeX, holeY, holeSize } = settings;
-      const currentPieces = piecesRef.current;
-      const pieceInHole = currentPieces.find(p => p.isPlacedInHole);
+      // 3. VÙNG KHOÉT (HOLE) TRÊN BỨC ẢNH:
+      // QUAN TRỌNG: LUÔN LUÔN TÔ Ô ĐEN TẠI HOLE ĐỂ XÓA SẠCH ẢNH GỐC BÊN DƯỚI!
+      // Không bao giờ để ảnh gốc bên dưới lộ ra trừ khi chính mảnh đúng được ghép vào.
+      ctx.save();
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(holeX, holeY, holeSize, holeSize);
 
-      // Nếu KHÔNG có mảnh nào ở trong ô khuyết -> Vẽ ô che đen
+      // Nếu KHÔNG có mảnh nào ở trong ô khuyết -> Vẽ viền nét đứt định vị
       if (!pieceInHole) {
-        ctx.save();
-        ctx.fillStyle = '#05070a';
-        ctx.beginPath();
-        ctx.roundRect(holeX, holeY, holeSize, holeSize, 8);
-        ctx.fill();
-
-        // Viền nét đứt thanh mảnh định vị
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([8, 6]);
-        ctx.stroke();
-        ctx.restore();
+        ctx.strokeRect(holeX, holeY, holeSize, holeSize);
       }
+      ctx.restore();
 
       // 4. Vẽ 3 Khay Chứa phía trên
       const pieceSize = holeSize * 0.85;
@@ -463,78 +465,66 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       }
 
-      // 5. Vẽ từng Mảnh Ghép
+      // 5. Tính toán tọa độ nguồn ảnh cho từng mảnh (ĐÚNG vs SAI 1 vs SAI 2)
+      // Hàm vẽ nội dung mảnh ghép
       const drawPieceContent = (piece, px, py, pSize) => {
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(px - pSize / 2, py - pSize / 2, pSize, pSize, 8);
+        ctx.roundRect(px - pSize / 2, py - pSize / 2, pSize, pSize, piece.isPlacedInHole ? 0 : 8);
         ctx.clip();
 
+        // Luôn tô nền tối đệm kín để mảnh không bao giờ bị trong suốt
+        ctx.fillStyle = '#0a0d14';
+        ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
+
+        if (!mainImg) {
+          ctx.restore();
+          return;
+        }
+
+        const srcSize = holeSize / scale;
+        const maxSrcX = Math.max(0, mainImg.naturalWidth - srcSize);
+        const maxSrcY = Math.max(0, mainImg.naturalHeight - srcSize);
+
+        // Tọa độ nguồn của Mảnh ĐÚNG
+        const correctSrcX = Math.max(0, Math.min(maxSrcX, (holeX - dx) / scale));
+        const correctSrcY = Math.max(0, Math.min(maxSrcY, (holeY - dy) / scale));
+
         if (piece.isCorrect) {
-          // Cắt CHÍNH XÁC từ vùng Hole của ảnh chính
-          if (mainImg) {
-            const baseFit = Math.min(photoArea.w / mainImg.naturalWidth, photoArea.h / mainImg.naturalHeight);
-            const scale = baseFit * (settings.imgScale / 100);
-            const dw = mainImg.naturalWidth * scale;
-            const dh = mainImg.naturalHeight * scale;
-            const dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
-            const dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
-
-            const srcX = (holeX - dx) / scale;
-            const srcY = (holeY - dy) / scale;
-            const srcSize = holeSize / scale;
-
-            ctx.drawImage(
-              mainImg,
-              srcX, srcY, srcSize, srcSize,
-              px - pSize / 2, py - pSize / 2, pSize, pSize
-            );
-          }
+          // MẢNH ĐÚNG: Cắt CHÍNH XÁC từ vị trí hole của ảnh chính
+          ctx.drawImage(
+            mainImg,
+            correctSrcX, correctSrcY, srcSize, srcSize,
+            px - pSize / 2, py - pSize / 2, pSize, pSize
+          );
         } else if (piece.id === 'd1') {
-          // Mảnh sai 1
+          // MẢNH SAI 1
           if (settings.distractorMode === 'custom' && customDistractor1) {
             ctx.drawImage(customDistractor1, px - pSize / 2, py - pSize / 2, pSize, pSize);
-          } else if (mainImg) {
-            const baseFit = Math.min(photoArea.w / mainImg.naturalWidth, photoArea.h / mainImg.naturalHeight);
-            const scale = baseFit * (settings.imgScale / 100);
-            const dw = mainImg.naturalWidth * scale;
-            const dh = mainImg.naturalHeight * scale;
-            const dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
-            const dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
-
-            const fakeHoleX = photoArea.x + photoArea.w * 0.2;
-            const fakeHoleY = photoArea.y + photoArea.h * settings.autoSeed1;
-            const srcX = Math.max(0, (fakeHoleX - dx) / scale);
-            const srcY = Math.max(0, (fakeHoleY - dy) / scale);
-            const srcSize = holeSize / scale;
+          } else {
+            // Tự động: Cắt từ một vùng KHÁC RÕ RỆT trên ảnh chính
+            // Dịch chuyển ít nhất 35% kích thước ảnh để đảm bảo hình ảnh khác biệt hoàn toàn
+            const fakeSrcX1 = (correctSrcX + maxSrcX * 0.38 + 50) % (maxSrcX || 1);
+            const fakeSrcY1 = (correctSrcY + maxSrcY * 0.42 + 40) % (maxSrcY || 1);
 
             ctx.drawImage(
               mainImg,
-              srcX, srcY, srcSize, srcSize,
+              fakeSrcX1, fakeSrcY1, srcSize, srcSize,
               px - pSize / 2, py - pSize / 2, pSize, pSize
             );
           }
         } else if (piece.id === 'd2') {
-          // Mảnh sai 2
+          // MẢNH SAI 2
           if (settings.distractorMode === 'custom' && customDistractor2) {
             ctx.drawImage(customDistractor2, px - pSize / 2, py - pSize / 2, pSize, pSize);
-          } else if (mainImg) {
-            const baseFit = Math.min(photoArea.w / mainImg.naturalWidth, photoArea.h / mainImg.naturalHeight);
-            const scale = baseFit * (settings.imgScale / 100);
-            const dw = mainImg.naturalWidth * scale;
-            const dh = mainImg.naturalHeight * scale;
-            const dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
-            const dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
-
-            const fakeHoleX = photoArea.x + photoArea.w * 0.65;
-            const fakeHoleY = photoArea.y + photoArea.h * settings.autoSeed2;
-            const srcX = Math.max(0, (fakeHoleX - dx) / scale);
-            const srcY = Math.max(0, (fakeHoleY - dy) / scale);
-            const srcSize = holeSize / scale;
+          } else {
+            // Tự động: Cắt từ một góc khác nữa
+            const fakeSrcX2 = (correctSrcX + maxSrcX * 0.72 + 90) % (maxSrcX || 1);
+            const fakeSrcY2 = (correctSrcY + maxSrcY * 0.68 + 70) % (maxSrcY || 1);
 
             ctx.drawImage(
               mainImg,
-              srcX, srcY, srcSize, srcSize,
+              fakeSrcX2, fakeSrcY2, srcSize, srcSize,
               px - pSize / 2, py - pSize / 2, pSize, pSize
             );
           }
@@ -543,14 +533,23 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       };
 
+      // Vẽ các mảnh ghép
       currentPieces.forEach((piece) => {
         // NẾU MẢNH ĐANG NẰM TRONG Ô KHUYẾT (DÙ ĐÚNG HAY SAI)
         if (piece.isPlacedInHole) {
-          // Vẽ khớp kín kích thước holeSize
+          // Vẽ khớp kín ô khuyết với kích thước holeSize
+          // Nếu là mảnh sai: Hình ảnh của Mảnh Sai sẽ hiển thị ngay tại ô khuyết (rõ ràng là hình sai/lệch!)
+          // Nếu là mảnh đúng: Khớp hoàn hảo với tranh
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
 
-          // Nếu là mảnh sai: Không vẽ viền để nó hiện nguyên hình ảnh sai lấp vào chỗ khuyết
-          // Nếu là mảnh đúng: Khớp hoàn hảo với tranh
+          // Nếu là mảnh sai, vẽ thêm đường viền mảnh nhẹ để thấy rõ ranh giới ô ghép sai
+          if (!piece.isCorrect) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(holeX, holeY, holeSize, holeSize);
+            ctx.restore();
+          }
           return;
         }
 
@@ -567,7 +566,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
         drawPieceContent(piece, piece.currentX, piece.currentY, currentPSize);
 
-        // Viền mảnh ghép
+        // Viền mảnh ghép trên khay
         ctx.strokeStyle = isDragging ? '#38bdf8' : '#ffffff';
         ctx.lineWidth = isDragging ? 2.5 : 1.5;
         ctx.beginPath();
@@ -889,9 +888,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               <div className="font-semibold text-slate-200 flex items-center gap-1.5">
                 🎬 Mẹo quay YouTube Shorts:
               </div>
-              <div>• Kéo thử mảnh sai vào chỗ khuyết: Mảnh sẽ <b>giữ nguyên vị trí</b> tại chỗ khuyết để khán giả thấy sai.</div>
-              <div>• Nhấn phím <b>Space</b>: Mảnh đó sẽ lập tức bay trở lại vị trí trên khay!</div>
-              <div>• Sau đó bạn kéo mảnh đúng vào để hoàn thiện bức tranh.</div>
+              <div>• Kéo thử mảnh sai vào chỗ khuyết: Chỗ khuyết sẽ <b>hiển thị chính xác hình ảnh sai</b> để khán giả thấy bị lệch.</div>
+              <div>• Nhấn phím <b>Space</b>: Mảnh sai đó sẽ bay trở lại khay trên, trả lại ô đen!</div>
+              <div>• Kéo mảnh đúng vào: Hình ảnh khớp hoàn hảo 100% với bức tranh.</div>
               <div>• Nhấn <b>ESC</b> để thoát chế độ Khởi Chạy.</div>
             </div>
           </div>
