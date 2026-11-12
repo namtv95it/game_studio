@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import NumberInput from './NumberInput';
+import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import { saveLocalImage, loadLocalImage } from '../utils/localImageStorage';
 import heroImg from '../assets/hero.png';
 
@@ -26,6 +27,16 @@ const DEFAULT_SETTINGS = {
   autoSeed2: 0.7,
 
   soundEnabled: true,
+
+  // Con trỏ & Bàn tay chỉ (giống Soi Đèn Pin)
+  enablePointer: false,
+  pointerEmoji: '👆',
+  handSize: 48,
+  pointerRotation: -90,
+  pointerOffsetX: 0,
+  pointerOffsetY: 0,
+  pointerAnchor: 'tip',
+  lockPointerToCenter: false,
 };
 
 // Component điều khiển thanh trượt kết hợp ô nhập số
@@ -77,11 +88,12 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const [customDistractor2, setCustomDistractor2] = useState(null);
 
   const [stageScale, setStageScale] = useState(1);
-  const [openSections, setOpenSections] = useState({ main: true, hole: true, distractors: true });
+  const [openSections, setOpenSections] = useState({ main: true, hole: true, distractors: false, pointer: false });
 
   // 3 mảnh ghép: id: 'correct'|'d1'|'d2'
   const [pieces, setPieces] = useState([]);
   const [isSolved, setIsSolved] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100, rawX: -100, rawY: -100 });
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -155,6 +167,19 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       window.removeEventListener('resize', updateScale);
     };
   }, [is916Mode]);
+
+  // Cố định con trỏ ở giữa nếu bật lockPointerToCenter
+  useEffect(() => {
+    if (settings.lockPointerToCenter && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setCursorPos({
+        x: 270,
+        y: 480,
+        rawX: rect.width / 2,
+        rawY: rect.height / 2
+      });
+    }
+  }, [settings.lockPointerToCenter]);
 
   // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên (Y ≈ 115)
   const initPieces = useCallback((shuffle = true) => {
@@ -240,28 +265,33 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   // Chuyển đổi tọa độ chuột thực tế sang tọa độ Canvas 540x960 (khi xoay -90deg)
   const getCanvasCoords = useCallback((e) => {
     const canvas = canvasRef.current;
-    if (!canvas) return { canvasX: 0, canvasY: 0 };
+    const container = containerRef.current;
+    if (!canvas || !container) return { canvasX: 0, canvasY: 0, rawX: 0, rawY: 0 };
+
+    const containerRect = container.getBoundingClientRect();
+    const rawX = e.clientX - containerRect.left;
+    const rawY = e.clientY - containerRect.top;
 
     const canvasRect = canvas.getBoundingClientRect();
-    if (canvasRect.width === 0 || canvasRect.height === 0) return { canvasX: 0, canvasY: 0 };
+    if (canvasRect.width === 0 || canvasRect.height === 0) return { canvasX: 0, canvasY: 0, rawX, rawY };
 
     const cRawX = e.clientX - canvasRect.left;
     const cRawY = e.clientY - canvasRect.top;
 
-    // Khi xoay -90deg:
-    // Trục X màn hình = Trục Y Canvas (0 -> 960)
-    // Trục Y màn hình = Trục X ngược Canvas (540 -> 0)
     const canvasY = (cRawX / canvasRect.width) * 960;
     const canvasX = (1 - (cRawY / canvasRect.height)) * 540;
 
-    return { canvasX, canvasY };
+    return { canvasX, canvasY, rawX, rawY };
   }, []);
 
   // Xử lý sự kiện kéo thả (Pointer Events)
   const handlePointerDown = (e) => {
-    const { canvasX, canvasY } = getCanvasCoords(e);
-    const pieceSize = settings.holeSize * 0.85;
+    const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
+    if (!settings.lockPointerToCenter) {
+      setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+    }
 
+    const pieceSize = settings.holeSize * 0.85;
     const pList = piecesRef.current;
     for (let i = pList.length - 1; i >= 0; i--) {
       const p = pList[i];
@@ -300,12 +330,15 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   };
 
   const handlePointerMove = (e) => {
+    const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
+    if (!settings.lockPointerToCenter) {
+      setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+    }
+
     const idx = activeDragIndexRef.current;
     if (idx < 0) return;
 
-    const { canvasX, canvasY } = getCanvasCoords(e);
     const offset = dragOffsetRef.current;
-
     setPieces(prev => {
       const updated = [...prev];
       if (updated[idx]) {
@@ -422,7 +455,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSpaceAction, initPieces, is916Mode, setIs916Mode]);
 
-  // Main Render Loop (Canvas 2D) - HOÀN TOÀN TRONG SUỐT KHÔNG NỀN ĐEN (GIỐNG FLASH LIGHT REVEAL)
+  // Main Render Loop (Canvas 2D) - HOÀN TOÀN TRONG SUỐT KHÔNG NỀN ĐEN
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -431,7 +464,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const H = 960;
 
     function render() {
-      // 1. Clear toàn bộ canvas để TRONG SUỐT 100%, để lộ nền sân khấu StageBackgroundOverlay bên dưới!
+      // 1. Clear toàn bộ canvas để TRONG SUỐT 100%
       ctx.clearRect(0, 0, W, H);
 
       const { holeX, holeY, holeSize } = settings;
@@ -444,7 +477,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       let drawY = 0;
       let scale = 1;
 
-      // 2. VẼ ẢNH CHÍNH (TỰ DO, PHÓNG TO THU NHỎ FULL THEO Ý NGƯỜI DÙNG GIỐNG FLASHLIGHT REVEAL)
+      // 2. VẼ ẢNH CHÍNH (TỰ DO, PHÓNG TO THU NHỎ THEO Ý NGƯỜI DÙNG GIỐNG FLASHLIGHT REVEAL)
       if (mainImg) {
         ctx.save();
         const baseFit = Math.min(W / mainImg.naturalWidth, H / mainImg.naturalHeight);
@@ -459,7 +492,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       }
 
       // 3. VÙNG KHOÉT (HOLE) TRÊN BỨC ẢNH:
-      // Luôn tô ô đen tại hole để che sạch ảnh gốc bên dưới
       ctx.save();
       ctx.fillStyle = '#000000';
       ctx.fillRect(holeX, holeY, holeSize, holeSize);
@@ -570,7 +602,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.restore();
       });
 
-      // 6. VIỀN NÉT ĐỨT CỦA VÙNG KHUYẾT (LUÔN LUÔN HIỂN THỊ KỂ CẢ KHI ĐÃ KÉO THẢ MẢNH VÀO)
+      // 6. VIỀN NÉT ĐỨT CỦA VÙNG KHUYẾT: LUÔN LUÔN HIỂN THỊ KỂ CẢ KHI ĐÃ KÉO THẢ MẢNH VÀO
       ctx.save();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 2;
@@ -646,6 +678,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         <div 
           ref={containerRef}
           className={`relative overflow-hidden select-none shadow-2xl transition-all duration-300 flex items-center justify-center cursor-grab active:cursor-grabbing ${
+            settings.enablePointer ? 'cursor-none' : ''
+          } ${
             is916Mode
               ? 'rounded-none border-0'
               : 'rounded-2xl border border-slate-700/80'
@@ -659,7 +693,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
-          {/* Lớp nền sân khấu linh hoạt (hiển thị hoa văn nền theo nút Đổi Nền Sân Khấu) */}
+          {/* Lớp nền sân khấu linh hoạt */}
           <StageBackgroundOverlay />
 
           {/* CANVAS XOAY NẰM NGANG 90 ĐỘ (BẰNG 100% VỚI PHẦN NỀN) */}
@@ -679,6 +713,24 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               className="block"
             />
           </div>
+
+          {/* HAND / EMOJI CURSOR OVERLAY (GIỐNG SOI ĐÈN PIN) */}
+          {settings.enablePointer && (
+            <div
+              className="absolute pointer-events-none select-none z-30 transition-transform"
+              style={getPointerStyle({
+                x: cursorPos.rawX,
+                y: cursorPos.rawY,
+                size: settings.handSize,
+                rotation: settings.pointerRotation,
+                offsetX: settings.pointerOffsetX,
+                offsetY: settings.pointerOffsetY,
+                anchor: settings.pointerAnchor
+              })}
+            >
+              {settings.pointerEmoji || '👆'}
+            </div>
+          )}
 
           {/* OVERLAY NÚT ĐIỀU HƯỚNG NHANH (ẨN HOÀN TOÀN KHI Ở CHẾ ĐỘ QUAY VIDEO is916Mode) */}
           {!is916Mode && (
@@ -823,7 +875,31 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               )}
             </div>
 
-            {/* MỤC 3: CÀI ĐẶT 2 MẢNH GHÉP SAI */}
+            {/* MỤC 3: CÀI ĐẶT CON TRỎ & BÀN TAY CHỈ (GIỐNG SOI ĐÈN PIN) */}
+            <PointerSettingsControl
+              isOpen={openSections.pointer}
+              onToggle={() => setOpenSections(p => ({ ...p, pointer: !p.pointer }))}
+              isAccordion={true}
+              pointerEmoji={settings.pointerEmoji}
+              setPointerEmoji={(val) => setSettings(p => ({ ...p, pointerEmoji: val }))}
+              pointerSize={settings.handSize}
+              setPointerSize={(val) => setSettings(p => ({ ...p, handSize: val }))}
+              pointerRotation={settings.pointerRotation}
+              setPointerRotation={(val) => setSettings(p => ({ ...p, pointerRotation: val }))}
+              pointerOffsetX={settings.pointerOffsetX}
+              setPointerOffsetX={(val) => setSettings(p => ({ ...p, pointerOffsetX: val }))}
+              pointerOffsetY={settings.pointerOffsetY}
+              setPointerOffsetY={(val) => setSettings(p => ({ ...p, pointerOffsetY: val }))}
+              pointerAnchor={settings.pointerAnchor}
+              setPointerAnchor={(val) => setSettings(p => ({ ...p, pointerAnchor: val }))}
+              enablePointer={settings.enablePointer}
+              setEnablePointer={(val) => setSettings(p => ({ ...p, enablePointer: val }))}
+              lockPointerToCenter={settings.lockPointerToCenter}
+              setLockPointerToCenter={(val) => setSettings(p => ({ ...p, lockPointerToCenter: val }))}
+              themeColor="rose"
+            />
+
+            {/* MỤC 4: CÀI ĐẶT 2 MẢNH GHÉP SAI */}
             <div className="bg-slate-850/60 border border-slate-800 rounded-xl overflow-hidden">
               <button
                 onClick={() => setOpenSections(p => ({ ...p, distractors: !p.distractors }))}
@@ -920,10 +996,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               <div className="font-semibold text-slate-200 flex items-center gap-1.5">
                 🎬 Mẹo quay YouTube Shorts:
               </div>
-              <div>• Bấm nút <b>"Khởi Chạy"</b> ở header: Màn hình mở rộng tối đa, nền khớp 100% với hoa văn sân khấu giống như tính năng Soi Đèn Pin.</div>
-              <div>• Kéo thử mảnh sai vào chỗ khuyết: Chỗ khuyết sẽ hiển thị chính xác hình ảnh sai.</div>
-              <div>• Nhấn phím <b>Space</b>: Mảnh sai đó sẽ bay trở lại khay trên, trả lại ô đen!</div>
-              <div>• Kéo mảnh đúng vào: Khớp hoàn hảo 100% với bức tranh.</div>
+              <div>• Bật <b>"Con trỏ bàn tay chỉ"</b> để hiển thị bàn tay emoji khi quay video.</div>
+              <div>• Bấm nút <b>"Khởi Chạy"</b> ở header: Màn hình mở rộng tối đa, hoa văn nền chuẩn Soi Đèn Pin.</div>
+              <div>• Kéo thử mảnh sai vào chỗ khuyết, nhấn <b>Space</b> để mảnh bay về khay!</div>
               <div>• Nhấn <b>ESC</b> để thoát chế độ Khởi Chạy.</div>
             </div>
           </div>
