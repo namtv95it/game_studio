@@ -463,14 +463,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       ctx.save();
       ctx.fillStyle = '#000000';
       ctx.fillRect(holeX, holeY, holeSize, holeSize);
-
-      // Nếu KHÔNG có mảnh nào ở trong ô khuyết -> Vẽ viền nét đứt định vị
-      if (!pieceInHole) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 6]);
-        ctx.strokeRect(holeX, holeY, holeSize, holeSize);
-      }
       ctx.restore();
 
       // 4. KHU VỰC KHAY CHỨA PHÍA TRÊN
@@ -554,14 +546,6 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       currentPieces.forEach((piece) => {
         if (piece.isPlacedInHole) {
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
-
-          if (!piece.isCorrect) {
-            ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(holeX, holeY, holeSize, holeSize);
-            ctx.restore();
-          }
           return;
         }
 
@@ -585,6 +569,14 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
         ctx.restore();
       });
+
+      // 6. VIỀN NÉT ĐỨT CỦA VÙNG KHUYẾT (LUÔN LUÔN HIỂN THỊ KỂ CẢ KHI ĐÃ KÉO THẢ MẢNH VÀO)
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+      ctx.strokeRect(holeX, holeY, holeSize, holeSize);
+      ctx.restore();
 
       animRef.current = requestAnimationFrame(render);
     }
