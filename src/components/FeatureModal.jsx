@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flashlight, Ghost, FileText, X, ArrowRight } from 'lucide-react';
+import { Flashlight, Ghost, FileText, Flame, Eye, X, ArrowRight } from 'lucide-react';
 
 export const GAME_FEATURES = [
   {
@@ -9,7 +9,7 @@ export const GAME_FEATURES = [
     description: 'Trải nghiệm bí ẩn, soi quầng sáng đèn pin để bộc lộ ảnh đầy màu sắc bên dưới.',
     icon: Flashlight,
     color: 'from-sky-500 to-blue-600',
-    badge: 'Chức năng 1',
+    badge: 'Chức năng 1 (Shorts)',
     active: true
   },
   {
@@ -19,7 +19,7 @@ export const GAME_FEATURES = [
     description: 'Thử thách tìm và kéo ghép hình ảnh chính xác vào bóng đen silhouette nhân vật.',
     icon: Ghost,
     color: 'from-purple-500 to-indigo-600',
-    badge: 'Chức năng 2',
+    badge: 'Chức năng 2 (Shorts)',
     active: true
   },
   {
@@ -29,7 +29,27 @@ export const GAME_FEATURES = [
     description: 'Hiệu ứng tờ giấy gập giấu ảnh bí mật, bấm Space để hé mở khe giấy tò mò và mở toang bất ngờ.',
     icon: FileText,
     color: 'from-amber-500 via-orange-500 to-rose-500',
-    badge: 'Chức năng 3 (Mới)',
+    badge: 'Chức năng 3 (Shorts)',
+    active: true
+  },
+  {
+    id: 'fire_burn',
+    title: 'Thiêu Cháy Bí Mật',
+    subtitle: 'Fire Burn Reveal',
+    description: 'Ngọn lửa thiêu rụi màn đêm bí ẩn, lộ ra nhân vật ẩn bên dưới với vệt cháy tự động.',
+    icon: Flame,
+    color: 'from-orange-500 via-amber-500 to-red-600',
+    badge: 'Chức năng 4 (Shorts)',
+    active: true
+  },
+  {
+    id: 'shadow_quiz',
+    title: 'Giải Mã Bóng Đen',
+    subtitle: 'Shadow Clue Quiz',
+    description: 'Đố vui bóng đen tự động theo series nhiều nhân vật, hé lộ từng ô màu gợi ý cho video dài 16:9.',
+    icon: Eye,
+    color: 'from-teal-500 via-emerald-500 to-sky-600',
+    badge: 'Chức năng 5 (Video Dài)',
     active: true
   }
 ];
@@ -38,31 +58,31 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div 
-        className="relative w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-3xl p-8 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-5xl bg-slate-900 border border-slate-700/80 rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* CLOSE BUTTON */}
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+          className="absolute top-5 right-5 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
 
         {/* MODAL HEADER */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+        <div className="text-center mb-6 shrink-0">
+          <h2 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-sky-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1.5">
             🎮 KHO TÍNH NĂNG GAME STUDIO
           </h2>
-          <p className="text-slate-400 text-sm max-w-lg mx-auto">
-            Chọn một chức năng minigame bên dưới để chuyển đổi ngay lập tức.
+          <p className="text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
+            Chọn một chức năng để sáng tạo nội dung quay video YouTube Shorts hoặc Video Dài.
           </p>
         </div>
 
-        {/* FEATURES GRID (3 TÍNH NĂNG DUY NHẤT) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* FEATURES GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto pr-1">
           {GAME_FEATURES.map((feature) => {
             const Icon = feature.icon;
             return (
@@ -74,24 +94,24 @@ export default function FeatureModal({ isOpen, onClose, onSelectFeature }) {
                     onClose();
                   }
                 }}
-                className="group relative bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 transition-all duration-300 flex flex-col hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 hover:-translate-y-1 cursor-pointer"
+                className="group relative bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 transition-all duration-300 flex flex-col hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 hover:-translate-y-1 cursor-pointer"
               >
                 {/* Badge Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <div className={`p-3 rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-md`}>
-                    <Icon size={22} />
+                <div className="flex justify-between items-center mb-3">
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${feature.color} text-white shadow-md`}>
+                    <Icon size={20} />
                   </div>
-                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border bg-slate-700 text-sky-300 border-slate-600">
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-700/80 text-sky-300 border-slate-600">
                     {feature.badge}
                   </span>
                 </div>
 
                 {/* Title & Description */}
-                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-sky-300 transition-colors">
+                <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-sky-300 transition-colors">
                   {feature.title}
                 </h3>
                 <p className="text-[11px] font-medium text-slate-400 mb-2">{feature.subtitle}</p>
-                <p className="text-slate-300 text-xs leading-relaxed mb-6">
+                <p className="text-slate-300 text-xs leading-relaxed mb-4 line-clamp-3">
                   {feature.description}
                 </p>
 
