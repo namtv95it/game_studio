@@ -134,6 +134,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const stageWrapperRef = useRef(null);
+  const pointerOverlayRef = useRef(null);
   const animRef = useRef(null);
   const activeDragIndexRef = useRef(-1);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
@@ -342,6 +343,10 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
     if (!settings.lockPointerToCenter) {
       setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+      if (pointerOverlayRef.current) {
+        pointerOverlayRef.current.style.left = `${rawX + (settings.pointerOffsetX || 0)}px`;
+        pointerOverlayRef.current.style.top = `${rawY + (settings.pointerOffsetY || 0)}px`;
+      }
     }
 
     const { pieceSize } = getSlotPositions(settings);
@@ -362,6 +367,12 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
           x: p.currentX - canvasX,
           y: p.currentY - canvasY,
         };
+
+        if (piecesRef.current[i]) {
+          piecesRef.current[i].isDragging = true;
+          piecesRef.current[i].isPlacedInHole = false;
+          piecesRef.current[i].isSnapped = false;
+        }
 
         setPieces(prev => {
           const updated = [...prev];
@@ -384,25 +395,22 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
   const handlePointerMove = (e) => {
     const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
-    if (!settings.lockPointerToCenter) {
-      setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+
+    // Cập nhật vị trí con trỏ chuột DOM ngay tức thì (0ms delay, không phụ thuộc render của React)
+    if (pointerOverlayRef.current && !settings.lockPointerToCenter) {
+      pointerOverlayRef.current.style.left = `${rawX + (settings.pointerOffsetX || 0)}px`;
+      pointerOverlayRef.current.style.top = `${rawY + (settings.pointerOffsetY || 0)}px`;
     }
 
     const idx = activeDragIndexRef.current;
     if (idx >= 0) {
       hoveredIndexRef.current = idx;
       const offset = dragOffsetRef.current;
-      setPieces(prev => {
-        const updated = [...prev];
-        if (updated[idx]) {
-          updated[idx] = {
-            ...updated[idx],
-            currentX: canvasX + offset.x,
-            currentY: canvasY + offset.y,
-          };
-        }
-        return updated;
-      });
+      // Cập nhật trực tiếp vào piecesRef để Canvas vẽ siêu mượt ở 60fps không bị nghẽn
+      if (piecesRef.current[idx]) {
+        piecesRef.current[idx].currentX = canvasX + offset.x;
+        piecesRef.current[idx].currentY = canvasY + offset.y;
+      }
       return;
     }
 
@@ -863,12 +871,11 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
             />
           </div>
 
-          {/* HAND / EMOJI CURSOR OVERLAY (GIỐNG SOI ĐÈN PIN) */}
+          {/* HAND / EMOJI CURSOR OVERLAY (0ms DELAY BẰNG CÁCH KHÔNG DÙNG TRANSITION TRÊN KHUNG TỌA ĐỘ) */}
           {settings.enablePointer && (
             <div
-              className={`absolute pointer-events-none select-none z-30 transition-all duration-150 ${
-                isHoveringPiece ? 'scale-115 drop-shadow-[0_4px_14px_rgba(56,189,248,0.6)]' : 'scale-100'
-              }`}
+              ref={pointerOverlayRef}
+              className="absolute pointer-events-none select-none z-30"
               style={getPointerStyle({
                 x: cursorPos.rawX,
                 y: cursorPos.rawY,
@@ -879,7 +886,13 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
                 anchor: settings.pointerAnchor
               })}
             >
-              {settings.pointerEmoji || '👆'}
+              <div
+                className={`transition-transform duration-100 ${
+                  isHoveringPiece ? 'scale-115 drop-shadow-[0_4px_14px_rgba(56,189,248,0.6)]' : 'scale-100'
+                }`}
+              >
+                {settings.pointerEmoji || '👆'}
+              </div>
             </div>
           )}
 
