@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   // Ảnh chính
   imgScale: 100,
   imgOffsetX: 0,
-  imgOffsetY: 0,
+  imgOffsetY: 60,
 
   // Vùng khuyết (Hole)
   holeX: 195,      // tọa độ trên canvas 540x960
@@ -131,20 +131,29 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     });
   }, []);
 
-  // Tính scale hiển thị canvas (540x960 xoay -90deg hiển thị thành 960x540)
+  // Tính toán stageScale pixel-perfect giống hệt FlashlightReveal
   useEffect(() => {
-    function handleResize() {
+    const updateScale = () => {
       if (!stageWrapperRef.current) return;
       const rect = stageWrapperRef.current.getBoundingClientRect();
       const pad = is916Mode ? 0 : 32;
-      const availW = Math.max(300, rect.width - pad);
-      const availH = Math.max(200, rect.height - pad);
-      const scale = Math.min(availW / 960, availH / 540, 1.35);
-      setStageScale(Math.max(0.3, scale));
-    }
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+      const availW = Math.max(100, rect.width - pad);
+      const availH = Math.max(100, rect.height - pad);
+
+      // Tỷ lệ 16:9 khi xoay ngang (ngang 960, dọc 540)
+      const scaleW = availW / 960;
+      const scaleH = availH / 540;
+      const s = Math.min(scaleW, scaleH);
+      setStageScale(s);
+    };
+
+    updateScale();
+    const timer = setTimeout(updateScale, 50);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateScale);
+    };
   }, [is916Mode]);
 
   // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên (Y ≈ 115)
@@ -413,7 +422,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSpaceAction, initPieces, is916Mode, setIs916Mode]);
 
-  // Main Render Loop (Canvas 2D) - FULL TOÀN MÀN HÌNH, KHÔNG NỀN ĐEN
+  // Main Render Loop (Canvas 2D) - HOÀN TOÀN TRONG SUỐT KHÔNG NỀN ĐEN (GIỐNG FLASH LIGHT REVEAL)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -422,97 +431,60 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     const H = 960;
 
     function render() {
-      // 1. VẼ NỀN SÂN KHẤU (BỎ NỀN ĐEN):
-      // Dùng chính bức ảnh phóng to và làm mờ (Blur background) phủ 100% canvas 540x960
-      if (mainImg) {
-        ctx.save();
-        ctx.filter = 'blur(28px) brightness(0.45)';
-        const bgScale = Math.max(W / mainImg.naturalWidth, H / mainImg.naturalHeight) * 1.15;
-        const bgW = mainImg.naturalWidth * bgScale;
-        const bgH = mainImg.naturalHeight * bgScale;
-        const bgX = (W - bgW) / 2;
-        const bgY = (H - bgH) / 2;
-        ctx.drawImage(mainImg, bgX, bgY, bgW, bgH);
-        ctx.restore();
-      } else {
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-        bgGrad.addColorStop(0, '#1e293b');
-        bgGrad.addColorStop(1, '#0f172a');
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, W, H);
-      }
-
-      // 2. KHU VỰC BỨC ẢNH CHÍNH (FULL CHIỀU RỘNG VÀ ĐỘ CAO, KHÔNG BỊ CO CỤM)
-      // Chiều rộng: Tràn kín 100% (W = 540)
-      // Chiều cao: Từ Y = 210 đến Y = 960 (cao 750px)
-      const photoArea = { x: 0, y: 210, w: 540, h: 750 };
+      // 1. Clear toàn bộ canvas để TRONG SUỐT 100%, để lộ nền sân khấu StageBackgroundOverlay bên dưới!
+      ctx.clearRect(0, 0, W, H);
 
       const { holeX, holeY, holeSize } = settings;
       const currentPieces = piecesRef.current;
       const pieceInHole = currentPieces.find(p => p.isPlacedInHole);
 
+      let drawW = W;
+      let drawH = H;
+      let drawX = 0;
+      let drawY = 0;
       let scale = 1;
-      let dx = photoArea.x;
-      let dy = photoArea.y;
 
-      // Vẽ Ảnh Chính tràn kín (Cover mode)
+      // 2. VẼ ẢNH CHÍNH (TỰ DO, PHÓNG TO THU NHỎ FULL THEO Ý NGƯỜI DÙNG GIỐNG FLASHLIGHT REVEAL)
       if (mainImg) {
         ctx.save();
-        ctx.beginPath();
-        ctx.rect(photoArea.x, photoArea.y, photoArea.w, photoArea.h);
-        ctx.clip();
-
-        // Chế độ Cover: Luôn lấp kín toàn bộ khung hình không để lại khoảng trống
-        const baseFit = Math.max(photoArea.w / mainImg.naturalWidth, photoArea.h / mainImg.naturalHeight);
+        const baseFit = Math.min(W / mainImg.naturalWidth, H / mainImg.naturalHeight);
         scale = baseFit * (settings.imgScale / 100);
-        const dw = mainImg.naturalWidth * scale;
-        const dh = mainImg.naturalHeight * scale;
-        dx = photoArea.x + (photoArea.w - dw) / 2 + settings.imgOffsetX;
-        dy = photoArea.y + (photoArea.h - dh) / 2 + settings.imgOffsetY;
+        drawW = mainImg.naturalWidth * scale;
+        drawH = mainImg.naturalHeight * scale;
+        drawX = (W - drawW) / 2 + settings.imgOffsetX;
+        drawY = (H - drawH) / 2 + settings.imgOffsetY;
 
-        ctx.drawImage(mainImg, dx, dy, dw, dh);
+        ctx.drawImage(mainImg, drawX, drawY, drawW, drawH);
         ctx.restore();
       }
 
       // 3. VÙNG KHOÉT (HOLE) TRÊN BỨC ẢNH:
       // Luôn tô ô đen tại hole để che sạch ảnh gốc bên dưới
       ctx.save();
-      ctx.fillStyle = '#05070a';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(holeX, holeY, holeSize, holeSize);
 
       // Nếu KHÔNG có mảnh nào ở trong ô khuyết -> Vẽ viền nét đứt định vị
       if (!pieceInHole) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 6]);
         ctx.strokeRect(holeX, holeY, holeSize, holeSize);
       }
       ctx.restore();
 
-      // 4. KHU VỰC KHAY CHỨA PHÍA TRÊN (Kính mờ sang trọng)
-      ctx.save();
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
-      ctx.fillRect(0, 0, W, 210);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, 210);
-      ctx.lineTo(W, 210);
-      ctx.stroke();
-      ctx.restore();
-
-      // Vẽ 3 ô khay rỗng
+      // 4. KHU VỰC KHAY CHỨA PHÍA TRÊN
       const pieceSize = holeSize * 0.85;
       const slotX = [105, 270, 435];
       const slotY = 115;
 
       for (let i = 0; i < 3; i++) {
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
         ctx.beginPath();
         ctx.roundRect(slotX[i] - pieceSize / 2 - 4, slotY - pieceSize / 2 - 4, pieceSize + 8, pieceSize + 8, 12);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.restore();
@@ -525,7 +497,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         ctx.roundRect(px - pSize / 2, py - pSize / 2, pSize, pSize, piece.isPlacedInHole ? 0 : 8);
         ctx.clip();
 
-        ctx.fillStyle = '#0a0d14';
+        // Nền đen đệm cho từng mảnh
+        ctx.fillStyle = '#000000';
         ctx.fillRect(px - pSize / 2, py - pSize / 2, pSize, pSize);
 
         if (!mainImg) {
@@ -537,8 +510,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
         const maxSrcX = Math.max(0, mainImg.naturalWidth - srcSize);
         const maxSrcY = Math.max(0, mainImg.naturalHeight - srcSize);
 
-        const correctSrcX = Math.max(0, Math.min(maxSrcX, (holeX - dx) / scale));
-        const correctSrcY = Math.max(0, Math.min(maxSrcY, (holeY - dy) / scale));
+        const correctSrcX = Math.max(0, Math.min(maxSrcX, (holeX - drawX) / scale));
+        const correctSrcY = Math.max(0, Math.min(maxSrcY, (holeY - drawY) / scale));
 
         if (piece.isCorrect) {
           ctx.drawImage(
@@ -584,7 +557,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
           if (!piece.isCorrect) {
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(holeX, holeY, holeSize, holeSize);
             ctx.restore();
@@ -670,39 +643,48 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
   return (
     <div className="flex h-full w-full bg-slate-950 text-slate-100 overflow-hidden relative select-none">
-      {/* SÂN KHẤU CANVA 9:16 ROTATED -90 DEG */}
+      {/* SÂN KHẤU TRUNG TÂM (Cấu trúc pixel-perfect chuẩn 100% giống FlashlightReveal) */}
       <div 
         ref={stageWrapperRef}
-        className="flex-1 relative flex items-center justify-center p-2 bg-slate-900/60 overflow-hidden"
+        className={`flex-1 relative flex items-center justify-center overflow-hidden transition-all duration-300 ${
+          is916Mode ? 'p-0 w-full h-full bg-slate-950' : 'p-4 bg-slate-900/60'
+        }`}
       >
-        <StageBackgroundOverlay />
-
-        {/* CONTAINER CHỨA CANVAS XOAY NGANG 9:16 (540x960 xoay -90deg) */}
+        {/* CONTAINER CHÍNH CHỨA SÂN KHẤU */}
         <div 
           ref={containerRef}
-          className="relative shadow-2xl rounded-2xl overflow-hidden ring-1 ring-slate-800/80 transition-transform duration-150 cursor-grab active:cursor-grabbing"
+          className={`relative overflow-hidden select-none shadow-2xl transition-all duration-300 flex items-center justify-center cursor-grab active:cursor-grabbing ${
+            is916Mode
+              ? 'rounded-none border-0'
+              : 'rounded-2xl border border-slate-700/80'
+          }`}
           style={{
-            width: `${stageScale * 960}px`,
-            height: `${stageScale * 540}px`,
+            width: `${Math.round(960 * stageScale)}px`,
+            height: `${Math.round(540 * stageScale)}px`,
           }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
         >
+          {/* Lớp nền sân khấu linh hoạt (hiển thị hoa văn nền theo nút Đổi Nền Sân Khấu) */}
+          <StageBackgroundOverlay />
+
+          {/* CANVAS XOAY NẰM NGANG 90 ĐỘ (BẰNG 100% VỚI PHẦN NỀN) */}
           <div
-            className="absolute top-1/2 left-1/2 origin-center"
+            className="relative z-10"
             style={{
+              transform: `rotate(-90deg) scale(${stageScale})`,
+              transformOrigin: 'center center',
               width: '540px',
               height: '960px',
-              transform: `translate(-50%, -50%) scale(${stageScale}) rotate(-90deg)`,
             }}
           >
             <canvas
               ref={canvasRef}
               width={540}
               height={960}
-              className="w-full h-full block rounded-lg"
+              className="block"
             />
           </div>
 
@@ -828,8 +810,8 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
                     label="Vị trí dọc Y (Vùng che):"
                     value={settings.holeY}
                     onChange={(val) => setSettings(p => ({ ...p, holeY: val }))}
-                    min={210}
-                    max={780}
+                    min={150}
+                    max={820}
                     step={5}
                     unit="px"
                     color="amber"
@@ -840,7 +822,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
                     value={settings.holeSize}
                     onChange={(val) => setSettings(p => ({ ...p, holeSize: val }))}
                     min={70}
-                    max={260}
+                    max={280}
                     step={5}
                     unit="px"
                     color="amber"
@@ -946,10 +928,10 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               <div className="font-semibold text-slate-200 flex items-center gap-1.5">
                 🎬 Mẹo quay YouTube Shorts:
               </div>
-              <div>• Bức ảnh chính đã được tự động phóng to <b>phủ kín (Full) màn hình</b>, loại bỏ hoàn toàn viền đen.</div>
+              <div>• Bấm nút <b>"Khởi Chạy"</b> ở header: Màn hình mở rộng tối đa, nền khớp 100% với hoa văn sân khấu giống như tính năng Soi Đèn Pin.</div>
               <div>• Kéo thử mảnh sai vào chỗ khuyết: Chỗ khuyết sẽ hiển thị chính xác hình ảnh sai.</div>
               <div>• Nhấn phím <b>Space</b>: Mảnh sai đó sẽ bay trở lại khay trên, trả lại ô đen!</div>
-              <div>• Kéo mảnh đúng vào: Hình ảnh khớp hoàn hảo 100% với bức tranh.</div>
+              <div>• Kéo mảnh đúng vào: Khớp hoàn hảo 100% với bức tranh.</div>
               <div>• Nhấn <b>ESC</b> để thoát chế độ Khởi Chạy.</div>
             </div>
           </div>
