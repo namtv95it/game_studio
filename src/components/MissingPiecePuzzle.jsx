@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   Upload, Play, RotateCcw, Shuffle, ChevronDown, ChevronUp, 
   Volume2, VolumeX, Sparkles, Image as ImageIcon, HelpCircle, 
-  Sliders
+  Sliders, LayoutGrid, Layers
 } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import NumberInput from './NumberInput';
@@ -20,6 +20,12 @@ const DEFAULT_SETTINGS = {
   holeX: 195,      // tọa độ trên canvas 540x960
   holeY: 520,
   holeSize: 150,   // kích thước vuông
+
+  // 3 Ảnh / Khay phía trên
+  topTrayY: 115,     // vị trí dọc Y của 3 ảnh
+  topPieceSize: 115, // kích thước của 3 ảnh
+  topSpacing: 155,   // khoảng cách giữa các ảnh
+  topOffsetX: 0,     // dịch chuyển ngang X của cả hàng 3 ảnh
 
   // Chế độ tạo mảnh sai
   distractorMode: 'auto', // 'auto' | 'custom'
@@ -39,10 +45,33 @@ const DEFAULT_SETTINGS = {
   lockPointerToCenter: false,
 };
 
+// Hàm tính tọa độ khay chứa của 3 mảnh ghép phía trên
+function getSlotPositions(settings) {
+  const topTrayY = settings.topTrayY !== undefined ? settings.topTrayY : 115;
+  const topSpacing = settings.topSpacing !== undefined ? settings.topSpacing : 155;
+  const topOffsetX = settings.topOffsetX !== undefined ? settings.topOffsetX : 0;
+  const centerX = 270 + topOffsetX;
+
+  return {
+    slotX: [centerX - topSpacing, centerX, centerX + topSpacing],
+    slotY: topTrayY,
+    pieceSize: settings.topPieceSize !== undefined ? settings.topPieceSize : 115,
+  };
+}
+
 // Component điều khiển thanh trượt kết hợp ô nhập số
 function SliderControl({ label, value, onChange, min, max, step = 1, unit = '', color = 'rose' }) {
-  const accentColor = color === 'rose' ? 'accent-rose-500' : color === 'amber' ? 'accent-amber-500' : 'accent-sky-500';
-  const borderColor = color === 'rose' ? 'focus:border-rose-400' : color === 'amber' ? 'focus:border-amber-400' : 'focus:border-sky-400';
+  const accentColor = 
+    color === 'rose' ? 'accent-rose-500' : 
+    color === 'amber' ? 'accent-amber-500' : 
+    color === 'purple' ? 'accent-purple-500' : 
+    'accent-sky-500';
+
+  const borderColor = 
+    color === 'rose' ? 'focus:border-rose-400' : 
+    color === 'amber' ? 'focus:border-amber-400' : 
+    color === 'purple' ? 'focus:border-purple-400' : 
+    'focus:border-sky-400';
 
   return (
     <div className="flex flex-col gap-1.5 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
@@ -88,7 +117,13 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
   const [customDistractor2, setCustomDistractor2] = useState(null);
 
   const [stageScale, setStageScale] = useState(1);
-  const [openSections, setOpenSections] = useState({ main: true, hole: true, distractors: false, pointer: false });
+  const [openSections, setOpenSections] = useState({ 
+    main: true, 
+    topPieces: true, 
+    hole: true, 
+    distractors: false, 
+    pointer: false 
+  });
 
   // 3 mảnh ghép: id: 'correct'|'d1'|'d2'
   const [pieces, setPieces] = useState([]);
@@ -117,6 +152,22 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       console.warn('Lỗi lưu cài đặt:', e);
     }
   }, [settings]);
+
+  // Đồng bộ vị trí khay chứa khi người dùng kéo thanh trượt Y, khoảng cách hoặc offset X
+  useEffect(() => {
+    const { slotX, slotY } = getSlotPositions(settings);
+    setPieces(prev =>
+      prev.map((p, idx) => {
+        const targetSlot = p.slotIndex !== undefined ? p.slotIndex : idx;
+        const hX = slotX[targetSlot];
+        const hY = slotY;
+        if (!p.isPlacedInHole && !p.isDragging) {
+          return { ...p, homeX: hX, homeY: hY, currentX: hX, currentY: hY };
+        }
+        return { ...p, homeX: hX, homeY: hY };
+      })
+    );
+  }, [settings.topTrayY, settings.topSpacing, settings.topOffsetX]);
 
   // Load ảnh chính & ảnh custom từ IndexedDB
   useEffect(() => {
@@ -181,10 +232,9 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
     }
   }, [settings.lockPointerToCenter]);
 
-  // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên (Y ≈ 115)
+  // Khởi tạo và xáo trộn 3 mảnh ghép ở khay trên
   const initPieces = useCallback((shuffle = true) => {
-    const slotX = [105, 270, 435];
-    const slotY = 115;
+    const { slotX, slotY } = getSlotPositions(settings);
 
     const pieceTypes = [
       { id: 'correct', isCorrect: true },
@@ -210,12 +260,12 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
 
     setPieces(newPieces);
     setIsSolved(false);
-  }, []);
+  }, [settings]);
 
   // Khởi tạo ban đầu
   useEffect(() => {
     initPieces(true);
-  }, [initPieces]);
+  }, []);
 
   // Hiệu ứng âm thanh (Web Audio API)
   const playSound = useCallback((type) => {
@@ -291,7 +341,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
     }
 
-    const pieceSize = settings.holeSize * 0.85;
+    const { pieceSize } = getSlotPositions(settings);
     const pList = piecesRef.current;
     for (let i = pList.length - 1; i >= 0; i--) {
       const p = pList[i];
@@ -498,9 +548,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       ctx.restore();
 
       // 4. KHU VỰC KHAY CHỨA PHÍA TRÊN
-      const pieceSize = holeSize * 0.85;
-      const slotX = [105, 270, 435];
-      const slotY = 115;
+      const { slotX, slotY, pieceSize } = getSlotPositions(settings);
 
       for (let i = 0; i < 3; i++) {
         ctx.save();
@@ -578,6 +626,14 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
       currentPieces.forEach((piece) => {
         if (piece.isPlacedInHole) {
           drawPieceContent(piece, piece.currentX, piece.currentY, holeSize);
+
+          if (!piece.isCorrect) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(holeX, holeY, holeSize, holeSize);
+            ctx.restore();
+          }
           return;
         }
 
@@ -825,7 +881,68 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               )}
             </div>
 
-            {/* MỤC 2: VÙNG BỊ KHOÉT (HOLE) */}
+            {/* MỤC 2: 3 ẢNH PHÍA TRÊN (KHAY CHỨA MẢNH GHÉP) */}
+            <div className="bg-slate-850/60 border border-slate-800 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setOpenSections(p => ({ ...p, topPieces: !p.topPieces }))}
+                className="w-full flex items-center justify-between p-3 font-semibold text-slate-200 hover:bg-slate-800/50 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <LayoutGrid size={14} className="text-purple-400" /> 3 Ảnh Phía Trên (Khay Chọn)
+                </span>
+                {openSections.topPieces ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+
+              {openSections.topPieces && (
+                <div className="p-3 pt-0 space-y-3">
+                  <SliderControl
+                    label="Kích thước 3 ảnh phía trên:"
+                    value={settings.topPieceSize}
+                    onChange={(val) => setSettings(p => ({ ...p, topPieceSize: val }))}
+                    min={60}
+                    max={220}
+                    step={5}
+                    unit="px"
+                    color="purple"
+                  />
+
+                  <SliderControl
+                    label="Khoảng cách giữa các ảnh:"
+                    value={settings.topSpacing}
+                    onChange={(val) => setSettings(p => ({ ...p, topSpacing: val }))}
+                    min={70}
+                    max={220}
+                    step={5}
+                    unit="px"
+                    color="purple"
+                  />
+
+                  <SliderControl
+                    label="Vị trí dọc Y (Độ cao):"
+                    value={settings.topTrayY}
+                    onChange={(val) => setSettings(p => ({ ...p, topTrayY: val }))}
+                    min={40}
+                    max={320}
+                    step={5}
+                    unit="px"
+                    color="purple"
+                  />
+
+                  <SliderControl
+                    label="Dịch chuyển ngang X (Cả hàng):"
+                    value={settings.topOffsetX}
+                    onChange={(val) => setSettings(p => ({ ...p, topOffsetX: val }))}
+                    min={-150}
+                    max={150}
+                    step={5}
+                    unit="px"
+                    color="purple"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* MỤC 3: VÙNG BỊ KHOÉT (HOLE) */}
             <div className="bg-slate-850/60 border border-slate-800 rounded-xl overflow-hidden">
               <button
                 onClick={() => setOpenSections(p => ({ ...p, hole: !p.hole }))}
@@ -875,7 +992,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               )}
             </div>
 
-            {/* MỤC 3: CÀI ĐẶT CON TRỎ & BÀN TAY CHỈ (GIỐNG SOI ĐÈN PIN) */}
+            {/* MỤC 4: CÀI ĐẶT CON TRỎ & BÀN TAY CHỈ (GIỐNG SOI ĐÈN PIN) */}
             <PointerSettingsControl
               isOpen={openSections.pointer}
               onToggle={() => setOpenSections(p => ({ ...p, pointer: !p.pointer }))}
@@ -899,7 +1016,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               themeColor="rose"
             />
 
-            {/* MỤC 4: CÀI ĐẶT 2 MẢNH GHÉP SAI */}
+            {/* MỤC 5: CÀI ĐẶT 2 MẢNH GHÉP SAI */}
             <div className="bg-slate-850/60 border border-slate-800 rounded-xl overflow-hidden">
               <button
                 onClick={() => setOpenSections(p => ({ ...p, distractors: !p.distractors }))}
@@ -996,8 +1113,7 @@ export default function MissingPiecePuzzle({ is916Mode, setIs916Mode }) {
               <div className="font-semibold text-slate-200 flex items-center gap-1.5">
                 🎬 Mẹo quay YouTube Shorts:
               </div>
-              <div>• Bật <b>"Con trỏ bàn tay chỉ"</b> để hiển thị bàn tay emoji khi quay video.</div>
-              <div>• Bấm nút <b>"Khởi Chạy"</b> ở header: Màn hình mở rộng tối đa, hoa văn nền chuẩn Soi Đèn Pin.</div>
+              <div>• Tự do chỉnh kích thước, khoảng cách và độ cao của 3 mảnh ghép phía trên.</div>
               <div>• Kéo thử mảnh sai vào chỗ khuyết, nhấn <b>Space</b> để mảnh bay về khay!</div>
               <div>• Nhấn <b>ESC</b> để thoát chế độ Khởi Chạy.</div>
             </div>
