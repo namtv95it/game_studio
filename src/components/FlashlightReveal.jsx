@@ -660,9 +660,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
     if (gameMode === 'cover') {
       // ===== CHẾ ĐỘ 2: PHỦ MÀU CHE ẢNH (NHUỘM MÀU / TINTING) =====
-      // Bước 1: Vẽ Ảnh nhân vật màu gốc sắc nét
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+      // Bước 1: Vẽ Ảnh nhân vật màu gốc sắc nét (Chỉ vẽ trước với các chế độ Nhuộm màu hoặc Che đặc)
+      // Với chế độ 'image' (Ảnh phủ lên), ẩn hoàn toàn ảnh gốc bên ngoài, CHỈ hiển thị trong vùng sáng đèn pin!
+      if (coverBlendMode !== 'image') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+      }
 
       // Bước 2: Nhuộm màu nhân vật và hiển thị lớp phủ màu theo hình dáng đã cài đặt
       if (!isPlacingQm || is916Mode) {
@@ -680,7 +683,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           ctx.fill();
           ctx.restore();
         } else if (coverBlendMode === 'image') {
-          // === KIỂU ẢNH PHỦ LÊN: SOI ĐÈN TỚI ĐÂU HIỆN ẢNH GỐC TỚI ĐÓ ===
+          // === KIỂU ẢNH PHỦ LÊN: ẨN ẢNH GỐC BÊN NGOÀI, CHỈ HIỂN THỊ TRONG VÙNG SÁNG ĐÈN PIN ===
           if (coverOverlayImg) {
             const cw = width;
             const ch = height;
@@ -691,7 +694,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             const overlayX = (cw - overlayW) / 2 + coverOverlayOffsetX;
             const overlayY = (ch - overlayH) / 2 + coverOverlayOffsetY;
 
-            // Dùng canvas phụ để vẽ ảnh phủ rồi đục lỗ vệt sáng đèn pin
+            // 1. Dùng canvas phụ để vẽ ảnh phủ rồi đục lỗ vệt sáng đèn pin
             if (!coverCanvasRef.current) {
               coverCanvasRef.current = document.createElement('canvas');
             }
@@ -703,28 +706,44 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             const offCtx = offCanvas.getContext('2d');
             offCtx.clearRect(0, 0, cw, ch);
 
-            // 1. Vẽ ảnh phủ lên canvas phụ với độ mờ opacity
+            // Vẽ ảnh phủ lên canvas phụ với độ mờ opacity
             offCtx.save();
             offCtx.globalAlpha = opacity;
             offCtx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
 
-            // 2. Đục thủng lớp ảnh phủ tại vị trí đèn pin (để lộ ảnh gốc ở dưới)
+            // Đục thủng lớp ảnh phủ tại vị trí đèn pin
             offCtx.globalCompositeOperation = 'destination-out';
             drawCustomShape(offCtx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
             offCtx.fill();
             offCtx.restore();
 
-            // 3. Vẽ canvas phụ (ảnh phủ đã đục lỗ) đè lên ảnh gốc trên canvas chính
+            // 2. Vẽ ảnh phủ đã đục lỗ lên canvas chính (Lúc này ngoài vệt đèn chỉ có ảnh phủ, hoàn toàn không có ảnh gốc)
             ctx.save();
             ctx.globalCompositeOperation = 'source-over';
             ctx.drawImage(offCanvas, 0, 0);
+            ctx.restore();
+
+            // 3. CHỈ VẼ ẢNH GỐC BÊN DƯỚI TRONG ĐÚNG VÙNG SÁNG CỦA ĐÈN PIN (Clip giới hạn chuẩn xác)
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+            ctx.clip();
+            ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+            ctx.restore();
 
             // 4. Vẽ viền tinh tế quanh vệt sáng để thấy rõ vùng đèn đang rọi
+            ctx.save();
             ctx.lineWidth = 2;
             ctx.strokeStyle = coverColor || '#ffffff';
             ctx.globalAlpha = Math.min(1, opacity * 0.85);
             drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
             ctx.stroke();
+            ctx.restore();
+          } else {
+            // Khi chưa tải ảnh phủ, vẽ ảnh gốc để xem
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
             ctx.restore();
           }
         } else {
