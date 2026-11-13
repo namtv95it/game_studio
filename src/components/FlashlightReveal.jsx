@@ -12,6 +12,7 @@ import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage, getFlas
 export const SPOTLIGHT_SHAPES = [
   { id: 'circle', name: 'Tròn', icon: '⚪' },
   { id: 'square', name: 'Vuông', icon: '⬛' },
+  { id: 'custom', name: 'Tự Chỉnh', icon: '🔲' },
   { id: 'heart', name: 'Trái Tim', icon: '💖' },
   { id: 'star', name: 'Ngôi Sao', icon: '⭐' },
   { id: 'cloud', name: 'Đám Mây', icon: '☁️' }
@@ -26,7 +27,7 @@ export function drawCustomShape(ctx, shape, cx, cy, rx, ry = rx) {
   const rY = Math.max(5, ry);
   ctx.beginPath();
 
-  if (shape === 'square') {
+  if (shape === 'square' || shape === 'custom') {
     // Hình chữ nhật / vuông bo góc nhẹ
     const hw = rX * 0.95;
     const hh = rY * 0.95;
@@ -95,7 +96,7 @@ export function getCustomShapeSvgPath(shape, cx, cy, rx, ry = rx) {
   const rX = Math.max(5, rx);
   const rY = Math.max(5, ry);
 
-  if (shape === 'square') {
+  if (shape === 'square' || shape === 'custom') {
     const hw = rX * 0.95;
     const hh = rY * 0.95;
     const corner = Math.min(Math.min(hw, hh) * 0.2, 16);
@@ -200,7 +201,10 @@ const DEFAULT_SETTINGS = {
   coverColor: '#000000',
   coverOpacity: 100,
   coverShape: 'circle', // 'circle' | 'square' | 'heart' | 'star' | 'cloud'
-  beamShape: 'circle', // 'circle' | 'square' | 'heart' | 'star' | 'cloud'
+  beamShape: 'circle', // 'circle' | 'square' | 'custom' | 'heart' | 'star' | 'cloud'
+  useBeamDimensions: false, // Tùy chọn nhập chiều cao & chiều rộng riêng cho Vệt Sáng
+  beamWidth: 160,
+  beamHeight: 160,
   useCoverDimensions: false, // Tùy chọn nhập chiều cao & chiều rộng riêng
   coverWidth: 160,
   coverHeight: 160,
@@ -238,6 +242,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
   const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
   const [beamShape, setBeamShape] = useState(initialSettings.beamShape || 'circle');
+  const [useBeamDimensions, setUseBeamDimensions] = useState(initialSettings.useBeamDimensions ?? (initialSettings.beamShape === 'custom'));
+  const [beamWidth, setBeamWidth] = useState(initialSettings.beamWidth ?? (initialSettings.radius ? initialSettings.radius * 2 : 160));
+  const [beamHeight, setBeamHeight] = useState(initialSettings.beamHeight ?? (initialSettings.radius ? initialSettings.radius * 2 : 160));
   const [beamAngle, setBeamAngle] = useState(initialSettings.beamAngle ?? -135);
   const [coneSpread, setConeSpread] = useState(initialSettings.coneSpread !== undefined ? initialSettings.coneSpread : 6);
   const [beamStartWidth, setBeamStartWidth] = useState(initialSettings.beamStartWidth ?? 55);
@@ -417,6 +424,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       coverOpacity,
       coverShape,
       beamShape,
+      useBeamDimensions,
+      beamWidth,
+      beamHeight,
       useCoverDimensions,
       coverWidth,
       coverHeight,
@@ -434,7 +444,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         console.error('Không thể lưu cài đặt vào localStorage:', err2);
       }
     }
-  }, [radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
   // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -607,8 +617,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
       // Bước 2: Nhuộm màu nhân vật và hiển thị lớp phủ màu theo hình dáng đã cài đặt
       if (!isPlacingQm || is916Mode) {
-        const effectiveRx = useCoverDimensions ? (coverWidth || 160) / 2 : radius;
-        const effectiveRy = useCoverDimensions ? (coverHeight || 160) / 2 : radius;
+        const effectiveRx = (coverShape === 'custom' || useCoverDimensions) ? (coverWidth || 160) / 2 : radius;
+        const effectiveRy = (coverShape === 'custom' || useCoverDimensions) ? (coverHeight || 160) / 2 : radius;
         const opacity = Math.max(0.05, Math.min(1, (coverOpacity ?? 100) / 100));
 
         if (coverBlendMode === 'solid') {
@@ -724,7 +734,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         // BƯỚC 3: Tạo đường dẫn hình dạng của vệt sáng Đèn Pin
         const createBeamPath = (c) => {
           if (spotlightType === 'circle') {
-            drawCustomShape(c, beamShape || 'circle', cursorPos.x, cursorPos.y, radius);
+            const isCustomDim = beamShape === 'custom' || useBeamDimensions;
+            const effectiveRx = isCustomDim ? (beamWidth || 160) / 2 : radius;
+            const effectiveRy = isCustomDim ? (beamHeight || 160) / 2 : radius;
+            drawCustomShape(c, beamShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
           } else {
             c.beginPath();
             const centerRad = (beamAngle * Math.PI) / 180;
@@ -780,7 +793,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
 
     const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -1012,7 +1025,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-slate-400 font-mono">
-                    {radius}px • {spotlightType === 'circle' ? (SPOTLIGHT_SHAPES.find(s => s.id === beamShape)?.name || 'Tròn') : 'Nón'}
+                    {(beamShape === 'custom' || useBeamDimensions) ? `${beamWidth}×${beamHeight}px` : `${radius}px`} • {spotlightType === 'circle' ? (SPOTLIGHT_SHAPES.find(s => s.id === beamShape)?.name || 'Tròn') : 'Nón'}
                   </span>
                   {activeSection === 'flashlight' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
                 </div>
@@ -1066,13 +1079,22 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   {spotlightType === 'circle' && (
                     <div className="flex flex-col gap-1.5 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
                       <label className="text-xs text-sky-300 font-medium">Hình Dạng Vệt Sáng Đèn Pin:</label>
-                      <div className="grid grid-cols-5 gap-1.5">
+                      <div className="grid grid-cols-6 gap-1">
                         {SPOTLIGHT_SHAPES.map((shape) => (
                           <button
                             key={shape.id}
                             type="button"
-                            onClick={() => setBeamShape(shape.id)}
-                            className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all cursor-pointer ${
+                            onClick={() => {
+                              setBeamShape(shape.id);
+                              if (shape.id === 'custom') {
+                                setUseBeamDimensions(true);
+                                if (!beamWidth || !beamHeight) {
+                                  setBeamWidth(radius * 2 || 160);
+                                  setBeamHeight(radius * 2 || 160);
+                                }
+                              }
+                            }}
+                            className={`flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all cursor-pointer ${
                               beamShape === shape.id
                                 ? 'bg-sky-500/25 border-sky-400 text-sky-200 shadow-sm ring-1 ring-sky-400'
                                 : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-750'
@@ -1080,37 +1102,197 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                             title={shape.name}
                           >
                             <span className="text-base">{shape.icon}</span>
-                            <span className="text-[10px] mt-0.5 font-medium">{shape.name}</span>
+                            <span className="text-[9px] mt-0.5 font-medium truncate w-full text-center">{shape.name}</span>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Radius */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs text-slate-400 font-medium">Kích Thước Vệt Sáng:</label>
-                      <div className="flex items-center gap-1">
-                        <NumberInput
-                          min={20}
-                          max={400}
-                          value={radius}
-                          onChange={(val) => setRadius(val)}
-                          className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-right border border-slate-600 focus:outline-none focus:border-sky-400 font-mono"
-                        />
-                        <span className="text-xs text-slate-400">px</span>
+                  {/* KÍCH THƯỚC VỆT SÁNG (BÁN KÍNH HOẶC TỰ SET RỘNG x CAO RIÊNG) */}
+                  {spotlightType === 'circle' && (
+                    <div className="flex flex-col gap-2.5 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-sky-300 font-semibold flex items-center gap-1.5">
+                          <span>📏 Kích Thước Vệt Sáng:</span>
+                        </label>
+                        {/* Checkbox chuyển đổi: Kích thước đều / Rộng & Cao riêng */}
+                        <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={useBeamDimensions || beamShape === 'custom'}
+                            onChange={(e) => {
+                              const enabled = e.target.checked;
+                              setUseBeamDimensions(enabled);
+                              if (enabled) {
+                                if (!beamWidth || !beamHeight) {
+                                  setBeamWidth(radius * 2 || 160);
+                                  setBeamHeight(radius * 2 || 160);
+                                }
+                              } else {
+                                if (beamShape === 'custom') {
+                                  setBeamShape('square');
+                                }
+                              }
+                            }}
+                            className="accent-sky-400 cursor-pointer w-3.5 h-3.5 rounded"
+                          />
+                          <span className={(useBeamDimensions || beamShape === 'custom') ? 'text-sky-300 font-bold' : 'text-slate-400'}>
+                            Rộng & Cao riêng
+                          </span>
+                        </label>
                       </div>
+
+                      {!(useBeamDimensions || beamShape === 'custom') ? (
+                        /* CHẾ ĐỘ 1: KÍCH THƯỚC ĐỒNG ĐỀU (BÁN KÍNH) */
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-slate-400 font-medium">Bán kính (R):</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setRadius((prev) => Math.max(10, prev - 10))}
+                                className="w-6 h-6 flex items-center justify-center bg-slate-750 hover:bg-slate-700 active:bg-slate-650 text-slate-200 hover:text-white rounded border border-slate-600 font-bold text-xs transition-colors cursor-pointer"
+                                title="Giảm 10px"
+                              >
+                                -
+                              </button>
+                              <NumberInput
+                                min={10}
+                                max={500}
+                                value={radius}
+                                onChange={(val) => setRadius(val)}
+                                className="w-14 px-1.5 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-sky-400 font-mono font-bold"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setRadius((prev) => Math.min(500, prev + 10))}
+                                className="w-6 h-6 flex items-center justify-center bg-slate-750 hover:bg-slate-700 active:bg-slate-650 text-slate-200 hover:text-white rounded border border-slate-600 font-bold text-xs transition-colors cursor-pointer"
+                                title="Tăng 10px"
+                              >
+                                +
+                              </button>
+                              <span className="text-[11px] text-slate-400 ml-0.5 font-mono">px</span>
+                            </div>
+                          </div>
+                          <input
+                            type="range"
+                            min="20"
+                            max="300"
+                            value={radius}
+                            onChange={(e) => setRadius(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                          <div className="flex items-center gap-1 pt-0.5">
+                            {[
+                              { label: 'Nhỏ (50)', val: 50 },
+                              { label: 'Vừa (80)', val: 80 },
+                              { label: 'Lớn (120)', val: 120 },
+                              { label: 'Cực đại (180)', val: 180 }
+                            ].map((preset) => (
+                              <button
+                                key={preset.val}
+                                type="button"
+                                onClick={() => setRadius(preset.val)}
+                                className={`flex-1 py-1 text-[10px] rounded border transition-colors cursor-pointer ${
+                                  radius === preset.val
+                                    ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold shadow'
+                                    : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-750'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        /* CHẾ ĐỘ 2: TÙY CHỌN TỰ SET CHIỀU RỘNG & CHIỀU CAO RIÊNG */
+                        <div className="flex flex-col gap-2.5 pt-1">
+                          {/* Chiều rộng (Width) */}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                              <span className="text-[11px] text-slate-400">Chiều Rộng (W):</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setBeamWidth((prev) => Math.max(20, prev - 10))}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-750 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-bold text-xs cursor-pointer"
+                                  title="Giảm 10px"
+                                >
+                                  -
+                                </button>
+                                <NumberInput
+                                  min={20}
+                                  max={800}
+                                  value={beamWidth}
+                                  onChange={(val) => setBeamWidth(val)}
+                                  className="w-14 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-sky-400 font-mono font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setBeamWidth((prev) => Math.min(800, prev + 10))}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-750 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-bold text-xs cursor-pointer"
+                                  title="Tăng 10px"
+                                >
+                                  +
+                                </button>
+                                <span className="text-[10px] text-slate-400 font-mono">px</span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="20"
+                              max="600"
+                              value={beamWidth}
+                              onChange={(e) => setBeamWidth(Number(e.target.value))}
+                              className="accent-sky-400 cursor-pointer h-1.5"
+                            />
+                          </div>
+
+                          {/* Chiều cao (Height) */}
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                              <span className="text-[11px] text-slate-400">Chiều Cao (H):</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setBeamHeight((prev) => Math.max(20, prev - 10))}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-750 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-bold text-xs cursor-pointer"
+                                  title="Giảm 10px"
+                                >
+                                  -
+                                </button>
+                                <NumberInput
+                                  min={20}
+                                  max={800}
+                                  value={beamHeight}
+                                  onChange={(val) => setBeamHeight(val)}
+                                  className="w-14 px-1 py-0.5 bg-slate-700 text-white rounded text-xs text-center border border-slate-600 focus:outline-none focus:border-sky-400 font-mono font-bold"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setBeamHeight((prev) => Math.min(800, prev + 10))}
+                                  className="w-5 h-5 flex items-center justify-center bg-slate-750 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 font-bold text-xs cursor-pointer"
+                                  title="Tăng 10px"
+                                >
+                                  +
+                                </button>
+                                <span className="text-[10px] text-slate-400 font-mono">px</span>
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="20"
+                              max="600"
+                              value={beamHeight}
+                              onChange={(e) => setBeamHeight(Number(e.target.value))}
+                              className="accent-sky-400 cursor-pointer h-1.5"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <input
-                      type="range"
-                      min="30"
-                      max="250"
-                      value={radius}
-                      onChange={(e) => setRadius(Number(e.target.value))}
-                      className="accent-sky-400 cursor-pointer h-1.5"
-                    />
-                  </div>
+                  )}
 
                   {/* Cone options */}
                   {spotlightType === 'cone' && (
@@ -1386,13 +1568,22 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   {/* CHỌN HÌNH DÁNG LỚP PHỦ */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs text-purple-300 font-semibold">Hình Dáng Lớp Phủ:</label>
-                    <div className="grid grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-6 gap-1">
                       {SPOTLIGHT_SHAPES.map((shape) => (
                         <button
                           key={shape.id}
                           type="button"
-                          onClick={() => setCoverShape(shape.id)}
-                          className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all cursor-pointer ${
+                          onClick={() => {
+                            setCoverShape(shape.id);
+                            if (shape.id === 'custom') {
+                              setUseCoverDimensions(true);
+                              if (!coverWidth || !coverHeight) {
+                                setCoverWidth(radius * 2 || 160);
+                                setCoverHeight(radius * 2 || 160);
+                              }
+                            }
+                          }}
+                          className={`flex flex-col items-center justify-center p-1.5 rounded-lg border transition-all cursor-pointer ${
                             coverShape === shape.id
                               ? 'bg-purple-500/25 border-purple-400 text-purple-200 shadow-sm ring-1 ring-purple-400'
                               : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-750'
@@ -1400,7 +1591,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           title={shape.name}
                         >
                           <span className="text-base">{shape.icon}</span>
-                          <span className="text-[10px] mt-0.5 font-medium">{shape.name}</span>
+                          <span className="text-[9px] mt-0.5 font-medium truncate w-full text-center">{shape.name}</span>
                         </button>
                       ))}
                     </div>
@@ -1915,7 +2106,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       beamShape || 'circle',
                       cursorPos.x,
                       cursorPos.y,
-                      radius
+                      (beamShape === 'custom' || useBeamDimensions) ? (beamWidth || 160) / 2 : radius,
+                      (beamShape === 'custom' || useBeamDimensions) ? (beamHeight || 160) / 2 : radius
                     )}
                     fill={beamBgColor}
                   />
