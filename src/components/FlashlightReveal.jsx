@@ -244,6 +244,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [coverOverlayScale, setCoverOverlayScale] = useState(initialSettings.coverOverlayScale ?? 100);
   const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? 0);
   const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? 0);
+  const [overlayMoveStep, setOverlayMoveStep] = useState(10); // Bước dịch chuyển nút điều hướng (1px, 5px, 10px, 20px)
 
   const [imageSrc, setImageSrc] = useState(() => getFlashlightImageSync() || initialSettings.imageSrc || heroImg);
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
@@ -467,6 +468,32 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       }
     });
   }, []);
+
+    // Lắng nghe phím mũi tên bàn phím để dịch chuyển vị trí ảnh phủ (Cover Overlay)
+  useEffect(() => {
+    const handleArrowKey = (e) => {
+      if (gameMode !== 'cover' || coverBlendMode !== 'image' || !coverOverlayImg) return;
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      const step = e.shiftKey ? 10 : 1;
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCoverOverlayOffsetY((prev) => Math.max(-400, prev - step));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCoverOverlayOffsetY((prev) => Math.min(400, prev + step));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCoverOverlayOffsetX((prev) => Math.max(-400, prev - step));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCoverOverlayOffsetX((prev) => Math.min(400, prev + step));
+      }
+    };
+
+    window.addEventListener('keydown', handleArrowKey);
+    return () => window.removeEventListener('keydown', handleArrowKey);
+  }, [gameMode, coverBlendMode, coverOverlayImg]);
 
     // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
@@ -2065,6 +2092,95 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                               className="accent-purple-400 cursor-pointer h-1.5"
                             />
                           </div>
+                          {/* BỘ NÚT ĐIỀU HƯỚNG VỊ TRÍ ẢNH PHỦ (D-PAD) */}
+                          <div className="flex flex-col gap-2 p-2 bg-slate-950/60 rounded-xl border border-purple-500/30">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-purple-300 flex items-center gap-1.5">
+                                <span>🕹️</span> Nút Điều Hướng Vị Trí:
+                              </span>
+                              <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded border border-slate-700">
+                                {[1, 5, 10, 20].map((step) => (
+                                  <button
+                                    key={step}
+                                    type="button"
+                                    onClick={() => setOverlayMoveStep(step)}
+                                    className={`px-1.5 py-0.5 text-[9px] font-mono rounded transition-colors cursor-pointer ${
+                                      overlayMoveStep === step
+                                        ? 'bg-purple-600 text-white font-bold shadow'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    {step}px
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Cụm phím điều hướng D-Pad */}
+                            <div className="flex items-center justify-center py-0.5">
+                              <div className="grid grid-cols-3 gap-1.5 w-36">
+                                {/* Hàng 1: Nút Lên */}
+                                <div />
+                                <button
+                                  type="button"
+                                  onClick={() => setCoverOverlayOffsetY((prev) => Math.max(-400, prev - overlayMoveStep))}
+                                  className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-purple-600/40 border border-slate-700 hover:border-purple-400 text-purple-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                  title={`Dịch Lên ${overlayMoveStep}px (Phím ↑)`}
+                                >
+                                  <span className="text-sm font-bold">▲</span>
+                                </button>
+                                <div />
+
+                                {/* Hàng 2: Trái | Giữa (Reset) | Phải */}
+                                <button
+                                  type="button"
+                                  onClick={() => setCoverOverlayOffsetX((prev) => Math.max(-400, prev - overlayMoveStep))}
+                                  className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-purple-600/40 border border-slate-700 hover:border-purple-400 text-purple-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                  title={`Dịch Trái ${overlayMoveStep}px (Phím ←)`}
+                                >
+                                  <span className="text-sm font-bold">◄</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => { setCoverOverlayOffsetX(0); setCoverOverlayOffsetY(0); }}
+                                  className="h-8 flex flex-col items-center justify-center rounded-lg bg-slate-850 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer"
+                                  title="Đưa về tâm (0, 0)"
+                                >
+                                  <RotateCcw size={12} />
+                                  <span className="text-[8px] mt-0.5 font-mono">0,0</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setCoverOverlayOffsetX((prev) => Math.min(400, prev + overlayMoveStep))}
+                                  className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-purple-600/40 border border-slate-700 hover:border-purple-400 text-purple-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                  title={`Dịch Phải ${overlayMoveStep}px (Phím →)`}
+                                >
+                                  <span className="text-sm font-bold">►</span>
+                                </button>
+
+                                {/* Hàng 3: Nút Xuống */}
+                                <div />
+                                <button
+                                  type="button"
+                                  onClick={() => setCoverOverlayOffsetY((prev) => Math.min(400, prev + overlayMoveStep))}
+                                  className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-purple-600/40 border border-slate-700 hover:border-purple-400 text-purple-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                  title={`Dịch Xuống ${overlayMoveStep}px (Phím ↓)`}
+                                >
+                                  <span className="text-sm font-bold">▼</span>
+                                </button>
+                                <div />
+                              </div>
+                            </div>
+
+                            <div className="text-[9px] text-slate-400 text-center flex items-center justify-center gap-1.5 pt-0.5">
+                              <span>Phím <kbd className="px-1 py-0.5 bg-slate-850 rounded border border-slate-700 text-slate-300">↑</kbd><kbd className="px-1 py-0.5 bg-slate-850 rounded border border-slate-700 text-slate-300">↓</kbd><kbd className="px-1 py-0.5 bg-slate-850 rounded border border-slate-700 text-slate-300">←</kbd><kbd className="px-1 py-0.5 bg-slate-850 rounded border border-slate-700 text-slate-300">→</kbd></span>
+                              <span className="text-slate-500">•</span>
+                              <span>Giữ <kbd className="px-1 py-0.5 bg-slate-850 rounded border border-slate-700 text-slate-300">Shift</kbd> = 10px</span>
+                            </div>
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => { setCoverOverlayScale(100); setCoverOverlayOffsetX(0); setCoverOverlayOffsetY(0); }}
