@@ -363,6 +363,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   }, []);
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
+  const coverCanvasRef = useRef(null);
   const imgRef = useRef(null);
 
     // Tự động tính toán scale để Phần Canvas và Phần Nền bằng nhau 100% (Khớp pixel-perfect)
@@ -651,6 +652,54 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
           ctx.fill();
           ctx.restore();
+        } else if (coverBlendMode === 'image') {
+          // === KIỂU ẢNH PHỦ LÊN: SOI ĐÈN TỚI ĐÂU HIỆN ẢNH GỐC TỚI ĐÓ ===
+          if (coverOverlayImg) {
+            const cw = width;
+            const ch = height;
+            const baseFit = Math.min(cw / coverOverlayImg.naturalWidth, ch / coverOverlayImg.naturalHeight);
+            const overlayScale = baseFit * (coverOverlayScale / 100);
+            const overlayW = coverOverlayImg.naturalWidth * overlayScale;
+            const overlayH = coverOverlayImg.naturalHeight * overlayScale;
+            const overlayX = (cw - overlayW) / 2 + coverOverlayOffsetX;
+            const overlayY = (ch - overlayH) / 2 + coverOverlayOffsetY;
+
+            // Dùng canvas phụ để vẽ ảnh phủ rồi đục lỗ vệt sáng đèn pin
+            if (!coverCanvasRef.current) {
+              coverCanvasRef.current = document.createElement('canvas');
+            }
+            const offCanvas = coverCanvasRef.current;
+            if (offCanvas.width !== cw || offCanvas.height !== ch) {
+              offCanvas.width = cw;
+              offCanvas.height = ch;
+            }
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.clearRect(0, 0, cw, ch);
+
+            // 1. Vẽ ảnh phủ lên canvas phụ với độ mờ opacity
+            offCtx.save();
+            offCtx.globalAlpha = opacity;
+            offCtx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
+
+            // 2. Đục thủng lớp ảnh phủ tại vị trí đèn pin (để lộ ảnh gốc ở dưới)
+            offCtx.globalCompositeOperation = 'destination-out';
+            drawCustomShape(offCtx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+            offCtx.fill();
+            offCtx.restore();
+
+            // 3. Vẽ canvas phụ (ảnh phủ đã đục lỗ) đè lên ảnh gốc trên canvas chính
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(offCanvas, 0, 0);
+
+            // 4. Vẽ viền tinh tế quanh vệt sáng để thấy rõ vùng đèn đang rọi
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = coverColor || '#ffffff';
+            ctx.globalAlpha = Math.min(1, opacity * 0.85);
+            drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+            ctx.stroke();
+            ctx.restore();
+          }
         } else {
           // Kiểu NHUỘM MÀU ẢNH (Color Tinting / Blend Mode):
           // 2.1: Nhuộm trực tiếp vào pixel của ảnh nhân vật bên dưới (Color / Multiply) nhưng chỉ trong vùng shape
@@ -696,24 +745,6 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           ctx.stroke();
           ctx.restore();
         }
-      }
-
-      // ===== RENDER: ẢNH PHỦ LÊN (Cover Overlay Image) =====
-      if (coverBlendMode === 'image' && coverOverlayImg) {
-        const opacity = Math.max(0.05, Math.min(1, (coverOpacity ?? 100) / 100));
-        const cw = width;
-        const ch = height;
-        const baseFit = Math.min(cw / coverOverlayImg.naturalWidth, ch / coverOverlayImg.naturalHeight);
-        const overlayScale = baseFit * (coverOverlayScale / 100);
-        const overlayW = coverOverlayImg.naturalWidth * overlayScale;
-        const overlayH = coverOverlayImg.naturalHeight * overlayScale;
-        const overlayX = (cw - overlayW) / 2 + coverOverlayOffsetX;
-        const overlayY = (ch - overlayH) / 2 + coverOverlayOffsetY;
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = opacity;
-        ctx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
-        ctx.restore();
       }
 
       // Dấu hỏi chấm (nếu có bật)
