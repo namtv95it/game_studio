@@ -1974,7 +1974,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
                               <span>Kích Thước Ảnh Phủ:</span>
-                              <span className="text-white font-mono font-bold">{coverOverlayScale}%</span>
+                              <NumberInput
+                                value={coverOverlayScale}
+                                onChange={setCoverOverlayScale}
+                                min={20} max={300} step={1}
+                                suffix="%"
+                                className="w-16"
+                              />
                             </div>
                             <input
                               type="range"
@@ -1991,7 +1997,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
                               <span>Vị Trí Ngang (X):</span>
-                              <span className="text-white font-mono font-bold">{coverOverlayOffsetX}px</span>
+                              <NumberInput
+                                value={coverOverlayOffsetX}
+                                onChange={setCoverOverlayOffsetX}
+                                min={-400} max={400} step={1}
+                                suffix="px"
+                                className="w-16"
+                              />
                             </div>
                             <input
                               type="range"
@@ -2005,7 +2017,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
                               <span>Vị Trí Dọc (Y):</span>
-                              <span className="text-white font-mono font-bold">{coverOverlayOffsetY}px</span>
+                              <NumberInput
+                                value={coverOverlayOffsetY}
+                                onChange={setCoverOverlayOffsetY}
+                                min={-400} max={400} step={1}
+                                suffix="px"
+                                className="w-16"
+                              />
                             </div>
                             <input
                               type="range"
@@ -2032,7 +2050,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
                     <div className="flex items-center justify-between text-xs text-slate-300">
                       <span>Độ Đậm Hiệu Ứng (Opacity):</span>
-                      <span className="text-white font-mono font-bold">{coverOpacity}%</span>
+                      <NumberInput
+                        value={coverOpacity}
+                        onChange={setCoverOpacity}
+                        min={10} max={100} step={1}
+                        suffix="%"
+                        className="w-16"
+                      />
                     </div>
                     <input
                       type="range"
