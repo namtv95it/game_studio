@@ -50,6 +50,86 @@ export const STAGE_PATTERN_OPTIONS = [
     }
   },
   {
+    id: 'notebook-ruled-horizontal',
+    name: 'Đường kẻ ngang trang vở (Ruled Paper)',
+    category: 'notebook',
+    badge: 'Kẻ ngang',
+    style: {
+      backgroundImage: 'linear-gradient(rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 32px',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'notebook-lined-margin',
+    name: 'Trang vở kẻ ngang có lề đỏ (Notebook Margin)',
+    category: 'notebook',
+    badge: 'Vở có lề đỏ',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, transparent 58px, #f43f5e 58px, #f43f5e 60px, transparent 60px), linear-gradient(rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 100%, 100% 32px',
+      backgroundRepeat: 'no-repeat, repeat',
+      opacity: 0.8
+    }
+  },
+  {
+    id: 'notebook-ruled-vertical',
+    name: 'Đường kẻ dọc trang vở (Vertical Ruled)',
+    category: 'notebook',
+    badge: 'Kẻ dọc',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '32px 100%',
+      opacity: 0.75
+    }
+  },
+  {
+    id: 'notebook-vertical-margin',
+    name: 'Trang vở kẻ dọc có lề trên (Vertical Margin)',
+    category: 'notebook',
+    badge: 'Vở dọc lề',
+    style: {
+      backgroundImage: 'linear-gradient(0deg, transparent 58px, #f43f5e 58px, #f43f5e 60px, transparent 60px), linear-gradient(90deg, rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 100%, 32px 100%',
+      backgroundRepeat: 'no-repeat, repeat',
+      opacity: 0.8
+    }
+  },
+  {
+    id: 'notebook-horizontal-fine',
+    name: 'Đường kẻ ngang li hẹp (Narrow Ruled)',
+    category: 'notebook',
+    badge: 'Kẻ ngang hẹp',
+    style: {
+      backgroundImage: 'linear-gradient(rgba(148, 163, 184, 0.4) 1px, transparent 1px)',
+      backgroundSize: '100% 22px',
+      opacity: 0.7
+    }
+  },
+  {
+    id: 'notebook-vertical-fine',
+    name: 'Đường kẻ dọc li hẹp (Narrow Vertical)',
+    category: 'notebook',
+    badge: 'Kẻ dọc hẹp',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, rgba(148, 163, 184, 0.4) 1px, transparent 1px)',
+      backgroundSize: '22px 100%',
+      opacity: 0.7
+    }
+  },
+  {
+    id: 'notebook-grid-math',
+    name: 'Trang vở ô ly toán học (Math Notebook Grid)',
+    category: 'notebook',
+    badge: 'Vở ô ly có lề',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, transparent 58px, #f43f5e 58px, #f43f5e 60px, transparent 60px), linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px)',
+      backgroundSize: '100% 100%, 25px 25px, 25px 25px',
+      backgroundRepeat: 'no-repeat, repeat, repeat',
+      opacity: 0.75
+    }
+  },
+  {
     id: 'grid-blueprint',
     name: 'Bản thiết kế (Blueprint Tech Grid)',
     category: 'grid',

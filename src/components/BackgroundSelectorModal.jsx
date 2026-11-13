@@ -190,6 +190,7 @@ export default function BackgroundSelectorModal({ isOpen, onClose }) {
                   {[
                     { id: 'all', name: `Tất cả (${STAGE_PATTERN_OPTIONS.length})` },
                     ...(favoritePatternIds.length > 0 ? [{ id: 'favorites', name: `❤️ Yêu thích (${favoritePatternIds.length})` }] : []),
+                    { id: 'notebook', name: '📖 Trang vở' },
                     { id: 'wood', name: '🪵 Vân gỗ' },
                     { id: 'random', name: '✨ Ngẫu nhiên' },
                     { id: 'grid', name: 'Kẻ ô & Kỹ thuật' },
@@ -233,9 +234,11 @@ export default function BackgroundSelectorModal({ isOpen, onClose }) {
                       .filter(pat => {
                         if (!patternCategoryFilter || patternCategoryFilter === 'all') return true;
                         if (patternCategoryFilter === 'favorites') return favoritePatternIds.includes(pat.id);
+                        if (patternCategoryFilter === 'notebook') return pat.category === 'notebook' || pat.id.startsWith('notebook-');
                         if (patternCategoryFilter === 'wood') return pat.category === 'wood' || pat.id.startsWith('wood-');
                         if (patternCategoryFilter === 'random') return pat.category === 'random' || pat.id.startsWith('random-') || pat.id.startsWith('wood-');
-                        if (patternCategoryFilter === 'grid') return pat.category === 'grid' || pat.category === '3d';
+                        if (patternCategoryFilter === 'grid') return pat.category === 'grid' || pat.category === '3d' || pat.id.includes('grid');
+                        if (patternCategoryFilter === 'stripes') return pat.category === 'stripes' || pat.category === 'notebook' || pat.id.startsWith('notebook-');
                         if (patternCategoryFilter === 'geometric') return pat.category === 'geometric' || pat.category === '3d';
                         if (patternCategoryFilter === 'artistic') return pat.category === 'artistic' || pat.category === 'tech';
                         if (patternCategoryFilter === 'nature') return pat.id.startsWith('nature-') || pat.category === 'wood' || pat.id.startsWith('wood-');
