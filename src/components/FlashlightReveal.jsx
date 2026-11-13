@@ -7,6 +7,7 @@ import ShadowStyleSettingsControl, { applyShadowBackgroundToCanvas } from './Sha
 import NumberInput from './NumberInput';
 import heroImg from '../assets/hero.png';
 import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage, getFlashlightImageSync } from '../utils/imageStorage';
+import { saveLocalImage, loadLocalImage, removeLocalImage } from '../utils/localImageStorage';
 
 // Danh sách các hình dạng hỗ trợ cho Vệt Đèn và Lớp Phủ Màu
 export const SPOTLIGHT_SHAPES = [
@@ -238,6 +239,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [coverHeight, setCoverHeight] = useState(initialSettings.coverHeight ?? (initialSettings.radius ? initialSettings.radius * 2 : 160));
   const [coverBlendMode, setCoverBlendMode] = useState(initialSettings.coverBlendMode || 'color');
 
+  // === ẢNH PHỦ LÊN (Cover Overlay Image) ===
+  const [coverOverlayImg, setCoverOverlayImg] = useState(null); // HTMLImageElement
+  const [coverOverlayScale, setCoverOverlayScale] = useState(initialSettings.coverOverlayScale ?? 100);
+  const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? 0);
+  const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? 0);
+
   const [imageSrc, setImageSrc] = useState(() => getFlashlightImageSync() || initialSettings.imageSrc || heroImg);
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
   const [spotlightType, setSpotlightType] = useState(initialSettings.spotlightType || 'circle');
@@ -430,7 +437,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       useCoverDimensions,
       coverWidth,
       coverHeight,
-      coverBlendMode
+      coverBlendMode,
+      coverOverlayScale,
+      coverOverlayOffsetX,
+      coverOverlayOffsetY
     };
 
     try {
@@ -444,9 +454,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         console.error('Không thể lưu cài đặt vào localStorage:', err2);
       }
     }
-  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY]);
 
-  // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
+  // Load cover overlay image từ IndexedDB khi mount
+  useEffect(() => {
+    loadLocalImage('flashlight_cover_overlay').then(url => {
+      if (url) {
+        const img = new Image();
+        img.onload = () => setCoverOverlayImg(img);
+        img.src = url;
+      }
+    });
+  }, []);
+
+    // Bắt phím ESC để thoát chế độ Ẩn Giao Diện (Quay về giữ nguyên Sidebar)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' || e.code === 'Escape') {
@@ -677,6 +698,24 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         }
       }
 
+      // ===== RENDER: ẢNH PHỦ LÊN (Cover Overlay Image) =====
+      if (coverBlendMode === 'image' && coverOverlayImg) {
+        const opacity = Math.max(0.05, Math.min(1, (coverOpacity ?? 100) / 100));
+        const cw = width;
+        const ch = height;
+        const baseFit = Math.min(cw / coverOverlayImg.naturalWidth, ch / coverOverlayImg.naturalHeight);
+        const overlayScale = baseFit * (coverOverlayScale / 100);
+        const overlayW = coverOverlayImg.naturalWidth * overlayScale;
+        const overlayH = coverOverlayImg.naturalHeight * overlayScale;
+        const overlayX = (cw - overlayW) / 2 + coverOverlayOffsetX;
+        const overlayY = (ch - overlayH) / 2 + coverOverlayOffsetY;
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = opacity;
+        ctx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
+        ctx.restore();
+      }
+
       // Dấu hỏi chấm (nếu có bật)
       if (enableQuestionMarks && questionMarks.length > 0) {
         ctx.save();
@@ -793,7 +832,32 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode]);
+  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY]);
+
+    // Upload ảnh phủ lên
+  const handleCoverOverlayUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await saveLocalImage('flashlight_cover_overlay', file);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setCoverOverlayImg(img);
+      setCoverOverlayScale(100);
+      setCoverOverlayOffsetX(0);
+      setCoverOverlayOffsetY(0);
+    };
+    img.src = url;
+    e.target.value = '';
+  };
+
+  const handleCoverOverlayClear = async () => {
+    try { await removeLocalImage('flashlight_cover_overlay'); } catch {}
+    setCoverOverlayImg(null);
+    setCoverOverlayScale(100);
+    setCoverOverlayOffsetX(0);
+    setCoverOverlayOffsetY(0);
+  };
 
     const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -1858,14 +1922,15 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     <label className="text-xs font-semibold text-purple-300 flex items-center justify-between">
                       <span>Hiệu Ứng Lớp Phủ Lên Ảnh:</span>
                       <span className="text-[10px] text-slate-400 font-normal">
-                        {coverBlendMode === 'color' ? 'Nhuộm màu' : coverBlendMode === 'tint-multiply' ? 'Nhuộm đậm' : 'Che đặc'}
+                        {coverBlendMode === 'color' ? 'Nhuộm màu' : coverBlendMode === 'tint-multiply' ? 'Nhuộm đậm' : coverBlendMode === 'image' ? 'Ảnh Phủ' : 'Che Đặc'}
                       </span>
                     </label>
                     <div className="grid grid-cols-3 gap-1">
                       {[
                         { id: 'color', label: '🎨 Nhuộm Màu', desc: 'Đổi màu ảnh giữ nét' },
                         { id: 'tint-multiply', label: '🌘 Nhuộm Đậm', desc: 'Đậm nét chi tiết' },
-                        { id: 'solid', label: '⬛ Che Đặc', desc: 'Phủ kín 100%' }
+                        { id: 'solid', label: '⬛ Che Đặc', desc: 'Phủ kín 100%' },
+                        { id: 'image', label: '🖼️ Ảnh Phủ', desc: 'Dùng ảnh phủ lên' }
                       ].map((mode) => (
                         <button
                           key={mode.id}
@@ -1883,6 +1948,85 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       ))}
                     </div>
                   </div>
+
+                  {/* ẢNH PHỦ LÊN UI */}
+                  {coverBlendMode === 'image' && (
+                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-800/80">
+                      <label className="text-xs font-semibold text-purple-300">🖼️ Ảnh Phủ Lên:</label>
+                      <div className="flex gap-2 items-center">
+                        <label className="flex-1 py-1.5 px-2 rounded-lg border border-dashed border-purple-500/50 text-center text-xs text-purple-300 cursor-pointer hover:bg-purple-500/10 transition-colors">
+                          {coverOverlayImg ? '🔄 Thay ảnh phủ' : '📂 Chọn ảnh phủ'}
+                          <input type="file" accept="image/*" className="hidden" onChange={handleCoverOverlayUpload} />
+                        </label>
+                        {coverOverlayImg && (
+                          <button
+                            type="button"
+                            onClick={handleCoverOverlayClear}
+                            className="p-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 text-xs cursor-pointer"
+                            title="Xóa ảnh phủ"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                      {coverOverlayImg && (
+                        <>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                              <span>Kích Thước Ảnh Phủ:</span>
+                              <span className="text-white font-mono font-bold">{coverOverlayScale}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="20"
+                              max="300"
+                              value={coverOverlayScale}
+                              onChange={(e) => setCoverOverlayScale(Number(e.target.value))}
+                              className="accent-purple-400 cursor-pointer h-1.5"
+                            />
+                            <div className="flex justify-between text-[9px] text-slate-400">
+                              <span>20%</span><span>100% (mặc định)</span><span>300%</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                              <span>Vị Trí Ngang (X):</span>
+                              <span className="text-white font-mono font-bold">{coverOverlayOffsetX}px</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-400"
+                              max="400"
+                              value={coverOverlayOffsetX}
+                              onChange={(e) => setCoverOverlayOffsetX(Number(e.target.value))}
+                              className="accent-purple-400 cursor-pointer h-1.5"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                              <span>Vị Trí Dọc (Y):</span>
+                              <span className="text-white font-mono font-bold">{coverOverlayOffsetY}px</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-400"
+                              max="400"
+                              value={coverOverlayOffsetY}
+                              onChange={(e) => setCoverOverlayOffsetY(Number(e.target.value))}
+                              className="accent-purple-400 cursor-pointer h-1.5"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setCoverOverlayScale(100); setCoverOverlayOffsetX(0); setCoverOverlayOffsetY(0); }}
+                            className="py-1 px-2 text-[10px] rounded border border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
+                          >
+                            🔄 Đặt lại vị trí & kích thước
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {/* ĐỘ ĐẬM LỚP PHỦ */}
                   <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
