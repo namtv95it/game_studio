@@ -51,13 +51,24 @@ export const STAGE_PATTERN_OPTIONS = [
   },
   {
     id: 'notebook-ruled-horizontal',
-    name: 'Đường kẻ ngang trang vở (Ruled Paper)',
+    name: 'Đường kẻ ngang trang vở (Không vạch đỏ)',
     category: 'notebook',
     badge: 'Kẻ ngang',
     style: {
       backgroundImage: 'linear-gradient(rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
       backgroundSize: '100% 32px',
       opacity: 0.75
+    }
+  },
+  {
+    id: 'notebook-ruled-blue',
+    name: 'Trang vở kẻ ngang mực xanh (Không vạch đỏ)',
+    category: 'notebook',
+    badge: 'Ngang xanh',
+    style: {
+      backgroundImage: 'linear-gradient(rgba(96, 165, 250, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 32px',
+      opacity: 0.8
     }
   },
   {
@@ -73,8 +84,20 @@ export const STAGE_PATTERN_OPTIONS = [
     }
   },
   {
+    id: 'notebook-lined-gray-margin',
+    name: 'Trang vở kẻ ngang lề xám thanh (Không vạch đỏ)',
+    category: 'notebook',
+    badge: 'Lề xám nhã',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, transparent 58px, rgba(148, 163, 184, 0.55) 58px, rgba(148, 163, 184, 0.55) 60px, transparent 60px), linear-gradient(rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 100%, 100% 32px',
+      backgroundRepeat: 'no-repeat, repeat',
+      opacity: 0.8
+    }
+  },
+  {
     id: 'notebook-ruled-vertical',
-    name: 'Đường kẻ dọc trang vở (Vertical Ruled)',
+    name: 'Đường kẻ dọc trang vở (Không vạch đỏ)',
     category: 'notebook',
     badge: 'Kẻ dọc',
     style: {
@@ -84,10 +107,21 @@ export const STAGE_PATTERN_OPTIONS = [
     }
   },
   {
+    id: 'notebook-vertical-blue',
+    name: 'Trang vở kẻ dọc mực xanh (Không vạch đỏ)',
+    category: 'notebook',
+    badge: 'Dọc xanh',
+    style: {
+      backgroundImage: 'linear-gradient(90deg, rgba(96, 165, 250, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '32px 100%',
+      opacity: 0.8
+    }
+  },
+  {
     id: 'notebook-vertical-margin',
     name: 'Trang vở kẻ dọc có lề trên (Vertical Margin)',
     category: 'notebook',
-    badge: 'Vở dọc lề',
+    badge: 'Vở dọc lề đỏ',
     style: {
       backgroundImage: 'linear-gradient(0deg, transparent 58px, #f43f5e 58px, #f43f5e 60px, transparent 60px), linear-gradient(90deg, rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
       backgroundSize: '100% 100%, 32px 100%',
@@ -96,8 +130,20 @@ export const STAGE_PATTERN_OPTIONS = [
     }
   },
   {
+    id: 'notebook-vertical-gray-margin',
+    name: 'Trang vở kẻ dọc lề xám thanh (Không vạch đỏ)',
+    category: 'notebook',
+    badge: 'Dọc lề xám',
+    style: {
+      backgroundImage: 'linear-gradient(0deg, transparent 58px, rgba(148, 163, 184, 0.55) 58px, rgba(148, 163, 184, 0.55) 60px, transparent 60px), linear-gradient(90deg, rgba(148, 163, 184, 0.45) 1.5px, transparent 1.5px)',
+      backgroundSize: '100% 100%, 32px 100%',
+      backgroundRepeat: 'no-repeat, repeat',
+      opacity: 0.8
+    }
+  },
+  {
     id: 'notebook-horizontal-fine',
-    name: 'Đường kẻ ngang li hẹp (Narrow Ruled)',
+    name: 'Đường kẻ ngang li hẹp (Không vạch đỏ)',
     category: 'notebook',
     badge: 'Kẻ ngang hẹp',
     style: {
@@ -108,7 +154,7 @@ export const STAGE_PATTERN_OPTIONS = [
   },
   {
     id: 'notebook-vertical-fine',
-    name: 'Đường kẻ dọc li hẹp (Narrow Vertical)',
+    name: 'Đường kẻ dọc li hẹp (Không vạch đỏ)',
     category: 'notebook',
     badge: 'Kẻ dọc hẹp',
     style: {
@@ -119,7 +165,7 @@ export const STAGE_PATTERN_OPTIONS = [
   },
   {
     id: 'notebook-grid-math',
-    name: 'Trang vở ô ly toán học (Math Notebook Grid)',
+    name: 'Trang vở ô ly toán học (Có lề đỏ)',
     category: 'notebook',
     badge: 'Vở ô ly có lề',
     style: {
@@ -127,6 +173,17 @@ export const STAGE_PATTERN_OPTIONS = [
       backgroundSize: '100% 100%, 25px 25px, 25px 25px',
       backgroundRepeat: 'no-repeat, repeat, repeat',
       opacity: 0.75
+    }
+  },
+  {
+    id: 'notebook-grid-clean',
+    name: 'Trang vở ô ly toán học (Không vạch đỏ)',
+    category: 'notebook',
+    badge: 'Vở ô ly sạch',
+    style: {
+      backgroundImage: 'linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px)',
+      backgroundSize: '25px 25px',
+      opacity: 0.65
     }
   },
   {
