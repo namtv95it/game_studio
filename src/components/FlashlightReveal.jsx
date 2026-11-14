@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
-import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw, Save, Pencil, Check, X, RefreshCw, Bookmark, Folder } from 'lucide-react';
+import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw, Save, Pencil, Check, X, RefreshCw, Bookmark, Folder, Eye, EyeOff } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
@@ -402,10 +402,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   // === ẢNH PHỦ LÊN (Cover Overlay Image) ===
   const [coverOverlayImg, setCoverOverlayImg] = useState(null); // HTMLImageElement
-  const [coverOverlayScale, setCoverOverlayScale] = useState(initialSettings.coverOverlayScale ?? initialSettings.scale ?? 95);
-  const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? initialSettings.offsetX ?? 0);
-  const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? initialSettings.offsetY ?? 0);
+  const [coverOverlayScale, setCoverOverlayScale] = useState(initialSettings.coverOverlayScale ?? 100); // % tỉ lệ so với ảnh nhân vật (mặc định 100% khớp chuẩn)
+  const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? 0); // px dịch so với ảnh nhân vật (mặc định 0)
+  const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? 0); // px dịch so với ảnh nhân vật (mặc định 0)
   const [overlayMoveStep, setOverlayMoveStep] = useState(10); // Bước dịch chuyển nút điều hướng (1px, 5px, 10px, 20px)
+  const [showOriginalImage, setShowOriginalImage] = useState(false); // Nút bật/tắt hiển thị ảnh gốc mọi lúc để so khớp với lớp phủ
+  const [originalImagePreviewOpacity, setOriginalImagePreviewOpacity] = useState(65); // % độ rõ của ảnh gốc khi bật chế độ soi khớp (20% - 100%)
 
   // === KHUNG VIỀN VỆT SÁNG (Beam Border & PNG Frame) ===
   const [beamBorderMode, setBeamBorderMode] = useState(initialSettings.beamBorderMode || 'none'); // 'none' | 'custom' | 'image'
@@ -1054,12 +1056,33 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     }
   }, [lockPointerToCenter, is916Mode]);
 
-  // Handle Mouse Move: Tính toán ma trận đồng bộ 100% khi nằm ngang 90deg ở cả 2 trạng thái
+  const mouseRafIdRef = useRef(null);
+  const latestCoordsRef = useRef(null);
+
+  // Handle Mouse Move: Sử dụng requestAnimationFrame để đồng bộ 60/120fps chuẩn tần số quét màn hình, triệt tiêu hoàn toàn hiện tượng khựng giật
   const handleMouseMove = (e) => {
     if (lockPointerToCenter) return;
-    const { canvasX, canvasY, rawX, rawY } = getCanvasCoords(e);
-    setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+    const coords = getCanvasCoords(e);
+    latestCoordsRef.current = coords;
+
+    if (!mouseRafIdRef.current) {
+      mouseRafIdRef.current = requestAnimationFrame(() => {
+        mouseRafIdRef.current = null;
+        if (latestCoordsRef.current) {
+          const { canvasX, canvasY, rawX, rawY } = latestCoordsRef.current;
+          setCursorPos({ x: canvasX, y: canvasY, rawX, rawY });
+        }
+      });
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (mouseRafIdRef.current) {
+        cancelAnimationFrame(mouseRafIdRef.current);
+      }
+    };
+  }, []);
 
   // Khi đang ở chế độ Đặt Dấu '?', nhấp chuột vào sân khấu để thêm hoặc xóa dấu ?
   const handleStageClick = (e) => {
@@ -1284,10 +1307,17 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     if (gameMode === 'cover') {
       // ===== CHẾ ĐỘ 2: PHỦ MÀU CHE ẢNH (NHUỘM MÀU / TINTING) =====
       // Bước 1: Vẽ Ảnh nhân vật màu gốc sắc nét (Chỉ vẽ trước với các chế độ Nhuộm màu hoặc Che đặc)
-      // Với chế độ 'image' (Ảnh phủ lên), ẩn hoàn toàn ảnh gốc bên ngoài, CHỈ hiển thị trong vùng sáng đèn pin!
+      // Với chế độ 'image' (Ảnh phủ lên), ẩn hoàn toàn ảnh gốc bên ngoài, CHỈ hiển thị trong vùng sáng đèn pin (trừ khi bật chế độ căn chỉnh)
       if (coverBlendMode !== 'image') {
         ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+      } else if (showOriginalImage) {
+        // CHẾ ĐỘ CĂN CHỈNH: Vẽ ảnh gốc ở dưới lớp ảnh phủ để người dùng so khớp vị trí & kích thước
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = Math.max(0.1, (originalImagePreviewOpacity ?? 65) / 100);
+        ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+        ctx.restore();
       }
 
       // Bước 2: Nhuộm màu nhân vật và hiển thị lớp phủ màu theo hình dáng đã cài đặt
@@ -1310,17 +1340,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           if (coverOverlayImg) {
             const cw = width;
             const ch = height;
-            // Tính toán kích thước và vị trí ảnh phủ theo cùng hệ quy chiếu (maxBoxW, maxBoxH) với ảnh gốc
-            const coverNaturalW = coverOverlayImg.width || coverOverlayImg.naturalWidth;
-            const coverNaturalH = coverOverlayImg.height || coverOverlayImg.naturalHeight;
-            const coverFitScale = Math.min(maxBoxW / coverNaturalW, maxBoxH / coverNaturalH);
-            const coverBaseW = coverNaturalW * coverFitScale;
-            const coverBaseH = coverNaturalH * coverFitScale;
-            const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? scale ?? 100) / 100);
-            const overlayW = coverBaseW * overlayScaleFactor;
-            const overlayH = coverBaseH * overlayScaleFactor;
-            const overlayX = (cw - overlayW) / 2 + (coverOverlayOffsetX ?? offsetX ?? 0);
-            const overlayY = (ch - overlayH) / 2 + (coverOverlayOffsetY ?? offsetY ?? 0);
+            // Kích thước và vị trí ảnh phủ: Lấy chuẩn kích thước và vị trí của ảnh nhân vật (drawW, drawH, drawX, drawY) làm chuẩn 100%
+            const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? 100) / 100);
+            const overlayW = drawW * overlayScaleFactor;
+            const overlayH = drawH * overlayScaleFactor;
+            const overlayX = drawX + (drawW - overlayW) / 2 + (coverOverlayOffsetX || 0);
+            const overlayY = drawY + (drawH - overlayH) / 2 + (coverOverlayOffsetY || 0);
 
             // 1. Dùng canvas phụ để vẽ ảnh phủ rồi đục lỗ vệt sáng đèn pin
             if (!coverCanvasRef.current) {
@@ -1472,18 +1497,23 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       if (shadowStyle === 'image') {
         // === TÙY CHỌN: DÙNG ẢNH PHỦ CHO BÓNG NHÂN VẬT (GIỐNG BÊN PHỦ MÀU CHE ẢNH) ===
         if (coverOverlayImg) {
+          // CHẾ ĐỘ CĂN CHỈNH: Vẽ ảnh gốc ở dưới lớp ảnh phủ để người dùng so khớp vị trí & kích thước
+          if (showOriginalImage) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = Math.max(0.1, (originalImagePreviewOpacity ?? 65) / 100);
+            ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+            ctx.restore();
+          }
+
           const cw = width;
           const ch = height;
-          const coverNaturalW = coverOverlayImg.width || coverOverlayImg.naturalWidth;
-          const coverNaturalH = coverOverlayImg.height || coverOverlayImg.naturalHeight;
-          const coverFitScale = Math.min(maxBoxW / coverNaturalW, maxBoxH / coverNaturalH);
-          const coverBaseW = coverNaturalW * coverFitScale;
-          const coverBaseH = coverNaturalH * coverFitScale;
-          const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? scale ?? 100) / 100);
-          const overlayW = coverBaseW * overlayScaleFactor;
-          const overlayH = coverBaseH * overlayScaleFactor;
-          const overlayX = (cw - overlayW) / 2 + (coverOverlayOffsetX ?? offsetX ?? 0);
-          const overlayY = (ch - overlayH) / 2 + (coverOverlayOffsetY ?? offsetY ?? 0);
+          // Kích thước và vị trí ảnh phủ: Lấy chuẩn kích thước và vị trí của ảnh nhân vật (drawW, drawH, drawX, drawY) làm chuẩn 100%
+          const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? 100) / 100);
+          const overlayW = drawW * overlayScaleFactor;
+          const overlayH = drawH * overlayScaleFactor;
+          const overlayX = drawX + (drawW - overlayW) / 2 + (coverOverlayOffsetX || 0);
+          const overlayY = drawY + (drawH - overlayH) / 2 + (coverOverlayOffsetY || 0);
           const opacity = Math.max(0.05, Math.min(1, (coverOpacity ?? 100) / 100));
 
           // 1. Dùng canvas phụ để vẽ ảnh phủ rồi đục lỗ vệt sáng đèn pin
@@ -1600,6 +1630,15 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         ctx.globalCompositeOperation = 'source-in';
         applyShadowBackgroundToCanvas(ctx, width, height, shadowStyle, customShadowColor, shadowOpacity, shadowPattern);
 
+        // CHẾ ĐỘ CĂN CHỈNH: Nếu bật Hiện ảnh gốc mọi lúc trong chế độ bóng, vẽ đè ảnh gốc bán trong suốt lên trên lớp bóng để quan sát
+        if (showOriginalImage) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = Math.max(0.1, (originalImagePreviewOpacity ?? 65) / 100);
+          ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
+          ctx.restore();
+        }
+
         // BƯỚC 2.5: Vẽ các Dấu Hỏi Chấm '?' lên lớp bóng đen (chỉ hiển thị trên phần bóng đen)
         if (enableQuestionMarks && questionMarks.length > 0) {
           ctx.globalCompositeOperation = 'source-over';
@@ -1660,7 +1699,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useLayoutEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameImg, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity]);
+  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameImg, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, showOriginalImage, originalImagePreviewOpacity]);
 
     // Upload ảnh phủ lên
   const handleCoverOverlayUpload = async (e) => {
@@ -1671,10 +1710,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     const img = new Image();
     img.onload = () => {
       setCoverOverlayImg(img);
-      // Mặc định vị trí và kích thước khi tải lên sẽ bằng chuẩn xác với ảnh gốc
-      setCoverOverlayScale(scale ?? 95);
-      setCoverOverlayOffsetX(offsetX ?? 0);
-      setCoverOverlayOffsetY(offsetY ?? 0);
+      // Mặc định vị trí và kích thước khi tải lên sẽ khớp chuẩn xác 100% với ảnh gốc nhân vật
+      setCoverOverlayScale(100);
+      setCoverOverlayOffsetX(0);
+      setCoverOverlayOffsetY(0);
     };
     img.src = url;
     e.target.value = '';
@@ -1683,16 +1722,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const handleCoverOverlayClear = async () => {
     try { await removeLocalImage('flashlight_cover_overlay'); } catch {}
     setCoverOverlayImg(null);
-    setCoverOverlayScale(scale ?? 95);
-    setCoverOverlayOffsetX(offsetX ?? 0);
-    setCoverOverlayOffsetY(offsetY ?? 0);
+    setCoverOverlayScale(100);
+    setCoverOverlayOffsetX(0);
+    setCoverOverlayOffsetY(0);
   };
 
-    const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setQuestionMarksWithHistory([]);
       setIsPlacingQm(false);
+      // Khi tải ảnh nhân vật mới, đồng bộ lại ảnh phủ (nếu có) để khớp chuẩn xác 100%
+      setCoverOverlayScale(100);
+      setCoverOverlayOffsetX(0);
+      setCoverOverlayOffsetY(0);
       // Lưu ảnh vào bộ nhớ local (IndexedDB + localStorage cache)
       const dataUrl = await saveFlashlightImage(file);
       setImageSrc(dataUrl);
@@ -1806,6 +1849,53 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 >
                   🎯 Căn Vừa Khít Toàn Bộ (100% Chuẩn)
                 </button>
+
+                {/* NÚT BẬT / TẮT HIỆN ẢNH GỐC ĐỂ CĂN CHỈNH */}
+                <div className="flex flex-col gap-1.5 p-2.5 bg-slate-950/70 rounded-xl border border-amber-500/30 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowOriginalImage(!showOriginalImage)}
+                    className={`w-full py-2 px-3 rounded-lg border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                      showOriginalImage
+                        ? 'bg-amber-500/25 text-amber-300 border-amber-400 ring-2 ring-amber-400/40 shadow-amber-500/20'
+                        : 'bg-slate-800 text-slate-300 border-slate-600 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    {showOriginalImage ? <EyeOff size={15} /> : <Eye size={15} />}
+                    <span>{showOriginalImage ? '👁️ Đang Hiện Ảnh Gốc (Bấm để Ẩn)' : '👁️ Hiện Ảnh Gốc Mọi Lúc (Để So Khớp)'}</span>
+                  </button>
+
+                  {showOriginalImage && (
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-[11px] text-slate-300">
+                        <span>Độ Rõ Ảnh Gốc Khi So Khớp:</span>
+                        <NumberInput
+                          value={originalImagePreviewOpacity}
+                          onChange={setOriginalImagePreviewOpacity}
+                          min={20}
+                          max={100}
+                          step={5}
+                          suffix="%"
+                          className="w-14"
+                        />
+                      </div>
+                      <input
+                        type="range"
+                        min="20"
+                        max="100"
+                        value={originalImagePreviewOpacity}
+                        onChange={(e) => setOriginalImagePreviewOpacity(Number(e.target.value))}
+                        className="accent-amber-400 cursor-pointer h-1.5"
+                      />
+                      <div className="flex justify-between text-[9px] text-slate-400">
+                        <span>20% (Mờ)</span><span>65% (Chuẩn)</span><span>100% (Rõ nét)</span>
+                      </div>
+                      <span className="text-[9px] text-amber-400/90 text-center font-medium bg-amber-500/10 p-1 rounded border border-amber-500/20">
+                        💡 Ảnh gốc đang hiện xuyên suốt để bạn dễ so khớp viền với lớp phủ. Tắt nút này khi chơi.
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Scale (Phóng to / Thu nhỏ không giới hạn) */}
                 <div className="flex flex-col gap-1.5">
@@ -3705,9 +3795,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
                                 <button
                                   type="button"
-                                  onClick={() => { setCoverOverlayOffsetX(offsetX ?? 0); setCoverOverlayOffsetY(offsetY ?? 0); }}
+                                  onClick={() => { setCoverOverlayOffsetX(0); setCoverOverlayOffsetY(0); }}
                                   className="h-8 flex flex-col items-center justify-center rounded-lg bg-slate-850 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer"
-                                  title="Khớp vị trí ảnh gốc"
+                                  title="Khớp chuẩn vị trí theo ảnh nhân vật"
                                 >
                                   <RotateCcw size={12} />
                                   <span className="text-[8px] mt-0.5 font-mono">Gốc</span>
@@ -3746,13 +3836,26 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           <button
                             type="button"
                             onClick={() => {
-                              setCoverOverlayScale(scale ?? 95);
-                              setCoverOverlayOffsetX(offsetX ?? 0);
-                              setCoverOverlayOffsetY(offsetY ?? 0);
+                              setCoverOverlayScale(100);
+                              setCoverOverlayOffsetX(0);
+                              setCoverOverlayOffsetY(0);
                             }}
                             className="py-1 px-2 text-[10px] rounded border border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
                           >
                             🔄 Khớp vị trí & kích thước ảnh gốc
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowOriginalImage(!showOriginalImage)}
+                            className={`w-full py-1.5 px-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                              showOriginalImage
+                                ? 'bg-amber-500/25 text-amber-300 border-amber-400 ring-1 ring-amber-400/40 shadow-amber-500/20'
+                                : 'bg-slate-800 text-slate-300 border-slate-600 hover:text-white hover:bg-slate-700'
+                            }`}
+                          >
+                            {showOriginalImage ? <EyeOff size={14} /> : <Eye size={14} />}
+                            <span>{showOriginalImage ? '👁️ Đang hiện ảnh gốc (Bấm để ẩn)' : '👁️ Hiện ảnh gốc mọi lúc (Để so khớp)'}</span>
                           </button>
                         </>
                       )}
@@ -3996,9 +4099,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
                                 <button
                                   type="button"
-                                  onClick={() => { setCoverOverlayOffsetX(offsetX ?? 0); setCoverOverlayOffsetY(offsetY ?? 0); }}
+                                  onClick={() => { setCoverOverlayOffsetX(0); setCoverOverlayOffsetY(0); }}
                                   className="h-8 flex flex-col items-center justify-center rounded-lg bg-slate-850 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer"
-                                  title="Khớp vị trí ảnh gốc"
+                                  title="Khớp chuẩn vị trí theo ảnh nhân vật"
                                 >
                                   <RotateCcw size={12} />
                                   <span className="text-[8px] mt-0.5 font-mono">Gốc</span>
@@ -4037,13 +4140,26 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                           <button
                             type="button"
                             onClick={() => {
-                              setCoverOverlayScale(scale ?? 95);
-                              setCoverOverlayOffsetX(offsetX ?? 0);
-                              setCoverOverlayOffsetY(offsetY ?? 0);
+                              setCoverOverlayScale(100);
+                              setCoverOverlayOffsetX(0);
+                              setCoverOverlayOffsetY(0);
                             }}
                             className="py-1 px-2 text-[10px] rounded border border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer"
                           >
                             🔄 Khớp vị trí & kích thước ảnh gốc
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowOriginalImage(!showOriginalImage)}
+                            className={`w-full py-1.5 px-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                              showOriginalImage
+                                ? 'bg-amber-500/25 text-amber-300 border-amber-400 ring-1 ring-amber-400/40 shadow-amber-500/20'
+                                : 'bg-slate-800 text-slate-300 border-slate-600 hover:text-white hover:bg-slate-700'
+                            }`}
+                          >
+                            {showOriginalImage ? <EyeOff size={14} /> : <Eye size={14} />}
+                            <span>{showOriginalImage ? '👁️ Đang hiện ảnh gốc (Bấm để ẩn)' : '👁️ Hiện ảnh gốc mọi lúc (Để so khớp)'}</span>
                           </button>
 
                           {/* Độ đậm */}
@@ -4211,6 +4327,22 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               </button>
             </div>
           )}
+
+          {/* BANNER THÔNG BÁO KHI ĐANG BẬT HIỆN ẢNH GỐC ĐỂ CĂN CHỈNH */}
+          {showOriginalImage && !is916Mode && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-950/95 text-amber-200 text-xs font-semibold px-4 py-1.5 rounded-full border border-amber-500/60 shadow-2xl backdrop-blur-sm z-40 flex items-center gap-2">
+              <Eye size={14} className="text-amber-400 animate-pulse" />
+              <span>Đang hiện ảnh gốc mọi lúc để so khớp viền</span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowOriginalImage(false); }}
+                className="ml-2 px-2.5 py-0.5 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold rounded-full transition-colors cursor-pointer shadow"
+                title="Bấm để ẩn ảnh gốc và trở lại chế độ chơi"
+              >
+                Đã khớp • Ẩn ảnh gốc
+              </button>
+            </div>
+          )}
           {/* Lớp nền sân khấu linh hoạt (thay đổi theo cài đặt người dùng) */}
           <StageBackgroundOverlay />
 
@@ -4224,56 +4356,6 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
               height: '960px'
             }}
           >
-            {/* QUẦNG SÁNG ĐÈN PIN NỀN (Nằm cùng hệ quy chiếu Canvas - Khớp pixel-perfect 100% mọi hình dạng, tỷ lệ & góc xoay) */}
-            {gameMode === 'reveal' && enableBeamBg && (!isPlacingQm || is916Mode) && (
-              <svg
-                viewBox="0 0 540 960"
-                className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-visible"
-                style={{ opacity: Math.max(0, Math.min(1, beamOpacity / 100)) }}
-              >
-                {spotlightType === 'circle' ? (
-                  <path
-                    d={getCustomShapeSvgPath(
-                      beamShape || 'circle',
-                      cursorPos.x,
-                      cursorPos.y,
-                      (beamShape === 'custom' || useBeamDimensions) ? (beamWidth || 160) / 2 : radius,
-                      (beamShape === 'custom' || useBeamDimensions) ? (beamHeight || 160) / 2 : radius
-                    )}
-                    fill={beamBgColor}
-                  />
-                ) : (() => {
-                  const effectiveR = Math.max(1600, radius * 10);
-                  const centerRad = (beamAngle * Math.PI) / 180;
-                  const halfSpread = ((coneSpread / 2) * Math.PI) / 180;
-                  const hw = (beamStartWidth || 55) / 2;
-
-                  const perpX = -Math.sin(centerRad);
-                  const perpY = Math.cos(centerRad);
-
-                  const p1x = cursorPos.x - hw * perpX;
-                  const p1y = cursorPos.y - hw * perpY;
-                  const p2x = cursorPos.x + hw * perpX;
-                  const p2y = cursorPos.y + hw * perpY;
-
-                  const a1 = centerRad - halfSpread;
-                  const a2 = centerRad + halfSpread;
-
-                  const q1x = p1x + Math.cos(a1) * effectiveR;
-                  const q1y = p1y + Math.sin(a1) * effectiveR;
-                  const q2x = p2x + Math.cos(a2) * effectiveR;
-                  const q2y = p2y + Math.sin(a2) * effectiveR;
-
-                  return (
-                    <path
-                      d={`M ${p1x} ${p1y} L ${q1x} ${q1y} L ${q2x} ${q2y} L ${p2x} ${p2y} Z`}
-                      fill={beamBgColor}
-                    />
-                  );
-                })()}
-              </svg>
-            )}
-
             <canvas
               ref={canvasRef}
               width={540}
@@ -4286,7 +4368,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           {/* HAND / EMOJI CURSOR OVERLAY (Chỉ hiển thị khi bật và KHÔNG ở chế độ đặt dấu hỏi ? để tiện quan sát vị trí đặt) */}
           {enablePointer && (!isPlacingQm || is916Mode) && (
             <div
-              className="absolute pointer-events-none select-none z-30 transition-transform"
+              className="absolute pointer-events-none select-none z-30 transition-none"
               style={getPointerStyle({
                 x: cursorPos.rawX,
                 y: cursorPos.rawY,
