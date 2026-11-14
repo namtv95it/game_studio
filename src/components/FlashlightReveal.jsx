@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw } from 'lucide-react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { Upload, Play, ChevronDown, ChevronUp, HelpCircle, Trash2, Plus, RotateCcw, Save, Pencil, Check, X, RefreshCw, Bookmark, Folder } from 'lucide-react';
 import { StageBackgroundOverlay } from '../context/StageBackgroundContext';
 import PointerSettingsControl, { getPointerStyle } from './PointerSettingsControl';
 import QuestionMarkSettingsControl from './QuestionMarkSettingsControl';
@@ -8,6 +8,7 @@ import NumberInput from './NumberInput';
 import heroImg from '../assets/hero.png';
 import { saveFlashlightImage, loadFlashlightImage, clearFlashlightImage, getFlashlightImageSync } from '../utils/imageStorage';
 import { saveLocalImage, loadLocalImage, removeLocalImage } from '../utils/localImageStorage';
+import { KINH_LUP_FRAMES, KHUNG_NGANG_FRAMES, BEAM_FRAME_CATEGORIES } from '../constants/beamFramePresets';
 
 // Danh sách các hình dạng hỗ trợ cho Vệt Đèn và Lớp Phủ Màu
 export const SPOTLIGHT_SHAPES = [
@@ -169,6 +170,163 @@ export function getCustomShapeSvgPath(shape, cx, cy, rx, ry = rx) {
 }
 
 const STORAGE_KEY = 'flashlight_game_settings';
+const BEAM_PRESETS_STORAGE_KEY = 'flashlight_beam_presets';
+
+// Danh sách các mẫu cài đặt Vệt Sáng & Đèn Pin mặc định ban đầu
+const DEFAULT_BEAM_PRESETS = [
+  {
+    id: 'preset-kinh-lup',
+    name: '🔍 Kính Lúp Tròn Chuẩn',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    config: {
+      spotlightType: 'circle',
+      beamShape: 'circle',
+      useBeamDimensions: false,
+      radius: 80,
+      beamWidth: 160,
+      beamHeight: 160,
+      beamAngle: -135,
+      coneSpread: 45,
+      beamStartWidth: 55,
+      beamBgColor: '#fef08a',
+      enableBeamBg: true,
+      beamOpacity: 100,
+      beamBorderMode: 'image',
+      beamBorderWidth: 3,
+      beamBorderColor: '#ffffff',
+      beamBorderStyle: 'solid',
+      beamBorderScale: 100,
+      beamBorderOffsetX: 0,
+      beamBorderOffsetY: 0,
+      selectedBeamFrameCategory: 'kinh-lup',
+      selectedBeamFrameId: 'kinh-lup-1',
+      beamFrameScale: 100,
+      useBeamFrameDimensions: false,
+      beamFrameWidth: 260,
+      beamFrameHeight: 260,
+      beamFrameOffsetX: 0,
+      beamFrameOffsetY: 0,
+      beamFrameOpacity: 100
+    }
+  },
+  {
+    id: 'preset-khung-ngang',
+    name: '🖼️ Khung Ngang Banner',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    config: {
+      spotlightType: 'circle',
+      beamShape: 'custom',
+      useBeamDimensions: true,
+      radius: 80,
+      beamWidth: 340,
+      beamHeight: 120,
+      beamAngle: -135,
+      coneSpread: 45,
+      beamStartWidth: 55,
+      beamBgColor: '#fef08a',
+      enableBeamBg: true,
+      beamOpacity: 100,
+      beamBorderMode: 'image',
+      beamBorderWidth: 3,
+      beamBorderColor: '#ffffff',
+      beamBorderStyle: 'solid',
+      beamBorderScale: 100,
+      beamBorderOffsetX: 0,
+      beamBorderOffsetY: 0,
+      selectedBeamFrameCategory: 'khung-ngang',
+      selectedBeamFrameId: 'khung-ngang-1',
+      beamFrameScale: 100,
+      useBeamFrameDimensions: false,
+      beamFrameWidth: 380,
+      beamFrameHeight: 127,
+      beamFrameOffsetX: 0,
+      beamFrameOffsetY: 0,
+      beamFrameOpacity: 100
+    }
+  },
+  {
+    id: 'preset-vien-neon',
+    name: '✨ Vệt Sáng Viền Neon Glow',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    config: {
+      spotlightType: 'circle',
+      beamShape: 'circle',
+      useBeamDimensions: false,
+      radius: 85,
+      beamWidth: 170,
+      beamHeight: 170,
+      beamAngle: -135,
+      coneSpread: 45,
+      beamStartWidth: 55,
+      beamBgColor: '#e0f2fe',
+      enableBeamBg: true,
+      beamOpacity: 100,
+      beamBorderMode: 'custom',
+      beamBorderWidth: 4,
+      beamBorderColor: '#38bdf8',
+      beamBorderStyle: 'glow',
+      beamBorderScale: 100,
+      beamBorderOffsetX: 0,
+      beamBorderOffsetY: 0,
+      selectedBeamFrameCategory: 'kinh-lup',
+      selectedBeamFrameId: 'kinh-lup-1',
+      beamFrameScale: 100,
+      useBeamFrameDimensions: false,
+      beamFrameWidth: 260,
+      beamFrameHeight: 260,
+      beamFrameOffsetX: 0,
+      beamFrameOffsetY: 0,
+      beamFrameOpacity: 100
+    }
+  },
+  {
+    id: 'preset-den-non',
+    name: '📐 Đèn Pin Nón Rọi Chéo',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    config: {
+      spotlightType: 'cone',
+      beamShape: 'circle',
+      useBeamDimensions: false,
+      radius: 80,
+      beamWidth: 160,
+      beamHeight: 160,
+      beamAngle: -135,
+      coneSpread: 45,
+      beamStartWidth: 55,
+      beamBgColor: '#fef08a',
+      enableBeamBg: true,
+      beamOpacity: 100,
+      beamBorderMode: 'none',
+      beamBorderWidth: 3,
+      beamBorderColor: '#ffffff',
+      beamBorderStyle: 'solid',
+      beamBorderScale: 100,
+      beamBorderOffsetX: 0,
+      beamBorderOffsetY: 0,
+      selectedBeamFrameCategory: 'kinh-lup',
+      selectedBeamFrameId: 'kinh-lup-1',
+      beamFrameScale: 100,
+      useBeamFrameDimensions: false,
+      beamFrameWidth: 260,
+      beamFrameHeight: 260,
+      beamFrameOffsetX: 0,
+      beamFrameOffsetY: 0,
+      beamFrameOpacity: 100
+    }
+  }
+];
+
+const getSavedBeamPresets = () => {
+  try {
+    const raw = localStorage.getItem(BEAM_PRESETS_STORAGE_KEY);
+    if (!raw) return DEFAULT_BEAM_PRESETS;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_BEAM_PRESETS;
+  } catch {
+    return DEFAULT_BEAM_PRESETS;
+  }
+};
 
 const DEFAULT_SETTINGS = {
   imageSrc: heroImg,
@@ -209,7 +367,10 @@ const DEFAULT_SETTINGS = {
   useCoverDimensions: false, // Tùy chọn nhập chiều cao & chiều rộng riêng
   coverWidth: 160,
   coverHeight: 160,
-  coverBlendMode: 'color' // 'color' (Nhuộm màu ảnh - Color Tinting) | 'tint-multiply' (Phủ đậm nét) | 'solid' (Che đè phẳng)
+  coverBlendMode: 'color', // 'color' (Nhuộm màu ảnh - Color Tinting) | 'tint-multiply' (Phủ đậm nét) | 'solid' (Che đè phẳng)
+  useBeamFrameDimensions: false, // Tùy chọn nhập chiều cao & chiều rộng riêng cho Khung PNG
+  beamFrameWidth: 260,
+  beamFrameHeight: 260
 };
 
 export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mode: propSetIs916Mode }) {
@@ -245,6 +406,36 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? initialSettings.offsetX ?? 0);
   const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? initialSettings.offsetY ?? 0);
   const [overlayMoveStep, setOverlayMoveStep] = useState(10); // Bước dịch chuyển nút điều hướng (1px, 5px, 10px, 20px)
+
+  // === KHUNG VIỀN VỆT SÁNG (Beam Border & PNG Frame) ===
+  const [beamBorderMode, setBeamBorderMode] = useState(initialSettings.beamBorderMode || 'none'); // 'none' | 'custom' | 'image'
+  const [beamBorderWidth, setBeamBorderWidth] = useState(initialSettings.beamBorderWidth ?? 3); // px (1-40)
+  const [beamBorderColor, setBeamBorderColor] = useState(initialSettings.beamBorderColor || '#ffffff');
+  const [beamBorderStyle, setBeamBorderStyle] = useState(initialSettings.beamBorderStyle || 'solid'); // 'solid' | 'dashed' | 'glow' | 'double'
+  const [beamBorderScale, setBeamBorderScale] = useState(initialSettings.beamBorderScale ?? 100); // %
+  const [beamBorderOffsetX, setBeamBorderOffsetX] = useState(initialSettings.beamBorderOffsetX ?? 0); // px
+  const [beamBorderOffsetY, setBeamBorderOffsetY] = useState(initialSettings.beamBorderOffsetY ?? 0); // px
+
+  // Khung ảnh PNG đè lên vệt sáng (Mặc định 2 mục: Kính Lúp & Khung Ngang)
+  const [selectedBeamFrameCategory, setSelectedBeamFrameCategory] = useState(initialSettings.selectedBeamFrameCategory || 'kinh-lup'); // 'kinh-lup' | 'khung-ngang'
+  const [selectedBeamFrameId, setSelectedBeamFrameId] = useState(initialSettings.selectedBeamFrameId || 'kinh-lup-1');
+  const [beamFrameImg, setBeamFrameImg] = useState(null); // HTMLImageElement
+  const [beamFrameScale, setBeamFrameScale] = useState(initialSettings.beamFrameScale ?? 100); // %
+  const [useBeamFrameDimensions, setUseBeamFrameDimensions] = useState(initialSettings.useBeamFrameDimensions ?? false); // Rộng & Cao riêng cho khung PNG
+  const [beamFrameWidth, setBeamFrameWidth] = useState(initialSettings.beamFrameWidth ?? 260); // px
+  const [beamFrameHeight, setBeamFrameHeight] = useState(initialSettings.beamFrameHeight ?? 260); // px
+  const [beamFrameOffsetX, setBeamFrameOffsetX] = useState(initialSettings.beamFrameOffsetX ?? 0); // px
+  const [beamFrameOffsetY, setBeamFrameOffsetY] = useState(initialSettings.beamFrameOffsetY ?? 0); // px
+  const [beamFrameOpacity, setBeamFrameOpacity] = useState(initialSettings.beamFrameOpacity ?? 100); // %
+
+  // === QUẢN LÝ MẪU CẤU HÌNH VỆT SÁNG & ĐÈN PIN (PRESETS) ===
+  const [beamPresets, setBeamPresets] = useState(() => getSavedBeamPresets());
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [isAddingPreset, setIsAddingPreset] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [editingPresetId, setEditingPresetId] = useState(null);
+  const [editingPresetName, setEditingPresetName] = useState('');
+  const [presetFeedbackMsg, setPresetFeedbackMsg] = useState('');
 
   const [imageSrc, setImageSrc] = useState(() => getFlashlightImageSync() || initialSettings.imageSrc || heroImg);
   const [radius, setRadius] = useState(initialSettings.radius ?? 80);
@@ -442,7 +633,23 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       coverBlendMode,
       coverOverlayScale,
       coverOverlayOffsetX,
-      coverOverlayOffsetY
+      coverOverlayOffsetY,
+      beamBorderMode,
+      beamBorderWidth,
+      beamBorderColor,
+      beamBorderStyle,
+      beamBorderScale,
+      beamBorderOffsetX,
+      beamBorderOffsetY,
+      beamFrameScale,
+      useBeamFrameDimensions,
+      beamFrameWidth,
+      beamFrameHeight,
+      beamFrameOffsetX,
+      beamFrameOffsetY,
+      beamFrameOpacity,
+      selectedBeamFrameCategory,
+      selectedBeamFrameId
     };
 
     try {
@@ -456,9 +663,283 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         console.error('Không thể lưu cài đặt vào localStorage:', err2);
       }
     }
-  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY]);
+  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, selectedBeamFrameCategory, selectedBeamFrameId]);
 
-  // Load cover overlay image từ IndexedDB khi mount
+  // Chọn khung PNG mẫu có sẵn (Kính Lúp hoặc Khung Ngang)
+  const handleSelectBeamFramePreset = (preset) => {
+    if (!preset) return;
+    setSelectedBeamFrameId(preset.id);
+    setSelectedBeamFrameCategory(preset.category);
+    const img = new Image();
+    img.onload = () => {
+      setBeamFrameImg(img);
+      setBeamBorderMode('image');
+      if (preset.category === 'khung-ngang') {
+        const aspect = (img.naturalWidth || 2172) / (img.naturalHeight || 724);
+        setBeamFrameWidth(380);
+        setBeamFrameHeight(Math.round(380 / aspect));
+      } else {
+        const aspect = (img.naturalWidth || 1165) / (img.naturalHeight || 1350);
+        setBeamFrameHeight(280);
+        setBeamFrameWidth(Math.round(280 * aspect));
+      }
+    };
+    img.src = preset.src;
+
+    // Tự động chuyển hình dạng vệt sáng phù hợp với khung nếu ở dạng hình tròn / custom
+    if (preset.category === 'kinh-lup' && spotlightType !== 'cone') {
+      setBeamShape('circle');
+    }
+  };
+
+  // Load ảnh khung vệt sáng PNG từ Preset mặc định hoặc từ IndexedDB khi mount
+  useEffect(() => {
+    const frameId = initialSettings.selectedBeamFrameId || 'kinh-lup-1';
+    if (frameId && frameId !== 'custom') {
+      const allPresets = [...KINH_LUP_FRAMES, ...KHUNG_NGANG_FRAMES];
+      const preset = allPresets.find((p) => p.id === frameId) || KINH_LUP_FRAMES[0];
+      if (preset) {
+        const img = new Image();
+        img.onload = () => setBeamFrameImg(img);
+        img.src = preset.src;
+        return;
+      }
+    }
+    // Nếu là khung upload tùy chọn
+    loadLocalImage('flashlight_beam_frame').then((url) => {
+      if (url) {
+        const img = new Image();
+        img.onload = () => setBeamFrameImg(img);
+        img.src = url;
+      } else if (KINH_LUP_FRAMES[0]) {
+        // Mặc định luôn nạp Kính Lúp 1
+        const img = new Image();
+        img.onload = () => setBeamFrameImg(img);
+        img.src = KINH_LUP_FRAMES[0].src;
+      }
+    });
+  }, []);
+
+  // Upload ảnh khung PNG cho vệt sáng
+  const handleBeamFrameUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await saveLocalImage('flashlight_beam_frame', file);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setBeamFrameImg(img);
+      setBeamBorderMode('image');
+      setSelectedBeamFrameId('custom');
+      setBeamFrameScale(100);
+      setBeamFrameOffsetX(0);
+      setBeamFrameOffsetY(0);
+    };
+    img.src = url;
+    e.target.value = '';
+  };
+
+  const handleBeamFrameClear = async () => {
+    try { await removeLocalImage('flashlight_beam_frame'); } catch {}
+    // Quay lại Kính Lúp 1 mặc định
+    const defaultPreset = KINH_LUP_FRAMES[0];
+    if (defaultPreset) {
+      handleSelectBeamFramePreset(defaultPreset);
+    } else {
+      setBeamFrameImg(null);
+      setBeamBorderMode('none');
+    }
+  };
+
+  // === CÁC HÀM XỬ LÝ QUẢN LÝ MẪU CÀI ĐẶT VỆT SÁNG & ĐÈN PIN (PRESETS) ===
+  const getCurrentBeamConfig = () => ({
+    spotlightType,
+    beamShape,
+    useBeamDimensions,
+    radius,
+    beamWidth,
+    beamHeight,
+    beamAngle,
+    coneSpread,
+    beamStartWidth,
+    beamBgColor,
+    enableBeamBg,
+    beamOpacity,
+    beamBorderMode,
+    beamBorderWidth,
+    beamBorderColor,
+    beamBorderStyle,
+    beamBorderScale,
+    beamBorderOffsetX,
+    beamBorderOffsetY,
+    selectedBeamFrameCategory,
+    selectedBeamFrameId,
+    beamFrameScale,
+    useBeamFrameDimensions,
+    beamFrameWidth,
+    beamFrameHeight,
+    beamFrameOffsetX,
+    beamFrameOffsetY,
+    beamFrameOpacity
+  });
+
+  const triggerPresetFeedback = (msg) => {
+    setPresetFeedbackMsg(msg);
+    setTimeout(() => {
+      setPresetFeedbackMsg((prev) => (prev === msg ? '' : prev));
+    }, 2800);
+  };
+
+  const applyBeamConfig = (config) => {
+    if (!config) return;
+    if (config.spotlightType !== undefined) setSpotlightType(config.spotlightType);
+    if (config.beamShape !== undefined) setBeamShape(config.beamShape);
+    if (config.useBeamDimensions !== undefined) setUseBeamDimensions(Boolean(config.useBeamDimensions));
+    if (config.radius !== undefined) setRadius(Number(config.radius));
+    if (config.beamWidth !== undefined) setBeamWidth(Number(config.beamWidth));
+    if (config.beamHeight !== undefined) setBeamHeight(Number(config.beamHeight));
+    if (config.beamAngle !== undefined) setBeamAngle(Number(config.beamAngle));
+    if (config.coneSpread !== undefined) setConeSpread(Number(config.coneSpread));
+    if (config.beamStartWidth !== undefined) setBeamStartWidth(Number(config.beamStartWidth));
+    if (config.beamBgColor !== undefined) setBeamBgColor(config.beamBgColor);
+    if (config.enableBeamBg !== undefined) setEnableBeamBg(Boolean(config.enableBeamBg));
+    if (config.beamOpacity !== undefined) setBeamOpacity(Number(config.beamOpacity));
+
+    if (config.beamBorderMode !== undefined) setBeamBorderMode(config.beamBorderMode);
+    if (config.beamBorderWidth !== undefined) setBeamBorderWidth(Number(config.beamBorderWidth));
+    if (config.beamBorderColor !== undefined) setBeamBorderColor(config.beamBorderColor);
+    if (config.beamBorderStyle !== undefined) setBeamBorderStyle(config.beamBorderStyle);
+    if (config.beamBorderScale !== undefined) setBeamBorderScale(Number(config.beamBorderScale));
+    if (config.beamBorderOffsetX !== undefined) setBeamBorderOffsetX(Number(config.beamBorderOffsetX));
+    if (config.beamBorderOffsetY !== undefined) setBeamBorderOffsetY(Number(config.beamBorderOffsetY));
+
+    // Khung PNG
+    if (config.selectedBeamFrameCategory !== undefined) setSelectedBeamFrameCategory(config.selectedBeamFrameCategory);
+    if (config.selectedBeamFrameId !== undefined) setSelectedBeamFrameId(config.selectedBeamFrameId);
+    if (config.beamFrameScale !== undefined) setBeamFrameScale(Number(config.beamFrameScale));
+    if (config.useBeamFrameDimensions !== undefined) setUseBeamFrameDimensions(Boolean(config.useBeamFrameDimensions));
+    if (config.beamFrameWidth !== undefined) setBeamFrameWidth(Number(config.beamFrameWidth));
+    if (config.beamFrameHeight !== undefined) setBeamFrameHeight(Number(config.beamFrameHeight));
+    if (config.beamFrameOffsetX !== undefined) setBeamFrameOffsetX(Number(config.beamFrameOffsetX));
+    if (config.beamFrameOffsetY !== undefined) setBeamFrameOffsetY(Number(config.beamFrameOffsetY));
+    if (config.beamFrameOpacity !== undefined) setBeamFrameOpacity(Number(config.beamFrameOpacity));
+
+    // Nạp lại ảnh khung nếu ở chế độ 'image'
+    if (config.beamBorderMode === 'image' && config.selectedBeamFrameId && config.selectedBeamFrameId !== 'custom') {
+      const allPresets = [...KINH_LUP_FRAMES, ...KHUNG_NGANG_FRAMES];
+      const found = allPresets.find((p) => p.id === config.selectedBeamFrameId);
+      if (found) {
+        const img = new Image();
+        img.onload = () => setBeamFrameImg(img);
+        img.src = found.src;
+      }
+    }
+  };
+
+  const handleApplyBeamPreset = (preset) => {
+    if (!preset || !preset.config) return;
+    applyBeamConfig(preset.config);
+    setSelectedPresetId(preset.id);
+    triggerPresetFeedback(`✓ Đã áp dụng: ${preset.name}`);
+  };
+
+  const handleAddBeamPreset = (e) => {
+    if (e) e.preventDefault();
+    const name = newPresetName.trim() || `Mẫu Vệt Sáng #${beamPresets.length + 1}`;
+    const newPreset = {
+      id: `beam_preset_${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      config: getCurrentBeamConfig()
+    };
+    const updated = [newPreset, ...beamPresets];
+    setBeamPresets(updated);
+    try {
+      localStorage.setItem(BEAM_PRESETS_STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Lỗi lưu mẫu vệt sáng:', err);
+    }
+    setSelectedPresetId(newPreset.id);
+    setNewPresetName('');
+    setIsAddingPreset(false);
+    triggerPresetFeedback(`✓ Đã lưu thành công: ${name}`);
+  };
+
+  const handleOverwriteBeamPreset = (presetId) => {
+    const target = beamPresets.find((p) => p.id === presetId);
+    if (!target) return;
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn LƯU ĐÈ toàn bộ cài đặt vệt sáng & đèn pin hiện tại vào mục "${target.name}"?`);
+    if (!confirmed) return;
+
+    const updated = beamPresets.map((p) => {
+      if (p.id === presetId) {
+        return {
+          ...p,
+          updatedAt: new Date().toISOString(),
+          config: getCurrentBeamConfig()
+        };
+      }
+      return p;
+    });
+    setBeamPresets(updated);
+    try {
+      localStorage.setItem(BEAM_PRESETS_STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Lỗi lưu đè mẫu vệt sáng:', err);
+    }
+    setSelectedPresetId(presetId);
+    triggerPresetFeedback(`✓ Đã lưu đè cài đặt vào: ${target.name}`);
+  };
+
+  const handleStartRename = (preset) => {
+    setEditingPresetId(preset.id);
+    setEditingPresetName(preset.name);
+  };
+
+  const handleSaveRename = (presetId) => {
+    if (!editingPresetName.trim()) {
+      setEditingPresetId(null);
+      return;
+    }
+    const updated = beamPresets.map((p) => {
+      if (p.id === presetId) {
+        return { ...p, name: editingPresetName.trim(), updatedAt: new Date().toISOString() };
+      }
+      return p;
+    });
+    setBeamPresets(updated);
+    try {
+      localStorage.setItem(BEAM_PRESETS_STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Lỗi đổi tên mẫu vệt sáng:', err);
+    }
+    setEditingPresetId(null);
+    setEditingPresetName('');
+    triggerPresetFeedback(`✓ Đã đổi tên thành công!`);
+  };
+
+  const handleDeleteBeamPreset = (presetId, presetName) => {
+    if (beamPresets.length <= 1) {
+      alert('Cần giữ lại ít nhất 1 mục trong danh sách!');
+      return;
+    }
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn XÓA mục "${presetName}"?`);
+    if (!confirmed) return;
+
+    const updated = beamPresets.filter((p) => p.id !== presetId);
+    setBeamPresets(updated);
+    try {
+      localStorage.setItem(BEAM_PRESETS_STORAGE_KEY, JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Lỗi xóa mẫu vệt sáng:', err);
+    }
+    if (selectedPresetId === presetId) {
+      setSelectedPresetId(updated[0]?.id || null);
+    }
+    triggerPresetFeedback(`✓ Đã xóa mục: ${presetName}`);
+  };
+
+    // Load cover overlay image từ IndexedDB khi mount
   useEffect(() => {
     loadLocalImage('flashlight_cover_overlay').then(url => {
       if (url) {
@@ -656,6 +1137,147 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     const drawX = (width - drawW) / 2 + (offsetX || 0);
     const drawY = (height - drawH) / 2 + (offsetY || 0);
 
+    // Hàm tạo đường dẫn hình dạng của vệt sáng Đèn Pin (Dùng chung cho Soi Sáng, Phủ Màu và Khung Viền)
+    const createBeamPath = (c) => {
+      if (spotlightType === 'circle') {
+        const isCustomDim = beamShape === 'custom' || useBeamDimensions;
+        const effectiveRx = isCustomDim ? (beamWidth || 160) / 2 : radius;
+        const effectiveRy = isCustomDim ? (beamHeight || 160) / 2 : radius;
+        drawCustomShape(c, beamShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+      } else {
+        c.beginPath();
+        const centerRad = (beamAngle * Math.PI) / 180;
+        const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
+        const length = Math.max(width, height) * 3;
+
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (height / canvasRect.width) : 1;
+        const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
+
+        const perpX = -Math.sin(centerRad);
+        const perpY = Math.cos(centerRad);
+
+        const p1x = cursorPos.x - hwCanvas * perpX;
+        const p1y = cursorPos.y - hwCanvas * perpY;
+        const p2x = cursorPos.x + hwCanvas * perpX;
+        const p2y = cursorPos.y + hwCanvas * perpY;
+
+        const angle1 = centerRad - halfSpreadRad;
+        const angle2 = centerRad + halfSpreadRad;
+
+        const q1x = p1x + Math.cos(angle1) * length;
+        const q1y = p1y + Math.sin(angle1) * length;
+        const q2x = p2x + Math.cos(angle2) * length;
+        const q2y = p2y + Math.sin(angle2) * length;
+
+        c.moveTo(p1x, p1y);
+        c.lineTo(q1x, q1y);
+        c.lineTo(q2x, q2y);
+        c.lineTo(p2x, p2y);
+        c.closePath();
+      }
+    };
+
+    // Hàm vẽ khung viền (Border CSS hoặc Khung Ảnh PNG) đè lên phía trên của vệt sáng
+    const renderBeamOverlayFrame = (targetShape, targetRx, targetRy) => {
+      if (isPlacingQm && !is916Mode) return;
+      if (cursorPos.x < -100 || cursorPos.y < -100) return;
+
+      // TRƯỜNG HỢP 1: Khung Ảnh PNG
+      if (beamBorderMode === 'image' && beamFrameImg) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, (beamFrameOpacity ?? 100) / 100));
+
+        // Kích thước Khung PNG hoàn toàn độc lập với kích thước vệt sáng (targetRx, targetRy)
+        let frameW;
+        let frameH;
+        if (useBeamFrameDimensions) {
+          frameW = Math.max(20, beamFrameWidth || 260);
+          frameH = Math.max(20, beamFrameHeight || 260);
+        } else {
+          // Tự động tính theo tỉ lệ gốc (aspect ratio) của ảnh khung để không bị méo hình
+          const imgW = beamFrameImg.naturalWidth || beamFrameImg.width || 260;
+          const imgH = beamFrameImg.naturalHeight || beamFrameImg.height || 260;
+          const aspect = imgW / imgH;
+
+          // Chuẩn hóa kích thước cơ sở độc lập (không dính líu đến vệt sáng targetRx / targetRy)
+          let baseW = 260;
+          let baseH = 260;
+          if (aspect >= 2.0) {
+            // Dạng khung ngang / banner rộng (như khung-ngang tỉ lệ 3:1)
+            baseW = 380;
+            baseH = Math.round(baseW / aspect);
+          } else if (aspect >= 1.0) {
+            baseW = 260;
+            baseH = Math.round(baseW / aspect);
+          } else {
+            // Dạng dọc như kính lúp có cán cầm (tỉ lệ ~0.75 - 0.85)
+            baseH = 280;
+            baseW = Math.round(baseH * aspect);
+          }
+
+          const scaleFactor = Math.max(0.1, (beamFrameScale ?? 100) / 100);
+          frameW = baseW * scaleFactor;
+          frameH = baseH * scaleFactor;
+        }
+        const frameX = cursorPos.x - frameW / 2 + (beamFrameOffsetX ?? 0);
+        const frameY = cursorPos.y - frameH / 2 + (beamFrameOffsetY ?? 0);
+
+        ctx.drawImage(beamFrameImg, frameX, frameY, frameW, frameH);
+        ctx.restore();
+        return;
+      }
+
+      // TRƯỜNG HỢP 2: Viền Vẽ Vector / CSS
+      if (beamBorderMode === 'custom' || (beamBorderMode !== 'none' && beamBorderWidth > 0)) {
+        if (beamBorderWidth <= 0) return;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.lineWidth = beamBorderWidth;
+        ctx.strokeStyle = beamBorderColor || '#ffffff';
+
+        if (beamBorderStyle === 'dashed') {
+          ctx.setLineDash([Math.max(4, beamBorderWidth * 2.5), Math.max(3, beamBorderWidth * 1.8)]);
+        } else if (beamBorderStyle === 'glow') {
+          ctx.shadowColor = beamBorderColor || '#ffffff';
+          ctx.shadowBlur = Math.max(6, beamBorderWidth * 2.8);
+        }
+
+        const scaleFactor = Math.max(0.1, (beamBorderScale ?? 100) / 100);
+        const borderRx = targetRx * scaleFactor;
+        const borderRy = targetRy * scaleFactor;
+        const borderCx = cursorPos.x + (beamBorderOffsetX ?? 0);
+        const borderCy = cursorPos.y + (beamBorderOffsetY ?? 0);
+
+        if (spotlightType === 'cone') {
+          if (beamBorderOffsetX || beamBorderOffsetY) {
+            ctx.save();
+            ctx.translate(beamBorderOffsetX || 0, beamBorderOffsetY || 0);
+            createBeamPath(ctx);
+            ctx.stroke();
+            ctx.restore();
+          } else {
+            createBeamPath(ctx);
+            ctx.stroke();
+          }
+        } else {
+          drawCustomShape(ctx, targetShape || 'circle', borderCx, borderCy, borderRx, borderRy);
+          ctx.stroke();
+
+          if (beamBorderStyle === 'double') {
+            const gap = Math.max(3, beamBorderWidth * 1.2);
+            ctx.lineWidth = Math.max(1, beamBorderWidth * 0.6);
+            drawCustomShape(ctx, targetShape || 'circle', borderCx, borderCy, borderRx + gap, borderRy + gap);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+      }
+    };
+
     // Clear background
     ctx.clearRect(0, 0, width, height);
 
@@ -716,12 +1338,25 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             offCtx.save();
             offCtx.globalAlpha = opacity;
             offCtx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
-
-            // Đục thủng lớp ảnh phủ tại vị trí đèn pin
-            offCtx.globalCompositeOperation = 'destination-out';
-            drawCustomShape(offCtx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
-            offCtx.fill();
             offCtx.restore();
+
+            // Đục thủng lớp ảnh phủ tại vị trí đèn pin với alpha 1.0 (Triệt tiêu 100% không còn tàn dư mờ mờ)
+            if (!isPlacingQm || is916Mode) {
+              offCtx.save();
+              offCtx.globalCompositeOperation = 'destination-out';
+              offCtx.globalAlpha = 1.0;
+              offCtx.fillStyle = '#000000';
+              if (spotlightType === 'cone') {
+                createBeamPath(offCtx);
+              } else {
+                drawCustomShape(offCtx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+              }
+              offCtx.fill();
+              offCtx.lineWidth = 3;
+              offCtx.strokeStyle = '#000000';
+              offCtx.stroke();
+              offCtx.restore();
+            }
 
             // 2. Vẽ ảnh phủ đã đục lỗ lên canvas chính (Lúc này ngoài vệt đèn chỉ có ảnh phủ, hoàn toàn không có ảnh gốc)
             ctx.save();
@@ -729,22 +1364,35 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             ctx.drawImage(offCanvas, 0, 0);
             ctx.restore();
 
+            // 2.1. Đục thủng lớp ảnh phủ trực tiếp trên canvas chính để đảm bảo tuyệt đối không còn sót bất kỳ pixel nào của ảnh phủ trong vệt sáng
+            if (!isPlacingQm || is916Mode) {
+              ctx.save();
+              ctx.globalCompositeOperation = 'destination-out';
+              ctx.globalAlpha = 1.0;
+              ctx.fillStyle = '#000000';
+              if (spotlightType === 'cone') {
+                createBeamPath(ctx);
+              } else {
+                drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+              }
+              ctx.fill();
+              ctx.restore();
+            }
+
             // 3. CHỈ VẼ ẢNH GỐC BÊN DƯỚI TRONG ĐÚNG VÙNG SÁNG CỦA ĐÈN PIN (Clip giới hạn chuẩn xác)
             ctx.save();
             ctx.globalCompositeOperation = 'source-over';
-            drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+            if (spotlightType === 'cone') {
+              createBeamPath(ctx);
+            } else {
+              drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
+            }
             ctx.clip();
             ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
             ctx.restore();
 
-            // 4. Vẽ viền tinh tế quanh vệt sáng để thấy rõ vùng đèn đang rọi
-            ctx.save();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = coverColor || '#ffffff';
-            ctx.globalAlpha = Math.min(1, opacity * 0.85);
-            drawCustomShape(ctx, coverShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
-            ctx.stroke();
-            ctx.restore();
+            // 4. Vẽ khung viền (Border CSS hoặc Khung Ảnh PNG) đè lên phía trên của vệt sáng
+            renderBeamOverlayFrame(coverShape || 'circle', effectiveRx, effectiveRy);
           } else {
             // Khi chưa tải ảnh phủ, vẽ ảnh gốc để xem
             ctx.save();
@@ -821,47 +1469,6 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
     } else {
       // ===== CHẾ ĐỘ 1: SOI ĐÈN CHIẾU SÁNG (BÓNG ĐEN -> SOI TỚI ĐÂU SÁNG TỚI ĐÓ) =====
-      // Hàm tạo đường dẫn hình dạng của vệt sáng Đèn Pin
-      const createBeamPath = (c) => {
-        if (spotlightType === 'circle') {
-          const isCustomDim = beamShape === 'custom' || useBeamDimensions;
-          const effectiveRx = isCustomDim ? (beamWidth || 160) / 2 : radius;
-          const effectiveRy = isCustomDim ? (beamHeight || 160) / 2 : radius;
-          drawCustomShape(c, beamShape || 'circle', cursorPos.x, cursorPos.y, effectiveRx, effectiveRy);
-        } else {
-          c.beginPath();
-          const centerRad = (beamAngle * Math.PI) / 180;
-          const halfSpreadRad = ((coneSpread / 2) * Math.PI) / 180;
-          const length = Math.max(width, height) * 3;
-
-          const canvasRect = canvasRef.current?.getBoundingClientRect();
-          const scaleToCanvas = canvasRect && canvasRect.width > 0 ? (height / canvasRect.width) : 1;
-          const hwCanvas = ((beamStartWidth || 55) / 2) * scaleToCanvas;
-
-          const perpX = -Math.sin(centerRad);
-          const perpY = Math.cos(centerRad);
-
-          const p1x = cursorPos.x - hwCanvas * perpX;
-          const p1y = cursorPos.y - hwCanvas * perpY;
-          const p2x = cursorPos.x + hwCanvas * perpX;
-          const p2y = cursorPos.y + hwCanvas * perpY;
-
-          const angle1 = centerRad - halfSpreadRad;
-          const angle2 = centerRad + halfSpreadRad;
-
-          const q1x = p1x + Math.cos(angle1) * length;
-          const q1y = p1y + Math.sin(angle1) * length;
-          const q2x = p2x + Math.cos(angle2) * length;
-          const q2y = p2y + Math.sin(angle2) * length;
-
-          c.moveTo(p1x, p1y);
-          c.lineTo(q1x, q1y);
-          c.lineTo(q2x, q2y);
-          c.lineTo(p2x, p2y);
-          c.closePath();
-        }
-      };
-
       if (shadowStyle === 'image') {
         // === TÙY CHỌN: DÙNG ẢNH PHỦ CHO BÓNG NHÂN VẬT (GIỐNG BÊN PHỦ MÀU CHE ẢNH) ===
         if (coverOverlayImg) {
@@ -895,20 +1502,49 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           offCtx.save();
           offCtx.globalAlpha = opacity;
           offCtx.drawImage(coverOverlayImg, overlayX, overlayY, overlayW, overlayH);
+          offCtx.restore();
 
-          // Đục thủng lớp ảnh phủ tại vị trí đèn pin
+          // Đục thủng lớp ảnh phủ tại vị trí đèn pin với alpha 1.0 (Triệt tiêu 100% không còn tàn dư mờ mờ)
           if (!isPlacingQm || is916Mode) {
+            offCtx.save();
             offCtx.globalCompositeOperation = 'destination-out';
+            offCtx.globalAlpha = 1.0;
+            offCtx.fillStyle = '#000000';
             createBeamPath(offCtx);
             offCtx.fill();
+            offCtx.lineWidth = 3;
+            offCtx.strokeStyle = '#000000';
+            offCtx.stroke();
+            offCtx.restore();
           }
-          offCtx.restore();
 
           // 2. Vẽ canvas phụ (ảnh phủ đã đục lỗ) lên canvas chính
           ctx.save();
           ctx.globalCompositeOperation = 'source-over';
           ctx.drawImage(offCanvas, 0, 0);
           ctx.restore();
+
+          // 2.1. Đục thủng lớp ảnh phủ trực tiếp trên canvas chính để đảm bảo tuyệt đối không còn sót bất kỳ pixel nào của ảnh phủ trong vệt sáng
+          if (!isPlacingQm || is916Mode) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = '#000000';
+            createBeamPath(ctx);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 2.2. VẼ MÀU QUẦNG SÁNG ĐÈN PIN TRỰC TIẾP TRÊN CANVAS ĐỂ ĐỒNG BỘ 100% CÙNG FRAME VỚI KHUNG VIỀN
+          if (enableBeamBg && beamBgColor && (!isPlacingQm || is916Mode)) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = Math.max(0, Math.min(1, beamOpacity / 100));
+            ctx.fillStyle = beamBgColor;
+            createBeamPath(ctx);
+            ctx.fill();
+            ctx.restore();
+          }
 
           // 3. Dấu hỏi chấm '?' nếu có bật
           if (enableQuestionMarks && questionMarks.length > 0) {
@@ -940,6 +1576,12 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             ctx.clip();
             ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
             ctx.restore();
+
+            // 5. Vẽ khung viền (Border CSS hoặc Khung Ảnh PNG) đè lên phía trên của vệt sáng
+            const isCustomDim = beamShape === 'custom' || useBeamDimensions;
+            const effRx = isCustomDim ? (beamWidth || 160) / 2 : radius;
+            const effRy = isCustomDim ? (beamHeight || 160) / 2 : radius;
+            renderBeamOverlayFrame(beamShape || 'circle', effRx, effRy);
           }
         } else {
           // Khi chưa tải ảnh phủ, vẽ ảnh gốc mờ 60% và khung viền nét đứt hướng dẫn
@@ -995,13 +1637,30 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           ctx.clip();
           ctx.drawImage(activeImg, drawX, drawY, drawW, drawH);
           ctx.restore();
+
+          // BƯỚC 4.5: VẼ MÀU QUẦNG SÁNG ĐÈN PIN NỀN TRỰC TIẾP TRÊN CANVAS ĐỂ ĐỒNG BỘ 100% CÙNG FRAME VỚI KHUNG VIỀN
+          if (enableBeamBg && beamBgColor) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.globalAlpha = Math.max(0, Math.min(1, beamOpacity / 100));
+            ctx.fillStyle = beamBgColor;
+            createBeamPath(ctx);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // BƯỚC 5: Vẽ khung viền (Border CSS hoặc Khung Ảnh PNG) đè lên phía trên của vệt sáng
+          const isCustomDim = beamShape === 'custom' || useBeamDimensions;
+          const effRx = isCustomDim ? (beamWidth || 160) / 2 : radius;
+          const effRy = isCustomDim ? (beamHeight || 160) / 2 : radius;
+          renderBeamOverlayFrame(beamShape || 'circle', effRx, effRy);
         }
       }    }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY]);
+  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameImg, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity]);
 
     // Upload ảnh phủ lên
   const handleCoverOverlayUpload = async (e) => {
@@ -1267,6 +1926,206 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
               {activeSection === 'flashlight' && (
                 <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
+                  {/* === KHỐI QUẢN LÝ MẪU CẤU HÌNH VỆT SÁNG & ĐÈN PIN (PRESETS) === */}
+                  <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-950/70 border border-sky-500/30 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Bookmark size={15} className="text-sky-400" />
+                        <span className="text-xs font-bold text-sky-200">Mẫu Vệt Sáng & Đèn Pin</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800 font-mono">
+                          {beamPresets.length}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingPreset(!isAddingPreset);
+                          setNewPresetName('');
+                        }}
+                        className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium shadow transition-all cursor-pointer"
+                        title="Lưu các thông số vệt sáng & đèn pin hiện tại thành 1 mục mới"
+                      >
+                        <Plus size={13} />
+                        <span>Lưu Mục Mới</span>
+                      </button>
+                    </div>
+
+                    {/* Banner thông báo kết quả (Feedback toast) */}
+                    {presetFeedbackMsg && (
+                      <div className="px-2.5 py-1.5 rounded-lg bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-xs flex items-center justify-between">
+                        <span className="font-medium">{presetFeedbackMsg}</span>
+                        <button type="button" onClick={() => setPresetFeedbackMsg('')} className="text-emerald-400 hover:text-white cursor-pointer">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Form thêm mới mục lưu */}
+                    {isAddingPreset && (
+                      <form onSubmit={handleAddBeamPreset} className="p-2.5 rounded-lg bg-slate-900 border border-sky-500/50 flex flex-col gap-2">
+                        <span className="text-[11px] font-semibold text-slate-300">Đặt tên cho mẫu cấu hình mới:</span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="VD: Kính lúp đỏ to, Khung banner rộng..."
+                            value={newPresetName}
+                            onChange={(e) => setNewPresetName(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 bg-slate-800 border border-slate-600 focus:border-sky-400 rounded-lg text-xs text-white outline-none"
+                          />
+                          <button
+                            type="submit"
+                            className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <Save size={13} />
+                            <span>Lưu</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingPreset(false)}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg text-xs transition-colors cursor-pointer"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {/* Danh sách các mục cài đặt đã lưu */}
+                    <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-0.5">
+                      {beamPresets.map((preset) => {
+                        const isSelected = selectedPresetId === preset.id;
+                        const isEditing = editingPresetId === preset.id;
+                        const cfg = preset.config || {};
+                        const isCone = cfg.spotlightType === 'cone';
+                        const isCustomDim = cfg.beamShape === 'custom' || cfg.useBeamDimensions;
+
+                        return (
+                          <div
+                            key={preset.id}
+                            className={`p-2 rounded-lg border transition-all ${
+                              isSelected
+                                ? 'bg-sky-950/50 border-sky-400/80 shadow-sm ring-1 ring-sky-400/40'
+                                : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            {isEditing ? (
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingPresetName}
+                                  onChange={(e) => setEditingPresetName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveRename(preset.id);
+                                    if (e.key === 'Escape') setEditingPresetId(null);
+                                  }}
+                                  className="flex-1 px-2 py-1 bg-slate-800 border border-sky-400 rounded text-xs text-white outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveRename(preset.id)}
+                                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                                  title="Lưu tên mới"
+                                >
+                                  <Check size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingPresetId(null)}
+                                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                                  title="Hủy"
+                                >
+                                  <X size={13} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center justify-between">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyBeamPreset(preset)}
+                                    className="flex items-center gap-1.5 text-left flex-1 min-w-0 cursor-pointer group"
+                                    title="Nhấn để áp dụng mẫu này"
+                                  >
+                                    <span className="text-xs font-semibold text-white group-hover:text-sky-300 truncate">
+                                      {preset.name}
+                                    </span>
+                                    {isSelected && (
+                                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold shrink-0">
+                                        Đang dùng
+                                      </span>
+                                    )}
+                                  </button>
+
+                                  <div className="flex items-center gap-1 shrink-0 ml-1">
+                                    {/* Nút Áp Dụng */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApplyBeamPreset(preset)}
+                                      className="px-1.5 py-0.5 rounded text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-medium cursor-pointer transition-colors"
+                                      title="Áp dụng mẫu này lên sân khấu"
+                                    >
+                                      Áp dụng
+                                    </button>
+
+                                    {/* Nút Lưu Đè */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOverwriteBeamPreset(preset.id)}
+                                      className="p-1 rounded text-amber-300 hover:text-white hover:bg-amber-600/30 border border-amber-500/30 cursor-pointer transition-colors"
+                                      title={`Lưu đè toàn bộ cài đặt hiện tại vào "${preset.name}"`}
+                                    >
+                                      <RefreshCw size={12} />
+                                    </button>
+
+                                    {/* Nút Đổi Tên */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartRename(preset)}
+                                      className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+                                      title="Sửa tên mục"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+
+                                    {/* Nút Xóa */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteBeamPreset(preset.id, preset.name)}
+                                      className="p-1 rounded text-red-400 hover:text-white hover:bg-red-600/40 cursor-pointer transition-colors"
+                                      title="Xóa mục này"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Thông tin tóm tắt cấu hình của mục */}
+                                <div className="flex items-center gap-1 text-[9px] text-slate-400 flex-wrap">
+                                  <span className="bg-slate-800/80 px-1.5 py-0.5 rounded">
+                                    {isCone ? 'Kiểu nón' : (isCustomDim ? `${cfg.beamWidth}×${cfg.beamHeight}px` : `R: ${cfg.radius}px`)}
+                                  </span>
+                                  <span className="bg-slate-800/80 px-1.5 py-0.5 rounded">
+                                    {cfg.beamBorderMode === 'image'
+                                      ? (cfg.selectedBeamFrameCategory === 'khung-ngang' ? '🖼️ Khung Ngang' : '🔍 Kính Lúp')
+                                      : (cfg.beamBorderMode === 'custom' ? `Viền CSS (${cfg.beamBorderStyle || 'solid'})` : 'Không viền')}
+                                  </span>
+                                  {cfg.enableBeamBg && (
+                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded">
+                                      <span className="w-2 h-2 rounded-full inline-block border border-white/30" style={{ backgroundColor: cfg.beamBgColor || '#fef08a' }} />
+                                      Quầng sáng
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* 📌 CHECKBOX CỐ ĐỊNH CON TRỎ / ĐÈN PIN VÀO TÂM */}
                   <label className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
                     lockPointerToCenter
@@ -1666,7 +2525,598 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     </div>
                   )}
 
-                  {/* Màu Quầng Sáng Đèn Pin */}
+                  {/* KHUNG VIỀN VỆT SÁNG (BORDER CSS HOẶC KHUNG ẢNH PNG) */}
+                  <div className="flex flex-col gap-3 p-3 bg-slate-950/50 rounded-xl border border-sky-500/30">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                        <span>🖼️</span> Khung Viền Vệt Sáng:
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {beamBorderMode === 'none' ? 'Tắt' : beamBorderMode === 'image' ? 'Khung PNG' : 'Viền CSS'}
+                      </span>
+                    </div>
+
+                    {/* 3 Nút chọn kiểu khung viền: Không viền | Viền CSS | Khung PNG */}
+                    <div className="grid grid-cols-3 gap-1 p-0.5 bg-slate-900 rounded-lg border border-slate-700">
+                      {[
+                        { id: 'none', label: '🚫 Không viền' },
+                        { id: 'custom', label: '✨ Viền CSS' },
+                        { id: 'image', label: '🖼️ Khung PNG' }
+                      ].map((mode) => (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => {
+                            setBeamBorderMode(mode.id);
+                            if (mode.id === 'image' && !beamFrameImg) {
+                              const def = KINH_LUP_FRAMES[0];
+                              if (def) handleSelectBeamFramePreset(def);
+                            }
+                          }}
+                          className={`py-1.5 px-1 rounded-md text-[11px] font-medium text-center transition-all cursor-pointer ${
+                            beamBorderMode === mode.id
+                              ? 'bg-sky-500/30 border border-sky-400 text-sky-200 font-bold shadow-sm'
+                              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* === CÁC TÙY CHỌN CHO VIỀN CSS === */}
+                    {beamBorderMode === 'custom' && (
+                      <div className="flex flex-col gap-2.5 pt-1">
+                        {/* Kiểu viền: Liền | Nét đứt | Phát sáng | Viền đôi */}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[11px] text-slate-300 font-medium">Kiểu đường viền:</span>
+                          <div className="grid grid-cols-4 gap-1">
+                            {[
+                              { id: 'solid', label: 'Liền nét' },
+                              { id: 'dashed', label: 'Nét đứt' },
+                              { id: 'glow', label: 'Phát sáng' },
+                              { id: 'double', label: 'Viền đôi' }
+                            ].map((style) => (
+                              <button
+                                key={style.id}
+                                type="button"
+                                onClick={() => setBeamBorderStyle(style.id)}
+                                className={`py-1 px-1 rounded text-[10px] border transition-colors cursor-pointer ${
+                                  beamBorderStyle === style.id
+                                    ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold'
+                                    : 'bg-slate-850 border-slate-700 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {style.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Màu viền */}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Màu viền:</span>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="color"
+                                value={beamBorderColor}
+                                onChange={(e) => setBeamBorderColor(e.target.value)}
+                                className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent p-0"
+                              />
+                              <span className="text-[11px] font-mono text-white">{beamBorderColor}</span>
+                            </div>
+                          </div>
+                          {/* Presets màu viền đẹp mắt */}
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            {[
+                              { label: 'Trắng', color: '#ffffff' },
+                              { label: 'Vàng', color: '#facc15' },
+                              { label: 'Cyan', color: '#06b6d4' },
+                              { label: 'Xanh Lá', color: '#22c55e' },
+                              { label: 'Đỏ', color: '#ef4444' },
+                              { label: 'Tím', color: '#a855f7' },
+                              { label: 'Hồng', color: '#ec4899' }
+                            ].map((p) => (
+                              <button
+                                key={p.color}
+                                type="button"
+                                onClick={() => setBeamBorderColor(p.color)}
+                                className="w-4 h-4 rounded-full border border-slate-600 hover:scale-110 transition-transform cursor-pointer shadow-sm"
+                                style={{ backgroundColor: p.color }}
+                                title={p.label}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Độ dày viền */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Độ Dày Viền:</span>
+                            <NumberInput
+                              value={beamBorderWidth}
+                              onChange={setBeamBorderWidth}
+                              min={1} max={40} step={1}
+                              suffix="px"
+                              className="w-16"
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="40"
+                            value={beamBorderWidth}
+                            onChange={(e) => setBeamBorderWidth(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                        </div>
+
+                        {/* Kích thước viền (Scale) */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Kích Thước Khung Viền:</span>
+                            <NumberInput
+                              value={beamBorderScale}
+                              onChange={setBeamBorderScale}
+                              min={50} max={200} step={1}
+                              suffix="%"
+                              className="w-16"
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min="50"
+                            max="200"
+                            value={beamBorderScale}
+                            onChange={(e) => setBeamBorderScale(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                          <div className="flex justify-between text-[9px] text-slate-400">
+                            <span>50%</span><span>100% (Chuẩn)</span><span>200%</span>
+                          </div>
+                        </div>
+
+                        {/* Vị trí ngang viền X */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Vị Trí Ngang Viền (X):</span>
+                            <NumberInput
+                              value={beamBorderOffsetX}
+                              onChange={setBeamBorderOffsetX}
+                              min={-200} max={200} step={1}
+                              suffix="px"
+                              className="w-16"
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min="-200"
+                            max="200"
+                            value={beamBorderOffsetX}
+                            onChange={(e) => setBeamBorderOffsetX(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                        </div>
+
+                        {/* Vị trí dọc viền Y */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span>Vị Trí Dọc Viền (Y):</span>
+                            <NumberInput
+                              value={beamBorderOffsetY}
+                              onChange={setBeamBorderOffsetY}
+                              min={-200} max={200} step={1}
+                              suffix="px"
+                              className="w-16"
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min="-200"
+                            max="200"
+                            value={beamBorderOffsetY}
+                            onChange={(e) => setBeamBorderOffsetY(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBeamBorderScale(100);
+                            setBeamBorderOffsetX(0);
+                            setBeamBorderOffsetY(0);
+                          }}
+                          className="py-1 px-2 text-[10px] rounded border border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer text-center"
+                        >
+                          🔄 Đặt lại khung viền về tâm
+                        </button>
+                      </div>
+                    )}
+
+                    {/* === CÁC TÙY CHỌN CHO KHUNG ẢNH PNG === */}
+                    {beamBorderMode === 'image' && (
+                      <div className="flex flex-col gap-2.5 pt-1">
+                        {/* 2 Mục mẫu mặc định: Kính Lúp & Khung Ngang */}
+                        <div className="flex flex-col gap-2 p-2 bg-slate-950/60 rounded-xl border border-sky-500/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-sky-300 flex items-center gap-1.5">
+                              <span>🗂️</span> Danh Mục Khung PNG:
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {selectedBeamFrameCategory === 'khung-ngang'
+                                ? `Khung Ngang (${KHUNG_NGANG_FRAMES.length})`
+                                : `Kính Lúp (${KINH_LUP_FRAMES.length})`}
+                            </span>
+                          </div>
+
+                          {/* 2 Tab chọn mục mặc định: Kính Lúp & Khung Ngang */}
+                          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900 rounded-lg border border-slate-700">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBeamFrameCategory('kinh-lup');
+                                if (!selectedBeamFrameId?.startsWith('kinh-lup')) {
+                                  handleSelectBeamFramePreset(KINH_LUP_FRAMES[0]);
+                                }
+                              }}
+                              className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                selectedBeamFrameCategory === 'kinh-lup'
+                                  ? 'bg-sky-600 text-white font-bold shadow-md ring-1 ring-sky-300/40'
+                                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                              }`}
+                            >
+                              <span>🔍</span> Kính Lúp ({KINH_LUP_FRAMES.length})
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBeamFrameCategory('khung-ngang');
+                                if (!selectedBeamFrameId?.startsWith('khung-ngang')) {
+                                  handleSelectBeamFramePreset(KHUNG_NGANG_FRAMES[0]);
+                                }
+                              }}
+                              className={`py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                selectedBeamFrameCategory === 'khung-ngang'
+                                  ? 'bg-sky-600 text-white font-bold shadow-md ring-1 ring-sky-300/40'
+                                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                              }`}
+                            >
+                              <span>🖼️</span> Khung Ngang ({KHUNG_NGANG_FRAMES.length})
+                            </button>
+                          </div>
+
+                          {/* Lưới các mẫu khung trong danh mục */}
+                          <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1.5 bg-slate-900/60 rounded-lg border border-slate-800/80 custom-scrollbar">
+                            {(selectedBeamFrameCategory === 'khung-ngang' ? KHUNG_NGANG_FRAMES : KINH_LUP_FRAMES).map((frame) => {
+                              const isSelected = selectedBeamFrameId === frame.id;
+                              return (
+                                <button
+                                  key={frame.id}
+                                  type="button"
+                                  onClick={() => handleSelectBeamFramePreset(frame)}
+                                  className={`relative flex flex-col items-center gap-1 p-1.5 rounded-lg border transition-all cursor-pointer group ${
+                                    isSelected
+                                      ? 'bg-sky-950/80 border-sky-400 ring-2 ring-sky-400/50 shadow-md'
+                                      : 'bg-slate-850/80 border-slate-700/80 hover:border-sky-500/50 hover:bg-slate-800'
+                                  }`}
+                                  title={frame.name}
+                                >
+                                  <div className="w-12 h-12 flex items-center justify-center rounded bg-slate-950/70 p-1 border border-slate-800/60 group-hover:scale-105 transition-transform overflow-hidden">
+                                    <img
+                                      src={frame.src}
+                                      alt={frame.name}
+                                      className="max-w-full max-h-full object-contain pointer-events-none drop-shadow"
+                                    />
+                                  </div>
+                                  <span className={`text-[10px] truncate w-full text-center ${
+                                    isSelected ? 'text-sky-300 font-bold' : 'text-slate-400 group-hover:text-slate-200'
+                                  }`}>
+                                    {frame.name}
+                                  </span>
+                                  {isSelected && (
+                                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Tùy chọn tải khung PNG riêng từ máy */}
+                          <div className="flex gap-2 items-center pt-1 border-t border-slate-800">
+                            <label className="flex-1 py-1.5 px-2 rounded-lg border border-dashed border-sky-500/40 text-center text-[11px] text-sky-300 cursor-pointer hover:bg-sky-500/10 transition-colors flex items-center justify-center gap-1.5">
+                              <span>📂</span> Hoặc tải khung PNG từ máy...
+                              <input type="file" accept="image/png,image/*" className="hidden" onChange={handleBeamFrameUpload} />
+                            </label>
+                            {selectedBeamFrameId === 'custom' && beamFrameImg && (
+                              <button
+                                type="button"
+                                onClick={handleBeamFrameClear}
+                                className="p-1 px-2 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 text-[10px] cursor-pointer"
+                                title="Bỏ khung tự tải, về kính lúp mặc định"
+                              >
+                                Về mặc định
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {beamFrameImg ? (
+                          <>
+                            {/* Chuyển đổi giữa Tỉ lệ đồng đều (%) và Rộng & Cao riêng (px) */}
+                            <div className="flex items-center justify-between pt-1">
+                              <label className="flex items-center gap-2 cursor-pointer text-xs select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={useBeamFrameDimensions}
+                                  onChange={(e) => {
+                                    const enabled = e.target.checked;
+                                    setUseBeamFrameDimensions(enabled);
+                                    if (enabled && (!beamFrameWidth || !beamFrameHeight)) {
+                                      const imgW = beamFrameImg.naturalWidth || beamFrameImg.width || 260;
+                                      const imgH = beamFrameImg.naturalHeight || beamFrameImg.height || 260;
+                                      const aspect = imgW / imgH;
+                                      let w = 260;
+                                      let h = Math.round(260 / aspect);
+                                      if (aspect >= 2.0) {
+                                        w = 380;
+                                        h = Math.round(380 / aspect);
+                                      } else if (aspect < 1.0) {
+                                        h = 280;
+                                        w = Math.round(280 * aspect);
+                                      }
+                                      setBeamFrameWidth(w);
+                                      setBeamFrameHeight(h);
+                                    }
+                                  }}
+                                  className="w-3.5 h-3.5 accent-sky-500 rounded cursor-pointer"
+                                />
+                                <span className={useBeamFrameDimensions ? 'text-sky-300 font-bold' : 'text-slate-400'}>
+                                  Rộng & Cao riêng của khung ảnh
+                                </span>
+                              </label>
+                            </div>
+
+                            {!useBeamFrameDimensions ? (
+                              /* Kích thước khung ảnh theo % độc lập */
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-xs text-slate-300">
+                                  <span>Kích Thước Khung Ảnh:</span>
+                                  <NumberInput
+                                    value={beamFrameScale}
+                                    onChange={setBeamFrameScale}
+                                    min={20} max={400} step={1}
+                                    suffix="%"
+                                    className="w-16"
+                                  />
+                                </div>
+                                <input
+                                  type="range"
+                                  min="20"
+                                  max="400"
+                                  value={beamFrameScale}
+                                  onChange={(e) => setBeamFrameScale(Number(e.target.value))}
+                                  className="accent-sky-400 cursor-pointer h-1.5"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>20%</span><span>100% (Chuẩn ảnh gốc)</span><span>400%</span>
+                                </div>
+                              </div>
+                            ) : (
+                              /* Nhập chiều rộng & chiều cao riêng cho khung */
+                              <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-xs text-slate-300">
+                                    <span>Chiều Rộng Khung (W):</span>
+                                    <NumberInput
+                                      value={beamFrameWidth}
+                                      onChange={setBeamFrameWidth}
+                                      min={30} max={800} step={2}
+                                      suffix="px"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="30"
+                                    max="800"
+                                    value={beamFrameWidth}
+                                    onChange={(e) => setBeamFrameWidth(Number(e.target.value))}
+                                    className="accent-sky-400 cursor-pointer h-1.5"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-xs text-slate-300">
+                                    <span>Chiều Cao Khung (H):</span>
+                                    <NumberInput
+                                      value={beamFrameHeight}
+                                      onChange={setBeamFrameHeight}
+                                      min={30} max={800} step={2}
+                                      suffix="px"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="30"
+                                    max="800"
+                                    value={beamFrameHeight}
+                                    onChange={(e) => setBeamFrameHeight(Number(e.target.value))}
+                                    className="accent-sky-400 cursor-pointer h-1.5"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Vị trí ngang khung X */}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-xs text-slate-300">
+                                <span>Vị Trí Ngang Khung (X):</span>
+                                <NumberInput
+                                  value={beamFrameOffsetX}
+                                  onChange={setBeamFrameOffsetX}
+                                  min={-400} max={400} step={1}
+                                  suffix="px"
+                                  className="w-16"
+                                />
+                              </div>
+                              <input
+                                type="range"
+                                min="-400"
+                                max="400"
+                                value={beamFrameOffsetX}
+                                onChange={(e) => setBeamFrameOffsetX(Number(e.target.value))}
+                                className="accent-sky-400 cursor-pointer h-1.5"
+                              />
+                            </div>
+
+                            {/* Vị trí dọc khung Y */}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between text-xs text-slate-300">
+                                <span>Vị Trí Dọc Khung (Y):</span>
+                                <NumberInput
+                                  value={beamFrameOffsetY}
+                                  onChange={setBeamFrameOffsetY}
+                                  min={-400} max={400} step={1}
+                                  suffix="px"
+                                  className="w-16"
+                                />
+                              </div>
+                              <input
+                                type="range"
+                                min="-400"
+                                max="400"
+                                value={beamFrameOffsetY}
+                                onChange={(e) => setBeamFrameOffsetY(Number(e.target.value))}
+                                className="accent-sky-400 cursor-pointer h-1.5"
+                              />
+                            </div>
+
+                            {/* D-Pad điều hướng vị trí khung ảnh */}
+                            <div className="flex flex-col gap-2 p-2 bg-slate-950/60 rounded-xl border border-sky-500/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-sky-300 flex items-center gap-1.5">
+                                  <span>🕹️</span> Dịch Khung Ảnh:
+                                </span>
+                                <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded border border-slate-700">
+                                  {[1, 5, 10, 20].map((step) => (
+                                    <button
+                                      key={step}
+                                      type="button"
+                                      onClick={() => setOverlayMoveStep(step)}
+                                      className={`px-1.5 py-0.5 text-[9px] font-mono rounded transition-colors cursor-pointer ${
+                                        overlayMoveStep === step
+                                          ? 'bg-sky-600 text-white font-bold shadow'
+                                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                      }`}
+                                    >
+                                      {step}px
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-center py-0.5">
+                                <div className="grid grid-cols-3 gap-1.5 w-36">
+                                  <div />
+                                  <button
+                                    type="button"
+                                    onClick={() => setBeamFrameOffsetY((prev) => Math.max(-400, prev - overlayMoveStep))}
+                                    className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-sky-600/40 border border-slate-700 hover:border-sky-400 text-sky-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    title={`Dịch Lên ${overlayMoveStep}px`}
+                                  >
+                                    <span className="text-sm font-bold">▲</span>
+                                  </button>
+                                  <div />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setBeamFrameOffsetX((prev) => Math.max(-400, prev - overlayMoveStep))}
+                                    className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-sky-600/40 border border-slate-700 hover:border-sky-400 text-sky-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    title={`Dịch Trái ${overlayMoveStep}px`}
+                                  >
+                                    <span className="text-sm font-bold">◄</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => { setBeamFrameOffsetX(0); setBeamFrameOffsetY(0); }}
+                                    className="h-8 flex flex-col items-center justify-center rounded-lg bg-slate-850 hover:bg-slate-750 border border-slate-700 text-slate-400 hover:text-white active:scale-95 transition-all cursor-pointer"
+                                    title="Khớp tâm vệt sáng (0, 0)"
+                                  >
+                                    <RotateCcw size={12} />
+                                    <span className="text-[8px] mt-0.5 font-mono">0,0</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setBeamFrameOffsetX((prev) => Math.min(400, prev + overlayMoveStep))}
+                                    className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-sky-600/40 border border-slate-700 hover:border-sky-400 text-sky-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    title={`Dịch Phải ${overlayMoveStep}px`}
+                                  >
+                                    <span className="text-sm font-bold">►</span>
+                                  </button>
+
+                                  <div />
+                                  <button
+                                    type="button"
+                                    onClick={() => setBeamFrameOffsetY((prev) => Math.min(400, prev + overlayMoveStep))}
+                                    className="h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-sky-600/40 border border-slate-700 hover:border-sky-400 text-sky-300 active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    title={`Dịch Xuống ${overlayMoveStep}px`}
+                                  >
+                                    <span className="text-sm font-bold">▼</span>
+                                  </button>
+                                  <div />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Độ đậm khung ảnh */}
+                            <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-800">
+                              <div className="flex items-center justify-between text-xs text-slate-300">
+                                <span>Độ Đậm Khung Ảnh (Opacity):</span>
+                                <NumberInput
+                                  value={beamFrameOpacity}
+                                  onChange={setBeamFrameOpacity}
+                                  min={10} max={100} step={1}
+                                  suffix="%"
+                                  className="w-16"
+                                />
+                              </div>
+                              <input
+                                type="range"
+                                min="10"
+                                max="100"
+                                value={beamFrameOpacity}
+                                onChange={(e) => setBeamFrameOpacity(Number(e.target.value))}
+                                className="accent-sky-400 cursor-pointer h-1.5"
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBeamFrameScale(100);
+                                setUseBeamFrameDimensions(false);
+                                setBeamFrameOffsetX(0);
+                                setBeamFrameOffsetY(0);
+                              }}
+                              className="py-1 px-2 text-[10px] rounded border border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer text-center"
+                            >
+                              🔄 Đặt lại khung ảnh về tâm
+                            </button>
+                          </>
+                        ) : (
+                          <div className="p-3 rounded-lg border border-dashed border-slate-700 text-center text-xs text-slate-400">
+                            💡 Chưa có ảnh khung PNG. Hãy tải lên ảnh viền kính lúp, đèn pin, hoặc khung viền tùy chọn.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex flex-col gap-2 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
                     <div className="flex items-center justify-between">
                       <label className="text-xs text-sky-300 font-bold flex items-center gap-1.5">
