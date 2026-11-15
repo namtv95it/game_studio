@@ -14,7 +14,7 @@ import ShadowClueQuiz from './components/ShadowClueQuiz';
 import FeatureModal, { GAME_FEATURES } from './components/FeatureModal';
 import BackgroundSelectorModal from './components/BackgroundSelectorModal';
 import { StageBackgroundProvider } from './context/StageBackgroundContext';
-import { LayoutGrid, Palette, Play } from 'lucide-react';
+import { LayoutGrid, Palette, Play, Image as ImageIcon } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
@@ -22,6 +22,7 @@ export default function App() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBgModalOpen, setIsBgModalOpen] = useState(false);
+  const [bgModalTab, setBgModalTab] = useState('colors');
   const [is916Mode, setIs916Mode] = useState(false);
 
   useEffect(() => {
@@ -51,11 +52,25 @@ export default function App() {
             {/* CÁC NÚT ĐIỀU HƯỚNG HEADER */}
             <div className="flex items-center gap-2.5">
               <button 
-                onClick={() => setIsBgModalOpen(true)}
+                onClick={() => {
+                  setBgModalTab('colors');
+                  setIsBgModalOpen(true);
+                }}
                 className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-500 font-semibold text-xs rounded-xl shadow-md transition-all hover:scale-105 cursor-pointer"
-                title="Thay đổi mẫu hoa văn nền sân khấu"
+                title="Thay đổi màu sắc hoặc hoa văn nền sân khấu"
               >
                 <Palette size={16} className="text-amber-400" /> Đổi Nền Sân Khấu
+              </button>
+
+              <button 
+                onClick={() => {
+                  setBgModalTab('image');
+                  setIsBgModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-purple-300 border border-purple-500/40 hover:border-purple-400 font-semibold text-xs rounded-xl shadow-md transition-all hover:scale-105 cursor-pointer"
+                title="Chọn hình ảnh làm nền sân khấu (xoay, chỉnh sửa ảnh và xem trước)"
+              >
+                <ImageIcon size={16} className="text-purple-400" /> Ảnh Nền Sân Khấu
               </button>
 
               <button 
@@ -119,6 +134,26 @@ export default function App() {
         )}
       </main>
 
+      {/* BANNER THÔNG TIN KHI ĐANG Ở CHẾ ĐỘ KHỞI CHẠY */}
+      {is916Mode && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-4 py-1.5 rounded-full shadow-2xl text-xs pointer-events-auto">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-200 font-semibold">Chế độ Khởi Chạy (Nhấn ESC để thoát)</span>
+          <button
+            type="button"
+            onClick={() => {
+              setIs916Mode(false);
+              setBgModalTab('image');
+              setIsBgModalOpen(true);
+            }}
+            className="ml-2 px-2.5 py-0.5 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow"
+            title="Quay lại bảng tùy chỉnh ảnh nền sân khấu"
+          >
+            <ImageIcon size={12} /> Chỉnh Lại Nền
+          </button>
+        </div>
+      )}
+
       {/* POPUP MODAL KHO TÍNH NĂNG */}
       <FeatureModal 
         isOpen={isModalOpen} 
@@ -126,10 +161,16 @@ export default function App() {
         onSelectFeature={(id) => setActiveTab(id)} 
       />
 
-      {/* POPUP MODAL CHỌN MẪU NỀN SÂN KHẤU */}
+      {/* POPUP MODAL CHỌN MẪU NỀN SÂN KHẤU (MÀU SẮC, HOA VĂN, HÌNH ẢNH NỀN) */}
       <BackgroundSelectorModal
         isOpen={isBgModalOpen}
         onClose={() => setIsBgModalOpen(false)}
+        initialTab={bgModalTab}
+        onLaunchPreview={() => {
+          setIsBgModalOpen(false);
+          window.dispatchEvent(new CustomEvent('app:launch-916'));
+          setIs916Mode(true);
+        }}
       />
     </div>
   </StageBackgroundProvider>

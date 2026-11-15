@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { saveLocalImage, loadLocalImage, removeLocalImage, getLocalImageSync } from '../utils/localImageStorage';
+import { STAGE_BG_IMAGE_PRESETS } from '../constants/stageImagePresets';
 
 // Danh sách các bảng màu nền pastel nhã nhặn, rõ ràng, không bị trùng màu hay quá chói
 export const SUBTLE_COLOR_PALETTES = [
@@ -1518,10 +1520,29 @@ export const STAGE_PATTERN_OPTIONS = [
   }
 ];
 
+export const DEFAULT_BG_IMAGE_SETTINGS = {
+  rotation: 0,           // -180 to 180 degrees
+  scale: 100,            // 20% to 300%
+  fit: 'cover',          // 'cover' | 'contain' | 'fill' | 'original'
+  offsetX: 0,            // px
+  offsetY: 0,            // px
+  flipX: false,          // horizontal flip
+  flipY: false,          // vertical flip
+  opacity: 100,          // %
+  brightness: 100,       // %
+  contrast: 100,         // %
+  blur: 0,               // px
+  grayscale: 0,          // %
+  overlayPattern: false  // whether to show pattern on top of image
+};
+
 const STORAGE_BG_COLOR_KEY = 'game_studio_stage_bg_color_v2';
 const STORAGE_PATTERN_KEY = 'game_studio_stage_bg_pattern_v2';
 const STORAGE_OPACITY_KEY = 'game_studio_stage_bg_opacity_v2';
 const STORAGE_FAVORITES_KEY = 'game_studio_stage_bg_favorites_v1';
+const STORAGE_BG_TYPE_KEY = 'game_studio_stage_bg_type_v2'; // 'pattern' | 'image'
+const STORAGE_BG_IMAGE_SETTINGS_KEY = 'game_studio_stage_bg_image_settings_v2';
+const STORAGE_CUSTOM_IMAGE_KEY = 'stage_background_image';
 
 const StageBackgroundContext = createContext({
   stageBgColor: '#ffffff',
@@ -1534,7 +1555,19 @@ const StageBackgroundContext = createContext({
   handleResetToWhite: () => {},
   favoritePatternIds: [],
   toggleFavoritePattern: () => {},
-  isFavoritePattern: () => false
+  isFavoritePattern: () => false,
+  // Tùy chọn Hình Ảnh Nền
+  stageBgType: 'pattern',
+  setStageBgType: () => {},
+  stageBgImage: null,
+  setStageBgImage: () => {},
+  stageBgImageSettings: DEFAULT_BG_IMAGE_SETTINGS,
+  setStageBgImageSettings: () => {},
+  updateStageBgImageSetting: () => {},
+  handleUploadStageBgImage: () => {},
+  handleSelectPresetBgImage: () => {},
+  handleClearStageBgImage: () => {},
+  handleResetStageBgImageSettings: () => {}
 });
 
 export function StageBackgroundProvider({ children }) {
@@ -1554,6 +1587,35 @@ export function StageBackgroundProvider({ children }) {
     return val !== null ? Number(val) : 50;
   });
 
+  // Kiểu nền: 'pattern' (màu + hoa văn CSS) hoặc 'image' (hình ảnh nền)
+  const [stageBgType, setStageBgType] = useState(() => {
+    return localStorage.getItem(STORAGE_BG_TYPE_KEY) || 'pattern';
+  });
+
+  // Hình ảnh nền (Data URL hoặc preset URL)
+  const [stageBgImage, setStageBgImage] = useState(() => {
+    return getLocalImageSync(STORAGE_CUSTOM_IMAGE_KEY) || null;
+  });
+
+  // Cài đặt tinh chỉnh hình ảnh nền (xoay, zoom, fit, offset, bộ lọc)
+  const [stageBgImageSettings, setStageBgImageSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_BG_IMAGE_SETTINGS_KEY);
+      return saved ? { ...DEFAULT_BG_IMAGE_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_BG_IMAGE_SETTINGS };
+    } catch {
+      return { ...DEFAULT_BG_IMAGE_SETTINGS };
+    }
+  });
+
+  // Tự động nạp ảnh nền từ IndexedDB nếu chưa có trong bộ nhớ cache tức thì
+  useEffect(() => {
+    loadLocalImage(STORAGE_CUSTOM_IMAGE_KEY).then(dataUrl => {
+      if (dataUrl) {
+        setStageBgImage(dataUrl);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_BG_COLOR_KEY, stageBgColor);
   }, [stageBgColor]);
@@ -1565,6 +1627,55 @@ export function StageBackgroundProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_OPACITY_KEY, String(patternOpacity));
   }, [patternOpacity]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_BG_TYPE_KEY, stageBgType);
+  }, [stageBgType]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_BG_IMAGE_SETTINGS_KEY, JSON.stringify(stageBgImageSettings));
+    } catch (e) {
+      console.warn('Lỗi lưu cấu hình ảnh nền vào localStorage:', e);
+    }
+  }, [stageBgImageSettings]);
+
+  const updateStageBgImageSetting = (key, value) => {
+    setStageBgImageSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleUploadStageBgImage = async (file) => {
+    if (!file) return;
+    try {
+      const dataUrl = await saveLocalImage(STORAGE_CUSTOM_IMAGE_KEY, file);
+      setStageBgImage(dataUrl);
+      setStageBgType('image');
+      return dataUrl;
+    } catch (err) {
+      console.error('Failed to upload stage background image:', err);
+    }
+  };
+
+  const handleSelectPresetBgImage = (url) => {
+    setStageBgImage(url);
+    setStageBgType('image');
+  };
+
+  const handleClearStageBgImage = async () => {
+    try {
+      await removeLocalImage(STORAGE_CUSTOM_IMAGE_KEY);
+    } catch {}
+    setStageBgImage(null);
+    setStageBgType('pattern');
+    setStageBgImageSettings({ ...DEFAULT_BG_IMAGE_SETTINGS });
+  };
+
+  const handleResetStageBgImageSettings = () => {
+    setStageBgImageSettings({ ...DEFAULT_BG_IMAGE_SETTINGS });
+  };
 
   const currentPattern = STAGE_PATTERN_OPTIONS.find(p => p.id === selectedPatternId) || STAGE_PATTERN_OPTIONS[0];
 
@@ -1594,11 +1705,12 @@ export function StageBackgroundProvider({ children }) {
 
   const isFavoritePattern = (patternId) => favoritePatternIds.includes(patternId);
 
-  // Reset về trắng hoàn toàn (Không hoa văn)
+  // Reset về trắng hoàn toàn (Không hoa văn & Không ảnh)
   const handleResetToWhite = () => {
     setStageBgColor('#ffffff');
     setSelectedPatternId('none');
     setPatternOpacity(50);
+    setStageBgType('pattern');
   };
 
   return (
@@ -1613,7 +1725,18 @@ export function StageBackgroundProvider({ children }) {
       handleResetToWhite,
       favoritePatternIds,
       toggleFavoritePattern,
-      isFavoritePattern
+      isFavoritePattern,
+      stageBgType,
+      setStageBgType,
+      stageBgImage,
+      setStageBgImage,
+      stageBgImageSettings,
+      setStageBgImageSettings,
+      updateStageBgImageSetting,
+      handleUploadStageBgImage,
+      handleSelectPresetBgImage,
+      handleClearStageBgImage,
+      handleResetStageBgImageSettings
     }}>
       {children}
     </StageBackgroundContext.Provider>
@@ -1626,24 +1749,62 @@ export function useStageBackground() {
 
 /**
  * Component render lớp phủ nền sân khấu
- * Tự động áp dụng cả màu nền và hoa văn trên tất cả chức năng
+ * Tự động áp dụng cả màu nền, hoa văn CSS hoặc hình ảnh nền đã chỉnh sửa
  */
 export function StageBackgroundOverlay({ className = '' }) {
-  const { stageBgColor, currentPattern, patternOpacity } = useStageBackground();
+  const { 
+    stageBgColor, 
+    stageBgType, 
+    stageBgImage, 
+    stageBgImageSettings,
+    currentPattern, 
+    patternOpacity 
+  } = useStageBackground();
 
   const isDarkBg = stageBgColor === '#0f172a';
+  const showImage = stageBgType === 'image' && !!stageBgImage;
+  const s = stageBgImageSettings || DEFAULT_BG_IMAGE_SETTINGS;
 
   return (
     <div 
-      className={`absolute inset-0 pointer-events-none transition-all duration-300 ${className}`}
+      className={`absolute inset-0 pointer-events-none overflow-hidden transition-all duration-300 ${className}`}
       style={{ backgroundColor: stageBgColor }}
     >
-      {currentPattern.id !== 'none' && (
+      {/* LỚP HÌNH ẢNH NỀN SÂN KHẤU (KÈM XOAY, BIẾN ĐỔI & BỘ LỌC) */}
+      {showImage && (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+          <img
+            src={stageBgImage}
+            alt="Stage Background"
+            className="pointer-events-none select-none max-w-none transition-transform duration-75"
+            style={{
+              width: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
+              height: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
+              objectFit: s.fit === 'original' ? 'none' : s.fit,
+              transform: `
+                translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)
+                rotate(${s.rotation || 0}deg)
+                scale(${((s.scale || 100) / 100) * (s.flipX ? -1 : 1)}, ${((s.scale || 100) / 100) * (s.flipY ? -1 : 1)})
+              `,
+              opacity: (s.opacity ?? 100) / 100,
+              filter: `
+                brightness(${s.brightness ?? 100}%)
+                contrast(${s.contrast ?? 100}%)
+                blur(${s.blur || 0}px)
+                grayscale(${s.grayscale || 0}%)
+              `
+            }}
+          />
+        </div>
+      )}
+
+      {/* LỚP HOA VĂN NỀN (NẾU Ở CHẾ ĐỘ PATTERN HOẶC BẬT OVERLAY LÊN ẢNH) */}
+      {(!showImage || s.overlayPattern) && currentPattern && currentPattern.id !== 'none' && (
         <div
           className="absolute inset-0 pointer-events-none transition-all duration-300"
           style={{
             ...currentPattern.style,
-            opacity: ((currentPattern.style.opacity || 1) * (patternOpacity / 50)),
+            opacity: ((currentPattern.style.opacity || 1) * (patternOpacity / 50)) * (showImage ? 0.6 : 1),
             filter: isDarkBg ? 'invert(1) brightness(0.6)' : 'none'
           }}
         />
