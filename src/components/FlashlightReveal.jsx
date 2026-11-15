@@ -403,6 +403,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   // === ẢNH PHỦ LÊN (Cover Overlay Image) ===
   const [coverOverlayImg, setCoverOverlayImg] = useState(null); // HTMLImageElement
   const [coverOverlayScale, setCoverOverlayScale] = useState(initialSettings.coverOverlayScale ?? 100); // % tỉ lệ so với ảnh nhân vật (mặc định 100% khớp chuẩn)
+  const [coverOverlayScaleX, setCoverOverlayScaleX] = useState(initialSettings.coverOverlayScaleX ?? 100); // % chiều rộng riêng
+  const [coverOverlayScaleY, setCoverOverlayScaleY] = useState(initialSettings.coverOverlayScaleY ?? 100); // % chiều cao riêng
+  const [coverOverlayUseCustomDim, setCoverOverlayUseCustomDim] = useState(initialSettings.coverOverlayUseCustomDim ?? false); // Bật/tắt chỉnh riêng Rộng & Cao
+  const [coverOverlayKeepAspect, setCoverOverlayKeepAspect] = useState(initialSettings.coverOverlayKeepAspect ?? true); // Giữ tỉ lệ dáng gốc của ảnh phủ không bị bóp méo
   const [coverOverlayOffsetX, setCoverOverlayOffsetX] = useState(initialSettings.coverOverlayOffsetX ?? 0); // px dịch so với ảnh nhân vật (mặc định 0)
   const [coverOverlayOffsetY, setCoverOverlayOffsetY] = useState(initialSettings.coverOverlayOffsetY ?? 0); // px dịch so với ảnh nhân vật (mặc định 0)
   const [overlayMoveStep, setOverlayMoveStep] = useState(10); // Bước dịch chuyển nút điều hướng (1px, 5px, 10px, 20px)
@@ -523,11 +527,13 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
   const is916Mode = propIs916Mode !== undefined ? propIs916Mode : internalIs916Mode;
   const setIs916Mode = propSetIs916Mode || setInternalIs916Mode;
 
-  // Trạng thái mở Accordion (chỉ mở 1 mục duy nhất tại một thời điểm, mở cái này thì đóng cái kia)
+  // Trạng thái mở Tab / Section
   const [activeSection, setActiveSection] = useState('flashlight');
+  const [pointerAccordionOpen, setPointerAccordionOpen] = useState(true);
+  const [qmAccordionOpen, setQmAccordionOpen] = useState(true);
 
   const toggleSection = (key) => {
-    setActiveSection((prev) => (prev === key ? null : key));
+    setActiveSection(key);
   };
 
     const handleResetSettings = () => {
@@ -634,6 +640,10 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       coverHeight,
       coverBlendMode,
       coverOverlayScale,
+      coverOverlayScaleX,
+      coverOverlayScaleY,
+      coverOverlayUseCustomDim,
+      coverOverlayKeepAspect,
       coverOverlayOffsetX,
       coverOverlayOffsetY,
       beamBorderMode,
@@ -665,7 +675,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
         console.error('Không thể lưu cài đặt vào localStorage:', err2);
       }
     }
-  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, selectedBeamFrameCategory, selectedBeamFrameId]);
+  }, [radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, handSize, pointerEmoji, pointerRotation, pointerOffsetX, pointerOffsetY, pointerAnchor, enablePointer, scale, offsetX, offsetY, imageSrc, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, qmRandomColor, qmRandomSize, qmMinSize, qmMaxSize, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayScale, coverOverlayScaleX, coverOverlayScaleY, coverOverlayUseCustomDim, coverOverlayKeepAspect, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, selectedBeamFrameCategory, selectedBeamFrameId]);
 
   // Chọn khung PNG mẫu có sẵn (Kính Lúp hoặc Khung Ngang)
   const handleSelectBeamFramePreset = (preset) => {
@@ -1340,10 +1350,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
           if (coverOverlayImg) {
             const cw = width;
             const ch = height;
-            // Kích thước và vị trí ảnh phủ: Lấy chuẩn kích thước và vị trí của ảnh nhân vật (drawW, drawH, drawX, drawY) làm chuẩn 100%
+            // Kích thước và vị trí ảnh phủ: Lấy chuẩn chiều cao ảnh nhân vật (drawH) làm mốc, bảo toàn tỉ lệ thực của ảnh phủ không bị ép méo chiều rộng
+            const naturalCoverW = coverOverlayImg.naturalWidth || coverOverlayImg.width || 1;
+            const naturalCoverH = coverOverlayImg.naturalHeight || coverOverlayImg.height || 1;
             const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? 100) / 100);
-            const overlayW = drawW * overlayScaleFactor;
-            const overlayH = drawH * overlayScaleFactor;
+            const scaleFactorX = coverOverlayUseCustomDim ? Math.max(0.1, (coverOverlayScaleX ?? 100) / 100) : 1;
+            const scaleFactorY = coverOverlayUseCustomDim ? Math.max(0.1, (coverOverlayScaleY ?? 100) / 100) : 1;
+
+            const baseOverlayH = drawH;
+            const baseOverlayW = (coverOverlayKeepAspect !== false)
+              ? (drawH / naturalCoverH) * naturalCoverW
+              : drawW;
+
+            const overlayW = baseOverlayW * overlayScaleFactor * scaleFactorX;
+            const overlayH = baseOverlayH * overlayScaleFactor * scaleFactorY;
             const overlayX = drawX + (drawW - overlayW) / 2 + (coverOverlayOffsetX || 0);
             const overlayY = drawY + (drawH - overlayH) / 2 + (coverOverlayOffsetY || 0);
 
@@ -1508,10 +1528,20 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
           const cw = width;
           const ch = height;
-          // Kích thước và vị trí ảnh phủ: Lấy chuẩn kích thước và vị trí của ảnh nhân vật (drawW, drawH, drawX, drawY) làm chuẩn 100%
+          // Kích thước và vị trí ảnh phủ: Lấy chuẩn chiều cao ảnh nhân vật (drawH) làm mốc, bảo toàn tỉ lệ thực của ảnh phủ không bị ép méo chiều rộng
+          const naturalCoverW = coverOverlayImg.naturalWidth || coverOverlayImg.width || 1;
+          const naturalCoverH = coverOverlayImg.naturalHeight || coverOverlayImg.height || 1;
           const overlayScaleFactor = Math.max(0.1, (coverOverlayScale ?? 100) / 100);
-          const overlayW = drawW * overlayScaleFactor;
-          const overlayH = drawH * overlayScaleFactor;
+          const scaleFactorX = coverOverlayUseCustomDim ? Math.max(0.1, (coverOverlayScaleX ?? 100) / 100) : 1;
+          const scaleFactorY = coverOverlayUseCustomDim ? Math.max(0.1, (coverOverlayScaleY ?? 100) / 100) : 1;
+
+          const baseOverlayH = drawH;
+          const baseOverlayW = (coverOverlayKeepAspect !== false)
+            ? (drawH / naturalCoverH) * naturalCoverW
+            : drawW;
+
+          const overlayW = baseOverlayW * overlayScaleFactor * scaleFactorX;
+          const overlayH = baseOverlayH * overlayScaleFactor * scaleFactorY;
           const overlayX = drawX + (drawW - overlayW) / 2 + (coverOverlayOffsetX || 0);
           const overlayY = drawY + (drawH - overlayH) / 2 + (coverOverlayOffsetY || 0);
           const opacity = Math.max(0.05, Math.min(1, (coverOpacity ?? 100) / 100));
@@ -1699,7 +1729,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
   useLayoutEffect(() => {
     renderCanvas();
-  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameImg, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, showOriginalImage, originalImagePreviewOpacity]);
+  }, [cursorPos, radius, spotlightType, beamShape, useBeamDimensions, beamWidth, beamHeight, beamAngle, coneSpread, beamStartWidth, imageSrc, is916Mode, scale, offsetX, offsetY, beamBgColor, enableBeamBg, beamOpacity, enableQuestionMarks, questionMarks, qmColor, qmDefaultSize, isPlacingQm, shadowStyle, shadowPattern, customShadowColor, shadowOpacity, gameMode, coverColor, coverOpacity, coverShape, useCoverDimensions, coverWidth, coverHeight, coverBlendMode, coverOverlayImg, coverOverlayScale, coverOverlayScaleX, coverOverlayScaleY, coverOverlayUseCustomDim, coverOverlayKeepAspect, coverOverlayOffsetX, coverOverlayOffsetY, beamBorderMode, beamBorderWidth, beamBorderColor, beamBorderStyle, beamBorderScale, beamBorderOffsetX, beamBorderOffsetY, beamFrameImg, beamFrameScale, useBeamFrameDimensions, beamFrameWidth, beamFrameHeight, beamFrameOffsetX, beamFrameOffsetY, beamFrameOpacity, showOriginalImage, originalImagePreviewOpacity]);
 
     // Upload ảnh phủ lên
   const handleCoverOverlayUpload = async (e) => {
@@ -1712,6 +1742,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       setCoverOverlayImg(img);
       // Mặc định vị trí và kích thước khi tải lên sẽ khớp chuẩn xác 100% với ảnh gốc nhân vật
       setCoverOverlayScale(100);
+      setCoverOverlayScaleX(100);
+      setCoverOverlayScaleY(100);
       setCoverOverlayOffsetX(0);
       setCoverOverlayOffsetY(0);
     };
@@ -1723,6 +1755,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     try { await removeLocalImage('flashlight_cover_overlay'); } catch {}
     setCoverOverlayImg(null);
     setCoverOverlayScale(100);
+    setCoverOverlayScaleX(100);
+    setCoverOverlayScaleY(100);
     setCoverOverlayOffsetX(0);
     setCoverOverlayOffsetY(0);
   };
@@ -1734,6 +1768,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
       setIsPlacingQm(false);
       // Khi tải ảnh nhân vật mới, đồng bộ lại ảnh phủ (nếu có) để khớp chuẩn xác 100%
       setCoverOverlayScale(100);
+      setCoverOverlayScaleX(100);
+      setCoverOverlayScaleY(100);
       setCoverOverlayOffsetX(0);
       setCoverOverlayOffsetY(0);
       // Lưu ảnh vào bộ nhớ local (IndexedDB + localStorage cache)
@@ -1748,7 +1784,7 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
     <div className={`flex w-full bg-slate-900 relative ${is916Mode ? 'h-full' : 'h-[calc(100vh-56px)]'}`}>
       {/* TRẠNG THÁI 2: GIỮ NGUYÊN SIDEBAR (Nút Khởi Chạy dùng để bật Trạng Thái 1: Ẩn Hết) */}
       {!is916Mode && (
-        <div className="w-80 bg-slate-800 p-5 pb-24 border-r border-slate-700 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+        <div className="w-[360px] bg-slate-800 p-4 pb-24 border-r border-slate-700 flex flex-col gap-3.5 overflow-y-auto custom-scrollbar">
           <h2 className="text-lg font-bold text-sky-400 flex items-center gap-2">
             🔦 CÀI ĐẶT SOI ĐÈN PIN (PNG)
           </h2>
@@ -1774,7 +1810,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 type="button"
                 onClick={() => {
                   setGameMode('reveal');
-                  setActiveSection('flashlight');
+                  if (activeSection === 'coverSettings') {
+                    setActiveSection('flashlight');
+                  }
                 }}
                 className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer shadow-sm ${
                   gameMode === 'reveal'
@@ -1791,7 +1829,9 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 type="button"
                 onClick={() => {
                   setGameMode('cover');
-                  setActiveSection('coverSettings');
+                  if (activeSection === 'flashlight' || activeSection === 'shadowStyle') {
+                    setActiveSection('coverSettings');
+                  }
                 }}
                 className={`py-2.5 px-2 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer shadow-sm ${
                   gameMode === 'cover'
@@ -1806,27 +1846,125 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
             </div>
           </div>
 
-          {/* NHÓM 1: NHÂN VẬT & KHUNG HÌNH */}
-          <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
-            <button
-              type="button"
-              onClick={() => toggleSection('character')}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">🖼️</span>
-                <span className="text-xs font-bold text-sky-300">Nhân Vật & Khung Hình</span>
+          {/* THANH TAB ĐIỀU HƯỚNG PHÂN CẤP (SEGMENTED TABS) */}
+          <div className="shrink-0">
+            {gameMode === 'reveal' ? (
+              <div className="grid grid-cols-4 gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-700/80">
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('flashlight')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'flashlight' || (!activeSection && gameMode === 'reveal')
+                      ? 'bg-sky-500/25 border border-sky-400 text-sky-200 shadow-sm ring-1 ring-sky-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Cài đặt vệt sáng đèn pin, quầng sáng và khung kính lúp/khung ngang"
+                >
+                  <span className="text-base">🔦</span>
+                  <span className="text-[10px] leading-tight truncate">Đèn & Khung</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('character')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'character'
+                      ? 'bg-emerald-500/25 border border-emerald-400 text-emerald-200 shadow-sm ring-1 ring-emerald-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Tải ảnh nhân vật PNG, căn vừa khít 100% và so khớp"
+                >
+                  <span className="text-base">👤</span>
+                  <span className="text-[10px] leading-tight truncate">Nhân Vật</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('shadowStyle')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'shadowStyle'
+                      ? 'bg-purple-500/25 border border-purple-400 text-purple-200 shadow-sm ring-1 ring-purple-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Cài đặt bóng đen, màu sắc, họa tiết hoặc dùng ảnh phủ"
+                >
+                  <span className="text-base">🎭</span>
+                  <span className="text-[10px] leading-tight truncate">Nền & Phủ</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('extras')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'extras' || activeSection === 'pointer' || activeSection === 'questionMarks'
+                      ? 'bg-amber-500/25 border border-amber-400 text-amber-200 shadow-sm ring-1 ring-amber-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Con trỏ bàn tay / emoji và dấu hỏi chấm (?)"
+                >
+                  <span className="text-base">✨</span>
+                  <span className="text-[10px] leading-tight truncate">Phụ Trợ</span>
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-400 font-mono">
+            ) : (
+              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-700/80">
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('coverSettings')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'coverSettings' || (!activeSection && gameMode === 'cover')
+                      ? 'bg-purple-500/25 border border-purple-400 text-purple-200 shadow-sm ring-1 ring-purple-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Cài đặt hình khối, màu sắc và hiệu ứng lớp phủ che ảnh"
+                >
+                  <span className="text-base">🎨</span>
+                  <span className="text-[10px] leading-tight truncate">Lớp Phủ Che</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('character')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'character'
+                      ? 'bg-emerald-500/25 border border-emerald-400 text-emerald-200 shadow-sm ring-1 ring-emerald-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Tải ảnh nhân vật PNG, căn vừa khít 100% và so khớp"
+                >
+                  <span className="text-base">👤</span>
+                  <span className="text-[10px] leading-tight truncate">Nhân Vật</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('extras')}
+                  className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    activeSection === 'extras' || activeSection === 'pointer' || activeSection === 'questionMarks'
+                      ? 'bg-amber-500/25 border border-amber-400 text-amber-200 shadow-sm ring-1 ring-amber-400/50'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                  }`}
+                  title="Con trỏ bàn tay / emoji và dấu hỏi chấm (?)"
+                >
+                  <span className="text-base">✨</span>
+                  <span className="text-[10px] leading-tight truncate">Phụ Trợ</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* TAB: NHÂN VẬT & KHUNG HÌNH */}
+          {activeSection === 'character' && (
+            <div className="bg-slate-900/60 rounded-xl border border-emerald-500/30 p-3.5 flex flex-col gap-4 shadow-sm shrink-0">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">👤</span>
+                  <span className="text-xs font-bold text-emerald-300">Cài Đặt Nhân Vật Gốc</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">
                   {scale}% • X:{offsetX} • Y:{offsetY}
                 </span>
-                {activeSection === 'character' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
               </div>
-            </button>
-
-            {activeSection === 'character' && (
-              <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
                 {/* Upload 1 PNG Image */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs text-slate-400 font-medium">Tải Ảnh Nhân Vật (PNG):</label>
@@ -1992,30 +2130,19 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 </div>
               </div>
             )}
-          </div>
 
-          {/* NHÓM 2: CÀI ĐẶT VỆT SÁNG (REVEAL) HOẶC CÀI ĐẶT LỚP PHỦ CHE MÀU (COVER) */}
-          {gameMode === 'reveal' ? (
-            <div className="bg-slate-900/50 rounded-xl border border-slate-700/80 overflow-hidden shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={() => toggleSection('flashlight')}
-                className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-              >
+          {/* TAB: VỆT SÁNG & KHUNG ĐÈN (REVEAL MODE) */}
+          {gameMode === 'reveal' && (activeSection === 'flashlight' || (!activeSection && gameMode === 'reveal')) && (
+            <div className="bg-slate-900/60 rounded-xl border border-sky-500/30 p-3.5 flex flex-col gap-4 shadow-sm shrink-0">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <span className="text-base">🔦</span>
-                  <span className="text-xs font-bold text-sky-300">Vệt Sáng & Đèn Pin</span>
+                  <span className="text-xs font-bold text-sky-300">Vệt Sáng & Khung Đèn</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {(beamShape === 'custom' || useBeamDimensions) ? `${beamWidth}×${beamHeight}px` : `${radius}px`} • {spotlightType === 'circle' ? (SPOTLIGHT_SHAPES.find(s => s.id === beamShape)?.name || 'Tròn') : 'Nón'}
-                  </span>
-                  {activeSection === 'flashlight' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-                </div>
-              </button>
-
-              {activeSection === 'flashlight' && (
-                <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
+                <span className="text-[10px] text-slate-400 font-mono bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">
+                  {(beamShape === 'custom' || useBeamDimensions) ? `${beamWidth}×${beamHeight}px` : `${radius}px`} • {spotlightType === 'circle' ? (SPOTLIGHT_SHAPES.find(s => s.id === beamShape)?.name || 'Tròn') : 'Nón'}
+                </span>
+              </div>
                   {/* === KHỐI QUẢN LÝ MẪU CẤU HÌNH VỆT SÁNG & ĐÈN PIN (PRESETS) === */}
                   <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-950/70 border border-sky-500/30 shadow-md">
                     <div className="flex items-center justify-between">
@@ -2615,6 +2742,82 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                     </div>
                   )}
 
+                  {/* MÀU QUẦNG SÁNG ĐÈN PIN */}
+                  <div className="flex flex-col gap-2 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-sky-300 font-bold flex items-center gap-1.5">
+                        <span>Màu Quầng Sáng Đèn:</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={enableBeamBg}
+                          onChange={(e) => setEnableBeamBg(e.target.checked)}
+                          className="accent-sky-400 cursor-pointer"
+                        />
+                        <span>Đổi màu</span>
+                      </label>
+                    </div>
+
+                    {enableBeamBg && (
+                      <div className="flex flex-col gap-2 pt-1 border-t border-slate-800">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-slate-400">Màu ánh đèn:</span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="color"
+                              value={beamBgColor}
+                              onChange={(e) => setBeamBgColor(e.target.value)}
+                              className="w-6 h-6 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
+                            />
+                            <span className="text-xs font-mono text-white uppercase">{beamBgColor}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Độ đậm ánh sáng:</span>
+                            <span className="text-white font-mono">{beamOpacity}%</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="10"
+                            max="100"
+                            value={beamOpacity}
+                            onChange={(e) => setBeamOpacity(Number(e.target.value))}
+                            className="accent-sky-400 cursor-pointer h-1.5"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          {[
+                            { label: 'Đỏ', color: '#ff0033' },
+                            { label: 'Cam', color: '#ff6600' },
+                            { label: 'Vàng', color: '#ffee00' },
+                            { label: 'Lục', color: '#00e640' },
+                            { label: 'Lam', color: '#00a8ff' },
+                            { label: 'Tím', color: '#9c27b0' },
+                            { label: 'Hồng Neon', color: '#ff007f' },
+                            { label: 'Trắng Sáng', color: '#ffffff' }
+                          ].map((preset) => (
+                            <button
+                              key={preset.color}
+                              type="button"
+                              onClick={() => setBeamBgColor(preset.color)}
+                              className={`w-5 h-5 rounded-full border transition-transform hover:scale-125 cursor-pointer shadow-sm ${
+                                beamBgColor.toLowerCase() === preset.color.toLowerCase()
+                                  ? 'ring-2 ring-sky-400 scale-110 border-white'
+                                  : 'border-slate-700 opacity-90 hover:opacity-100'
+                              }`}
+                              style={{ backgroundColor: preset.color }}
+                              title={preset.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* KHUNG VIỀN VỆT SÁNG (BORDER CSS HOẶC KHUNG ẢNH PNG) */}
                   <div className="flex flex-col gap-3 p-3 bg-slate-950/50 rounded-xl border border-sky-500/30">
                     <div className="flex items-center justify-between">
@@ -3206,110 +3409,27 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       </div>
                     )}
                   </div>
-
-                  <div className="flex flex-col gap-2 p-2.5 bg-slate-950/40 rounded-xl border border-sky-500/20">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs text-sky-300 font-bold flex items-center gap-1.5">
-                        <span>Màu Quầng Sáng Đèn:</span>
-                      </label>
-                      <label className="flex items-center gap-1 text-[11px] text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={enableBeamBg}
-                          onChange={(e) => setEnableBeamBg(e.target.checked)}
-                          className="accent-sky-400 cursor-pointer"
-                        />
-                        <span>Đổi màu</span>
-                      </label>
-                    </div>
-
-                    {enableBeamBg && (
-                      <div className="flex flex-col gap-2 pt-1 border-t border-slate-800">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-slate-400">Màu ánh đèn:</span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="color"
-                              value={beamBgColor}
-                              onChange={(e) => setBeamBgColor(e.target.value)}
-                              className="w-6 h-6 rounded border border-slate-600 cursor-pointer bg-transparent p-0"
-                            />
-                            <span className="text-xs font-mono text-white uppercase">{beamBgColor}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Độ đậm ánh sáng:</span>
-                            <span className="text-white font-mono">{beamOpacity}%</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="10"
-                            max="100"
-                            value={beamOpacity}
-                            onChange={(e) => setBeamOpacity(Number(e.target.value))}
-                            className="accent-sky-400 cursor-pointer h-1.5"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                          {[
-                            { label: 'Đỏ', color: '#ff0033' },
-                            { label: 'Cam', color: '#ff6600' },
-                            { label: 'Vàng', color: '#ffee00' },
-                            { label: 'Lục', color: '#00e640' },
-                            { label: 'Lam', color: '#00a8ff' },
-                            { label: 'Tím', color: '#9c27b0' },
-                            { label: 'Hồng Neon', color: '#ff007f' },
-                            { label: 'Trắng Sáng', color: '#ffffff' }
-                          ].map((preset) => (
-                            <button
-                              key={preset.color}
-                              type="button"
-                              onClick={() => setBeamBgColor(preset.color)}
-                              className={`w-5 h-5 rounded-full border transition-transform hover:scale-125 cursor-pointer shadow-sm ${
-                                beamBgColor.toLowerCase() === preset.color.toLowerCase()
-                                  ? 'ring-2 ring-sky-400 scale-110 border-white'
-                                  : 'border-slate-700 opacity-90 hover:opacity-100'
-                              }`}
-                              style={{ backgroundColor: preset.color }}
-                              title={preset.label}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
-            </div>
-          ) : (
-            /* KHI Ở CHẾ ĐỘ PHỦ MÀU: THAY THÀNH CÀI ĐẶT LỚP PHỦ CHE MÀU */
-            <div className="bg-slate-900/50 rounded-xl border border-purple-500/40 overflow-hidden shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={() => toggleSection('coverSettings')}
-                className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-              >
+
+          {/* TAB: CÀI ĐẶT LỚP PHỦ CHE MÀU (COVER MODE) */}
+          {gameMode === 'cover' && (activeSection === 'coverSettings' || (!activeSection && gameMode === 'cover')) && (
+            <div className="bg-slate-900/60 rounded-xl border border-purple-500/40 p-3.5 flex flex-col gap-4 shadow-sm shrink-0">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <span className="text-base">🎨</span>
                   <span className="text-xs font-bold text-purple-300">Cài Đặt Lớp Phủ Che Màu</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <div
                     className="w-3.5 h-3.5 rounded-full border border-slate-500 shadow-sm"
                     style={{ backgroundColor: coverColor }}
                   />
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-400 font-mono bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800">
                     {radius}px • {SPOTLIGHT_SHAPES.find(s => s.id === coverShape)?.name || 'Tròn'}
                   </span>
-                  {activeSection === 'coverSettings' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
                 </div>
-              </button>
-
-              {activeSection === 'coverSettings' && (
-                <div className="p-3.5 flex flex-col gap-4 border-t border-slate-800">
+              </div>
                   {/* 📌 CHECKBOX CỐ ĐỊNH VỊ TRÍ LỚP PHỦ VÀO TÂM */}
                   <label className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
                     lockPointerToCenter
@@ -3681,9 +3801,23 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       </div>
                       {coverOverlayImg && (
                         <>
+                          {/* Tự động giữ tỉ lệ gốc của ảnh phủ */}
+                          <div className="flex items-center justify-between bg-purple-950/40 p-2 rounded-lg border border-purple-500/20">
+                            <label className="text-[11px] text-purple-200 flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={coverOverlayKeepAspect}
+                                onChange={(e) => setCoverOverlayKeepAspect(e.target.checked)}
+                                className="accent-purple-500 rounded"
+                              />
+                              <span>🔒 Giữ tỉ lệ gốc ảnh phủ (Không bị bẹp ngang/dọc)</span>
+                            </label>
+                          </div>
+
+                          {/* Kích thước tổng thể */}
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
-                              <span>Kích Thước Ảnh Phủ:</span>
+                              <span>Kích Thước Tổng Thể:</span>
                               <NumberInput
                                 value={coverOverlayScale}
                                 onChange={setCoverOverlayScale}
@@ -3701,9 +3835,121 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                               className="accent-purple-400 cursor-pointer h-1.5"
                             />
                             <div className="flex justify-between text-[9px] text-slate-400">
-                              <span>20%</span><span>100% (mặc định)</span><span>300%</span>
+                              <span>20%</span><span>100% (chuẩn)</span><span>300%</span>
                             </div>
                           </div>
+
+                          {/* Chỉnh Rộng & Cao riêng biệt */}
+                          <div className="flex items-center justify-between pt-1">
+                            <label className="text-xs text-slate-300 flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={coverOverlayUseCustomDim}
+                                onChange={(e) => setCoverOverlayUseCustomDim(e.target.checked)}
+                                className="accent-purple-500 rounded"
+                              />
+                              <span className="font-semibold text-purple-300">📐 Chỉnh Rộng & Cao riêng</span>
+                            </label>
+                            {coverOverlayUseCustomDim && (
+                              <button
+                                type="button"
+                                onClick={() => { setCoverOverlayScaleX(100); setCoverOverlayScaleY(100); }}
+                                className="text-[10px] text-purple-400 hover:text-purple-200 underline cursor-pointer"
+                              >
+                                Khôi phục 100%
+                              </button>
+                            )}
+                          </div>
+
+                          {coverOverlayUseCustomDim && (
+                            <div className="flex flex-col gap-2 p-2.5 bg-slate-950/60 rounded-xl border border-purple-500/30">
+                              {/* Chiều Rộng (W) */}
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-xs text-slate-300">
+                                  <span className="text-purple-200 font-medium">↔️ Chiều Rộng (W):</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleX(prev => Math.max(20, prev - 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-purple-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Giảm 5% rộng"
+                                    >
+                                      -5%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleX(prev => Math.min(300, prev + 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-purple-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Tăng 5% rộng"
+                                    >
+                                      +5%
+                                    </button>
+                                    <NumberInput
+                                      value={coverOverlayScaleX}
+                                      onChange={setCoverOverlayScaleX}
+                                      min={20} max={300} step={1}
+                                      suffix="%"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="20"
+                                  max="300"
+                                  value={coverOverlayScaleX}
+                                  onChange={(e) => setCoverOverlayScaleX(Number(e.target.value))}
+                                  className="accent-purple-400 cursor-pointer h-1.5"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>20% (hẹp)</span><span>100%</span><span>300% (rộng)</span>
+                                </div>
+                              </div>
+
+                              {/* Chiều Cao (H) */}
+                              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+                                <div className="flex items-center justify-between text-xs text-slate-300">
+                                  <span className="text-purple-200 font-medium">↕️ Chiều Cao (H):</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleY(prev => Math.max(20, prev - 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-purple-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Giảm 5% cao"
+                                    >
+                                      -5%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleY(prev => Math.min(300, prev + 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-purple-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Tăng 5% cao"
+                                    >
+                                      +5%
+                                    </button>
+                                    <NumberInput
+                                      value={coverOverlayScaleY}
+                                      onChange={setCoverOverlayScaleY}
+                                      min={20} max={300} step={1}
+                                      suffix="%"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="20"
+                                  max="300"
+                                  value={coverOverlayScaleY}
+                                  onChange={(e) => setCoverOverlayScaleY(Number(e.target.value))}
+                                  className="accent-purple-400 cursor-pointer h-1.5"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>20% (thấp)</span><span>100%</span><span>300% (cao)</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
                               <span>Vị Trí Ngang (X):</span>
@@ -3837,6 +4083,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                             type="button"
                             onClick={() => {
                               setCoverOverlayScale(100);
+                              setCoverOverlayScaleX(100);
+                              setCoverOverlayScaleY(100);
                               setCoverOverlayOffsetX(0);
                               setCoverOverlayOffsetY(0);
                             }}
@@ -3889,22 +4137,16 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* NHÓM MÀU NỀN BÓNG NHÂN VẬT (CHỈ HIỂN THỊ KHI Ở CHẾ ĐỘ SOI ĐÈN CHIẾU SÁNG) */}
-          {gameMode === 'reveal' && (
-            <div className="bg-slate-900/50 rounded-xl border border-sky-500/30 overflow-hidden shadow-sm shrink-0">
-              <button
-                type="button"
-                onClick={() => toggleSection('shadowStyle')}
-                className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-              >
+          {/* TAB 3: MÀU NỀN BÓNG & LỚP PHỦ (CHỈ Ở CHẾ ĐỘ SOI ĐÈN) */}
+          {gameMode === 'reveal' && activeSection === 'shadowStyle' && (
+            <div className="bg-slate-900/60 rounded-xl border border-purple-500/30 p-3.5 flex flex-col gap-3.5 shadow-sm shrink-0">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">🎨</span>
-                  <span className="text-xs font-bold text-sky-300">Màu Nền Bóng & Lớp Phủ</span>
+                  <span className="text-base">🎭</span>
+                  <span className="text-xs font-bold text-purple-300">Màu Nền Bóng & Lớp Phủ</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <div
                     className="w-3.5 h-3.5 rounded-full border border-slate-500 shadow-sm flex items-center justify-center overflow-hidden"
                     style={{
@@ -3913,12 +4155,11 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                   >
                     {shadowStyle === 'image' && <span className="text-[10px]">🖼️</span>}
                   </div>
-                  {activeSection === 'shadowStyle' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+                  <span className="text-[10px] text-purple-300 font-medium">
+                    {shadowStyle === 'image' ? 'Ảnh phủ' : 'Bóng màu'}
+                  </span>
                 </div>
-              </button>
-
-              {activeSection === 'shadowStyle' && (
-                <div className="p-3.5 border-t border-slate-800 flex flex-col gap-3">
+              </div>
                   {/* TAB CHUYỂN ĐỔI: BÓNG MÀU / HỌA TIẾT vs DÙNG ẢNH PHỦ */}
                   <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/70 rounded-xl border border-slate-700/80">
                     <button
@@ -3982,10 +4223,23 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
                       {coverOverlayImg && (
                         <>
-                          {/* Kích thước */}
+                          {/* Tự động giữ tỉ lệ gốc của ảnh phủ */}
+                          <div className="flex items-center justify-between bg-sky-950/40 p-2 rounded-lg border border-sky-500/20">
+                            <label className="text-[11px] text-sky-200 flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={coverOverlayKeepAspect}
+                                onChange={(e) => setCoverOverlayKeepAspect(e.target.checked)}
+                                className="accent-sky-500 rounded"
+                              />
+                              <span>🔒 Giữ tỉ lệ gốc ảnh phủ (Không bị bẹp ngang/dọc)</span>
+                            </label>
+                          </div>
+
+                          {/* Kích thước tổng thể */}
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-xs text-slate-300">
-                              <span>Kích Thước Ảnh Phủ:</span>
+                              <span>Kích Thước Tổng Thể:</span>
                               <NumberInput
                                 value={coverOverlayScale}
                                 onChange={setCoverOverlayScale}
@@ -4003,9 +4257,121 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                               className="accent-sky-400 cursor-pointer h-1.5"
                             />
                             <div className="flex justify-between text-[9px] text-slate-400">
-                              <span>20%</span><span>100% (mặc định)</span><span>300%</span>
+                              <span>20%</span><span>100% (chuẩn)</span><span>300%</span>
                             </div>
                           </div>
+
+                          {/* Chỉnh Rộng & Cao riêng biệt */}
+                          <div className="flex items-center justify-between pt-1">
+                            <label className="text-xs text-slate-300 flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={coverOverlayUseCustomDim}
+                                onChange={(e) => setCoverOverlayUseCustomDim(e.target.checked)}
+                                className="accent-sky-500 rounded"
+                              />
+                              <span className="font-semibold text-sky-300">📐 Chỉnh Rộng & Cao riêng</span>
+                            </label>
+                            {coverOverlayUseCustomDim && (
+                              <button
+                                type="button"
+                                onClick={() => { setCoverOverlayScaleX(100); setCoverOverlayScaleY(100); }}
+                                className="text-[10px] text-sky-400 hover:text-sky-200 underline cursor-pointer"
+                              >
+                                Khôi phục 100%
+                              </button>
+                            )}
+                          </div>
+
+                          {coverOverlayUseCustomDim && (
+                            <div className="flex flex-col gap-2 p-2.5 bg-slate-950/60 rounded-xl border border-sky-500/30">
+                              {/* Chiều Rộng (W) */}
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between text-xs text-slate-300">
+                                  <span className="text-sky-200 font-medium">↔️ Chiều Rộng (W):</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleX(prev => Math.max(20, prev - 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Giảm 5% rộng"
+                                    >
+                                      -5%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleX(prev => Math.min(300, prev + 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Tăng 5% rộng"
+                                    >
+                                      +5%
+                                    </button>
+                                    <NumberInput
+                                      value={coverOverlayScaleX}
+                                      onChange={setCoverOverlayScaleX}
+                                      min={20} max={300} step={1}
+                                      suffix="%"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="20"
+                                  max="300"
+                                  value={coverOverlayScaleX}
+                                  onChange={(e) => setCoverOverlayScaleX(Number(e.target.value))}
+                                  className="accent-sky-400 cursor-pointer h-1.5"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>20% (hẹp)</span><span>100%</span><span>300% (rộng)</span>
+                                </div>
+                              </div>
+
+                              {/* Chiều Cao (H) */}
+                              <div className="flex flex-col gap-1 pt-1 border-t border-slate-800">
+                                <div className="flex items-center justify-between text-xs text-slate-300">
+                                  <span className="text-sky-200 font-medium">↕️ Chiều Cao (H):</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleY(prev => Math.max(20, prev - 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Giảm 5% cao"
+                                    >
+                                      -5%
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setCoverOverlayScaleY(prev => Math.min(300, prev + 5))}
+                                      className="px-1.5 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-sky-300 rounded border border-slate-700 cursor-pointer"
+                                      title="Tăng 5% cao"
+                                    >
+                                      +5%
+                                    </button>
+                                    <NumberInput
+                                      value={coverOverlayScaleY}
+                                      onChange={setCoverOverlayScaleY}
+                                      min={20} max={300} step={1}
+                                      suffix="%"
+                                      className="w-16"
+                                    />
+                                  </div>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="20"
+                                  max="300"
+                                  value={coverOverlayScaleY}
+                                  onChange={(e) => setCoverOverlayScaleY(Number(e.target.value))}
+                                  className="accent-sky-400 cursor-pointer h-1.5"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-400">
+                                  <span>20% (thấp)</span><span>100%</span><span>300% (cao)</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Offset X */}
                           <div className="flex flex-col gap-1">
@@ -4141,6 +4507,8 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                             type="button"
                             onClick={() => {
                               setCoverOverlayScale(100);
+                              setCoverOverlayScaleX(100);
+                              setCoverOverlayScaleY(100);
                               setCoverOverlayOffsetX(0);
                               setCoverOverlayOffsetY(0);
                             }}
@@ -4191,83 +4559,88 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                       )}
                     </div>
                   )}
-                </div>
-              )}
             </div>
           )}
 
-          {/* NHÓM 3: CON TRỎ & BÀN TAY CHỈ (ACCORDION MỚI) */}
-          <PointerSettingsControl
-            isOpen={activeSection === 'pointer'}
-            onToggle={() => toggleSection('pointer')}
-            isAccordion={true}
-            pointerEmoji={pointerEmoji}
-            setPointerEmoji={setPointerEmoji}
-            pointerSize={handSize}
-            setPointerSize={setHandSize}
-            pointerRotation={pointerRotation}
-            setPointerRotation={setPointerRotation}
-            pointerOffsetX={pointerOffsetX}
-            setPointerOffsetX={setPointerOffsetX}
-            pointerOffsetY={pointerOffsetY}
-            setPointerOffsetY={setPointerOffsetY}
-            pointerAnchor={pointerAnchor}
-            setPointerAnchor={setPointerAnchor}
-            enablePointer={enablePointer}
-            setEnablePointer={setEnablePointer}
-            lockPointerToCenter={lockPointerToCenter}
-            setLockPointerToCenter={setLockPointerToCenter}
-            themeColor="sky"
-          />
-
-          {/* NHÓM MỚI: DẤU HỎI CHẤM TRÊN BÓNG ĐEN (?) */}
-          <div className="bg-slate-900/50 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm shrink-0">
-            <button
-              type="button"
-              onClick={() => toggleSection('questionMarks')}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base text-rose-400 font-black">❓</span>
-                <span className="text-xs font-bold text-rose-300">Dấu Hỏi Chấm (?) Trên Bóng</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableQuestionMarks ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-400'}`}>
-                  {enableQuestionMarks ? `${questionMarks.length} dấu` : 'Tắt'}
-                </span>
-                {activeSection === 'questionMarks' ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-              </div>
-            </button>
-
-            {activeSection === 'questionMarks' && (
-              <QuestionMarkSettingsControl
-                enableQuestionMarks={enableQuestionMarks}
-                setEnableQuestionMarks={setEnableQuestionMarks}
-                questionMarks={questionMarks}
-                setQuestionMarksWithHistory={setQuestionMarksWithHistory}
-                canUndo={qmHistoryIndex > 0}
-                canRedo={qmHistoryIndex < qmHistory.length - 1}
-                onUndo={handleUndoQm}
-                onRedo={handleRedoQm}
-                qmColor={qmColor}
-                setQmColor={setQmColor}
-                qmDefaultSize={qmDefaultSize}
-                setQmDefaultSize={setQmDefaultSize}
-                qmRandomColor={qmRandomColor}
-                setQmRandomColor={setQmRandomColor}
-                qmRandomSize={qmRandomSize}
-                setQmRandomSize={setQmRandomSize}
-                qmMinSize={qmMinSize}
-                setQmMinSize={setQmMinSize}
-                qmMaxSize={qmMaxSize}
-                setQmMaxSize={setQmMaxSize}
-                isPlacingQm={isPlacingQm}
-                setIsPlacingQm={setIsPlacingQm}
-                onClearAll={handleClearAllQm}
-                themeColor="rose"
+          {/* TAB 4: PHỤ TRỢ (CON TRỎ & DẤU HỎI ?) */}
+          {(activeSection === 'extras' || activeSection === 'pointer' || activeSection === 'questionMarks') && (
+            <div className="flex flex-col gap-3 shrink-0">
+              {/* CON TRỎ BÀN TAY / EMOJI */}
+              <PointerSettingsControl
+                isOpen={pointerAccordionOpen}
+                onToggle={() => setPointerAccordionOpen(!pointerAccordionOpen)}
+                isAccordion={true}
+                pointerEmoji={pointerEmoji}
+                setPointerEmoji={setPointerEmoji}
+                pointerSize={handSize}
+                setPointerSize={setHandSize}
+                pointerRotation={pointerRotation}
+                setPointerRotation={setPointerRotation}
+                pointerOffsetX={pointerOffsetX}
+                setPointerOffsetX={setPointerOffsetX}
+                pointerOffsetY={pointerOffsetY}
+                setPointerOffsetY={setPointerOffsetY}
+                pointerAnchor={pointerAnchor}
+                setPointerAnchor={setPointerAnchor}
+                enablePointer={enablePointer}
+                setEnablePointer={setEnablePointer}
+                lockPointerToCenter={lockPointerToCenter}
+                setLockPointerToCenter={setLockPointerToCenter}
+                themeColor="amber"
               />
-            )}
-          </div>
+
+              {/* DẤU HỎI CHẤM TRÊN BÓNG ĐEN (?) */}
+              <div className="bg-slate-900/60 rounded-xl border border-rose-500/30 overflow-hidden shadow-sm shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setQmAccordionOpen(!qmAccordionOpen)}
+                  className="w-full px-3.5 py-2.5 flex items-center justify-between bg-slate-800/80 hover:bg-slate-750 transition-colors text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-base text-rose-400 font-black">❓</span>
+                    <span className="text-xs font-bold text-rose-300">Dấu Hỏi Chấm (?) Trên Bóng</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${enableQuestionMarks ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-400'}`}>
+                      {enableQuestionMarks ? `${questionMarks.length} dấu` : 'Tắt'}
+                    </span>
+                    {qmAccordionOpen ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+                  </div>
+                </button>
+
+                {qmAccordionOpen && (
+                  <div className="p-3.5 border-t border-slate-800">
+                    <QuestionMarkSettingsControl
+                      enableQuestionMarks={enableQuestionMarks}
+                      setEnableQuestionMarks={setEnableQuestionMarks}
+                      questionMarks={questionMarks}
+                      setQuestionMarksWithHistory={setQuestionMarksWithHistory}
+                      canUndo={qmHistoryIndex > 0}
+                      canRedo={qmHistoryIndex < qmHistory.length - 1}
+                      onUndo={handleUndoQm}
+                      onRedo={handleRedoQm}
+                      qmColor={qmColor}
+                      setQmColor={setQmColor}
+                      qmDefaultSize={qmDefaultSize}
+                      setQmDefaultSize={setQmDefaultSize}
+                      qmRandomColor={qmRandomColor}
+                      setQmRandomColor={setQmRandomColor}
+                      qmRandomSize={qmRandomSize}
+                      setQmRandomSize={setQmRandomSize}
+                      qmMinSize={qmMinSize}
+                      setQmMinSize={setQmMinSize}
+                      qmMaxSize={qmMaxSize}
+                      setQmMaxSize={setQmMaxSize}
+                      isPlacingQm={isPlacingQm}
+                      setIsPlacingQm={setIsPlacingQm}
+                      onClearAll={handleClearAllQm}
+                      themeColor="rose"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Nút Reset: Xóa Hết Hình Ảnh & Dấu ? */}
           <button
