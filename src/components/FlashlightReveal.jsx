@@ -2144,34 +2144,44 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                 </span>
               </div>
                   {/* === KHỐI QUẢN LÝ MẪU CẤU HÌNH VỆT SÁNG & ĐÈN PIN (PRESETS) === */}
-                  <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-slate-950/70 border border-sky-500/30 shadow-md">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Bookmark size={15} className="text-sky-400" />
-                        <span className="text-xs font-bold text-sky-200">Mẫu Vệt Sáng & Đèn Pin</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-950 text-sky-400 border border-sky-800 font-mono">
-                          {beamPresets.length}
-                        </span>
+                  <div className="flex flex-col gap-2.5 p-3 rounded-2xl bg-slate-950/40 border border-slate-800/80 shadow-xs backdrop-blur-xs">
+                    {/* Header: Tiêu đề gọn gàng & Nút lưu mẫu sang trọng */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-sky-500/15 border border-sky-400/30 flex items-center justify-center text-sky-400 shrink-0">
+                          <Bookmark size={13} />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-100 tracking-wide">Mẫu Vệt Sáng</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-sky-300 border border-slate-700/80 font-semibold">
+                            {beamPresets.length}
+                          </span>
+                        </div>
                       </div>
+
                       <button
                         type="button"
                         onClick={() => {
                           setIsAddingPreset(!isAddingPreset);
                           setNewPresetName('');
                         }}
-                        className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-medium shadow transition-all cursor-pointer"
-                        title="Lưu các thông số vệt sáng & đèn pin hiện tại thành 1 mục mới"
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shadow-xs ${
+                          isAddingPreset
+                            ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
+                            : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-sky-500/20'
+                        }`}
+                        title="Lưu các thông số vệt sáng & đèn pin hiện tại thành mẫu mới"
                       >
-                        <Plus size={13} />
-                        <span>Lưu Mục Mới</span>
+                        {isAddingPreset ? <X size={12} /> : <Plus size={12} strokeWidth={2.5} />}
+                        <span>{isAddingPreset ? 'Đóng' : 'Lưu Mẫu'}</span>
                       </button>
                     </div>
 
                     {/* Banner thông báo kết quả (Feedback toast) */}
                     {presetFeedbackMsg && (
-                      <div className="px-2.5 py-1.5 rounded-lg bg-emerald-950/90 border border-emerald-500/60 text-emerald-200 text-xs flex items-center justify-between">
-                        <span className="font-medium">{presetFeedbackMsg}</span>
-                        <button type="button" onClick={() => setPresetFeedbackMsg('')} className="text-emerald-400 hover:text-white cursor-pointer">
+                      <div className="px-2.5 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs flex items-center justify-between shadow-xs">
+                        <span className="font-medium text-[11px] truncate">{presetFeedbackMsg}</span>
+                        <button type="button" onClick={() => setPresetFeedbackMsg('')} className="text-emerald-400 hover:text-white cursor-pointer ml-1 shrink-0">
                           <X size={12} />
                         </button>
                       </div>
@@ -2179,37 +2189,43 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
 
                     {/* Form thêm mới mục lưu */}
                     {isAddingPreset && (
-                      <form onSubmit={handleAddBeamPreset} className="p-2.5 rounded-lg bg-slate-900 border border-sky-500/50 flex flex-col gap-2">
-                        <span className="text-[11px] font-semibold text-slate-300">Đặt tên cho mẫu cấu hình mới:</span>
+                      <form onSubmit={handleAddBeamPreset} className="p-2.5 rounded-xl bg-slate-900 border border-sky-500/40 flex flex-col gap-2 shadow-inner">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-medium text-slate-200">Đặt tên mẫu mới:</span>
+                          <span className="text-[10px] text-slate-400 italic">(Lưu cài đặt hiện tại)</span>
+                        </div>
                         <div className="flex items-center gap-1.5">
                           <input
                             type="text"
                             autoFocus
-                            placeholder="VD: Kính lúp đỏ to, Khung banner rộng..."
+                            placeholder="VD: Kính lúp đỏ to, Khung banner..."
                             value={newPresetName}
                             onChange={(e) => setNewPresetName(e.target.value)}
-                            className="flex-1 px-2.5 py-1.5 bg-slate-800 border border-slate-600 focus:border-sky-400 rounded-lg text-xs text-white outline-none"
+                            className="flex-1 px-2.5 py-1.5 bg-slate-800/90 border border-slate-700 focus:border-sky-400 rounded-lg text-xs text-white placeholder-slate-500 outline-none"
                           />
                           <button
                             type="submit"
-                            className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                            className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm shrink-0"
                           >
-                            <Save size={13} />
+                            <Save size={12} />
                             <span>Lưu</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setIsAddingPreset(false)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg text-xs transition-colors cursor-pointer"
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer shrink-0"
                           >
-                            <X size={14} />
+                            <X size={13} />
                           </button>
                         </div>
                       </form>
                     )}
 
-                    {/* Danh sách các mục cài đặt đã lưu */}
-                    <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-0.5">
+                    {/* Danh sách các mục cài đặt đã lưu (Interactive Studio Tiles) */}
+                    <div
+                      className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1"
+                      style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(100, 116, 139, 0.4) transparent' }}
+                    >
                       {beamPresets.map((preset) => {
                         const isSelected = selectedPresetId === preset.id;
                         const isEditing = editingPresetId === preset.id;
@@ -2217,17 +2233,43 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                         const isCone = cfg.spotlightType === 'cone';
                         const isCustomDim = cfg.beamShape === 'custom' || cfg.useBeamDimensions;
 
+                        // Xác định icon và nhãn phân loại trực quan
+                        let previewIcon = '🔦';
+                        let frameLabel = 'Không viền';
+                        if (cfg.beamBorderMode === 'image') {
+                          if (cfg.selectedBeamFrameCategory === 'khung-ngang') {
+                            previewIcon = '🖼️';
+                            frameLabel = 'Khung Ngang';
+                          } else {
+                            previewIcon = '🔍';
+                            frameLabel = 'Kính Lúp';
+                          }
+                        } else if (cfg.beamBorderMode === 'custom') {
+                          previewIcon = '✨';
+                          frameLabel = 'Viền Glow';
+                        } else if (cfg.beamShape === 'heart') previewIcon = '💖';
+                        else if (cfg.beamShape === 'star') previewIcon = '⭐';
+                        else if (cfg.beamShape === 'cloud') previewIcon = '☁️';
+                        else if (cfg.beamShape === 'square') previewIcon = '⬛';
+
+                        const dimLabel = isCone
+                          ? 'Kiểu nón'
+                          : (isCustomDim ? `${cfg.beamWidth}×${cfg.beamHeight}px` : `${cfg.radius}px`);
+
                         return (
                           <div
                             key={preset.id}
-                            className={`p-2 rounded-lg border transition-all ${
+                            onClick={() => {
+                              if (!isEditing) handleApplyBeamPreset(preset);
+                            }}
+                            className={`group relative flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-sky-950/50 border-sky-400/80 shadow-sm ring-1 ring-sky-400/40'
-                                : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                                ? 'bg-gradient-to-r from-sky-950/60 via-slate-900/90 to-slate-900/80 border border-sky-400/80 shadow-md shadow-sky-950/40 ring-1 ring-sky-400/30'
+                                : 'bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800/80 hover:border-slate-700/90'
                             }`}
                           >
                             {isEditing ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 w-full py-0.5" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="text"
                                   autoFocus
@@ -2237,109 +2279,131 @@ export default function FlashlightReveal({ is916Mode: propIs916Mode, setIs916Mod
                                     if (e.key === 'Enter') handleSaveRename(preset.id);
                                     if (e.key === 'Escape') setEditingPresetId(null);
                                   }}
-                                  className="flex-1 px-2 py-1 bg-slate-800 border border-sky-400 rounded text-xs text-white outline-none"
+                                  className="flex-1 px-2.5 py-1 bg-slate-800 border border-sky-400 rounded-lg text-xs text-white outline-none"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveRename(preset.id)}
-                                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
-                                  title="Lưu tên mới"
+                                  className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs"
+                                  title="Lưu tên"
                                 >
-                                  <Check size={13} />
+                                  <Check size={12} />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingPresetId(null)}
-                                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
                                   title="Hủy"
                                 >
-                                  <X size={13} />
+                                  <X size={12} />
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex flex-col gap-1.5">
-                                <div className="flex items-center justify-between">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleApplyBeamPreset(preset)}
-                                    className="flex items-center gap-1.5 text-left flex-1 min-w-0 cursor-pointer group"
-                                    title="Nhấn để áp dụng mẫu này"
-                                  >
-                                    <span className="text-xs font-semibold text-white group-hover:text-sky-300 truncate">
+                              <>
+                                {/* Visual Thumbnail Preview */}
+                                <div className="relative w-8 h-8 rounded-lg bg-slate-950/90 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                                  {/* Quầng sáng ambient preview */}
+                                  {cfg.enableBeamBg && (
+                                    <div
+                                      className="absolute inset-1 rounded-full opacity-70 blur-[3px]"
+                                      style={{ backgroundColor: cfg.beamBgColor || '#fef08a' }}
+                                    />
+                                  )}
+                                  <span className="relative text-xs select-none z-10">{previewIcon}</span>
+                                  {isSelected && (
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-sky-500 rounded-full flex items-center justify-center text-white shadow-xs z-20">
+                                      <Check size={8} strokeWidth={3} />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Thông tin mẫu: Tên rộng rãi + Thông số tinh tế */}
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-xs font-semibold truncate transition-colors ${
+                                      isSelected ? 'text-sky-300 font-bold' : 'text-slate-200 group-hover:text-white'
+                                    }`}>
                                       {preset.name}
                                     </span>
-                                    {isSelected && (
-                                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold shrink-0">
-                                        Đang dùng
-                                      </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5 truncate select-none">
+                                    <span className="font-mono text-slate-300">{dimLabel}</span>
+                                    <span className="text-slate-600">•</span>
+                                    <span>{frameLabel}</span>
+                                    {cfg.enableBeamBg && (
+                                      <>
+                                        <span className="text-slate-600">•</span>
+                                        <span className="flex items-center gap-1">
+                                          <span
+                                            className="w-1.5 h-1.5 rounded-full inline-block border border-white/30"
+                                            style={{ backgroundColor: cfg.beamBgColor || '#fef08a' }}
+                                          />
+                                          Quầng sáng
+                                        </span>
+                                      </>
                                     )}
-                                  </button>
+                                  </div>
+                                </div>
 
-                                  <div className="flex items-center gap-1 shrink-0 ml-1">
-                                    {/* Nút Áp Dụng */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleApplyBeamPreset(preset)}
-                                      className="px-1.5 py-0.5 rounded text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-medium cursor-pointer transition-colors"
-                                      title="Áp dụng mẫu này lên sân khấu"
-                                    >
+                                {/* Nhóm nút hành động bên phải */}
+                                <div
+                                  className="flex items-center gap-0.5 shrink-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {/* Trạng thái hiển thị */}
+                                  {isSelected ? (
+                                    <span className="text-[9px] font-bold text-sky-400 bg-sky-500/15 border border-sky-400/30 px-1.5 py-0.5 rounded-md mr-0.5 uppercase tracking-wider group-hover:hidden">
+                                      Đang dùng
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-medium text-slate-500 group-hover:text-sky-300 group-hover:hidden pr-1 transition-colors">
                                       Áp dụng
-                                    </button>
+                                    </span>
+                                  )}
 
+                                  {/* Cụm 3 nút phụ (Ghi đè, Đổi tên, Xóa) */}
+                                  <div className={`items-center gap-0.5 ${isSelected ? 'flex' : 'hidden group-hover:flex'}`}>
                                     {/* Nút Lưu Đè */}
                                     <button
                                       type="button"
                                       onClick={() => handleOverwriteBeamPreset(preset.id)}
-                                      className="p-1 rounded text-amber-300 hover:text-white hover:bg-amber-600/30 border border-amber-500/30 cursor-pointer transition-colors"
-                                      title={`Lưu đè toàn bộ cài đặt hiện tại vào "${preset.name}"`}
+                                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer"
+                                      title={`Lưu đè cấu hình hiện tại vào "${preset.name}"`}
                                     >
-                                      <RefreshCw size={12} />
+                                      <RefreshCw size={11} />
                                     </button>
 
                                     {/* Nút Đổi Tên */}
                                     <button
                                       type="button"
                                       onClick={() => handleStartRename(preset)}
-                                      className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
-                                      title="Sửa tên mục"
+                                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all cursor-pointer"
+                                      title="Sửa tên mẫu"
                                     >
-                                      <Pencil size={12} />
+                                      <Pencil size={11} />
                                     </button>
 
                                     {/* Nút Xóa */}
                                     <button
                                       type="button"
                                       onClick={() => handleDeleteBeamPreset(preset.id, preset.name)}
-                                      className="p-1 rounded text-red-400 hover:text-white hover:bg-red-600/40 cursor-pointer transition-colors"
-                                      title="Xóa mục này"
+                                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 transition-all cursor-pointer"
+                                      title="Xóa mẫu này"
                                     >
-                                      <Trash2 size={12} />
+                                      <Trash2 size={11} />
                                     </button>
                                   </div>
                                 </div>
-
-                                {/* Thông tin tóm tắt cấu hình của mục */}
-                                <div className="flex items-center gap-1 text-[9px] text-slate-400 flex-wrap">
-                                  <span className="bg-slate-800/80 px-1.5 py-0.5 rounded">
-                                    {isCone ? 'Kiểu nón' : (isCustomDim ? `${cfg.beamWidth}×${cfg.beamHeight}px` : `R: ${cfg.radius}px`)}
-                                  </span>
-                                  <span className="bg-slate-800/80 px-1.5 py-0.5 rounded">
-                                    {cfg.beamBorderMode === 'image'
-                                      ? (cfg.selectedBeamFrameCategory === 'khung-ngang' ? '🖼️ Khung Ngang' : '🔍 Kính Lúp')
-                                      : (cfg.beamBorderMode === 'custom' ? `Viền CSS (${cfg.beamBorderStyle || 'solid'})` : 'Không viền')}
-                                  </span>
-                                  {cfg.enableBeamBg && (
-                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded">
-                                      <span className="w-2 h-2 rounded-full inline-block border border-white/30" style={{ backgroundColor: cfg.beamBgColor || '#fef08a' }} />
-                                      Quầng sáng
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+                              </>
                             )}
                           </div>
                         );
                       })}
+                      {beamPresets.length === 0 && (
+                        <div className="p-3 text-center text-xs text-slate-500 italic rounded-lg bg-slate-900/40 border border-dashed border-slate-800">
+                          Chưa có mẫu nào. Bấm "+ Lưu Mẫu" để lưu cài đặt hiện tại.
+                        </div>
+                      )}
                     </div>
                   </div>
 
