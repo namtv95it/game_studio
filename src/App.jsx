@@ -51,7 +51,7 @@ export default function App() {
 
             {/* CÁC NÚT ĐIỀU HƯỚNG HEADER */}
             <div className="flex items-center gap-2.5">
-              <button 
+              <button
                 onClick={() => {
                   setBgModalTab('colors');
                   setIsBgModalOpen(true);
@@ -62,7 +62,7 @@ export default function App() {
                 <Palette size={16} className="text-amber-400" /> Đổi Nền Sân Khấu
               </button>
 
-              <button 
+              <button
                 onClick={() => {
                   setBgModalTab('image');
                   setIsBgModalOpen(true);
@@ -73,14 +73,14 @@ export default function App() {
                 <ImageIcon size={16} className="text-purple-400" /> Ảnh Nền Sân Khấu
               </button>
 
-              <button 
+              <button
                 onClick={() => setIsModalOpen(true)}
                 className="flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 hover:border-slate-500 font-semibold text-xs rounded-xl shadow-md transition-all hover:scale-105 cursor-pointer"
               >
                 <LayoutGrid size={16} /> Kho Tính Năng
               </button>
 
-              <button 
+              <button
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('app:launch-916'));
                   setIs916Mode(true);
@@ -94,48 +94,48 @@ export default function App() {
           </header>
         )}
 
-      {/* DYNAMIC SCREEN CONTENT */}
-      <main className="flex-1 relative overflow-hidden">
-        {activeTab === 'flashlight' && (
-          <FlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'multi_flashlight' && (
-          <MultiFlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'shadow' && (
-          <ShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'multi_shadow' && (
-          <MultiShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'luckywheel' && (
-          <LuckyWheel is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'imageblend' && (
-          <ImageBlend is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'redemption' && (
-          <RedemptionEffect is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'bomb_reveal' && (
-          <BombRevealStudio is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'folded_paper' && (
-          <FoldedPaperReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'missing_piece' && (
-          <MissingPiecePuzzle is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'fire_burn' && (
-          <FireBurnReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-        {activeTab === 'shadow_quiz' && (
-          <ShadowClueQuiz is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
-        )}
-      </main>
+        {/* DYNAMIC SCREEN CONTENT */}
+        <main className="flex-1 relative overflow-hidden">
+          {activeTab === 'flashlight' && (
+            <FlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'multi_flashlight' && (
+            <MultiFlashlightReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'shadow' && (
+            <ShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'multi_shadow' && (
+            <MultiShadowMatch is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'luckywheel' && (
+            <LuckyWheel is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'imageblend' && (
+            <ImageBlend is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'redemption' && (
+            <RedemptionEffect is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'bomb_reveal' && (
+            <BombRevealStudio is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'folded_paper' && (
+            <FoldedPaperReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'missing_piece' && (
+            <MissingPiecePuzzle is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'fire_burn' && (
+            <FireBurnReveal is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+          {activeTab === 'shadow_quiz' && (
+            <ShadowClueQuiz is916Mode={is916Mode} setIs916Mode={setIs916Mode} />
+          )}
+        </main>
 
-      {/* BANNER THÔNG TIN KHI ĐANG Ở CHẾ ĐỘ KHỞI CHẠY */}
-      {is916Mode && (
+        {/* BANNER THÔNG TIN KHI ĐANG Ở CHẾ ĐỘ KHỞI CHẠY */}
+        {/* {is916Mode && (
         <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-4 py-1.5 rounded-full shadow-2xl text-xs pointer-events-auto">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-slate-200 font-semibold">Chế độ Khởi Chạy (Nhấn ESC để thoát)</span>
@@ -152,27 +152,27 @@ export default function App() {
             <ImageIcon size={12} /> Chỉnh Lại Nền
           </button>
         </div>
-      )}
+      )} */}
 
-      {/* POPUP MODAL KHO TÍNH NĂNG */}
-      <FeatureModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSelectFeature={(id) => setActiveTab(id)} 
-      />
+        {/* POPUP MODAL KHO TÍNH NĂNG */}
+        <FeatureModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSelectFeature={(id) => setActiveTab(id)}
+        />
 
-      {/* POPUP MODAL CHỌN MẪU NỀN SÂN KHẤU (MÀU SẮC, HOA VĂN, HÌNH ẢNH NỀN) */}
-      <BackgroundSelectorModal
-        isOpen={isBgModalOpen}
-        onClose={() => setIsBgModalOpen(false)}
-        initialTab={bgModalTab}
-        onLaunchPreview={() => {
-          setIsBgModalOpen(false);
-          window.dispatchEvent(new CustomEvent('app:launch-916'));
-          setIs916Mode(true);
-        }}
-      />
-    </div>
-  </StageBackgroundProvider>
+        {/* POPUP MODAL CHỌN MẪU NỀN SÂN KHẤU (MÀU SẮC, HOA VĂN, HÌNH ẢNH NỀN) */}
+        <BackgroundSelectorModal
+          isOpen={isBgModalOpen}
+          onClose={() => setIsBgModalOpen(false)}
+          initialTab={bgModalTab}
+          onLaunchPreview={() => {
+            setIsBgModalOpen(false);
+            window.dispatchEvent(new CustomEvent('app:launch-916'));
+            setIs916Mode(true);
+          }}
+        />
+      </div>
+    </StageBackgroundProvider>
   );
 }
