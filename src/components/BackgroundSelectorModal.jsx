@@ -511,10 +511,10 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                   {/* Danh sách mẫu ảnh nền có sẵn */}
                   <div className="pt-2">
                     <div className="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
-                      <span>Mẫu ảnh nền thiết kế sẵn ({STAGE_BG_IMAGE_PRESETS.length}):</span>
-                      <span className="text-[10px] text-purple-400">Chất lượng cao • Nhẹ tức thì</span>
+                      <span>Mẫu ảnh nền từ thư mục ({STAGE_BG_IMAGE_PRESETS.length}):</span>
+                      <span className="text-[10px] text-purple-400">src/assets/background</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-5 gap-2">
                       {STAGE_BG_IMAGE_PRESETS.map((preset) => {
                         const isCurrent = stageBgImage === preset.url && stageBgType === 'image';
                         return (
@@ -574,7 +574,10 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                     {/* HÀNG CÔNG CỤ XOAY */}
                     <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-slate-300">Góc Xoay Ảnh:</span>
+                        <div>
+                          <span className="font-semibold text-slate-300">Góc Xoay Ảnh:</span>
+                          <span className="text-[10px] text-emerald-400 block">✓ Mặc định 0° đã tự xoay khớp chiều nhân vật</span>
+                        </div>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
@@ -595,10 +598,14 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                           <button
                             type="button"
                             onClick={() => updateStageBgImageSetting('rotation', 0)}
-                            className="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 cursor-pointer"
-                            title="Về góc chuẩn 0 độ"
+                            className={`px-2 py-1 text-[11px] rounded border cursor-pointer font-bold ${
+                              (s.rotation || 0) === 0
+                                ? 'bg-purple-600 text-white border-purple-400 shadow'
+                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                            title="Về góc chuẩn khớp chiều nhân vật (0 độ)"
                           >
-                            0°
+                            0° Chuẩn
                           </button>
                           <button
                             type="button"
@@ -629,26 +636,12 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                         className="w-full accent-purple-400 cursor-pointer h-1.5"
                       />
                       <div className="flex justify-between text-[9px] text-slate-500">
-                        <span>-180° (Ngược)</span>
-                        <span>-90° (Dọc Trái)</span>
-                        <span>0° (Chuẩn)</span>
-                        <span>+90° (Dọc Phải)</span>
-                        <span>+180° (Ngược)</span>
+                        <span>-180°</span>
+                        <span>-90°</span>
+                        <span>0° (Khớp Chuẩn Nhân Vật)</span>
+                        <span>+90°</span>
+                        <span>+180°</span>
                       </div>
-
-                      {/* Nút khớp khung khi xoay */}
-                      {Math.abs(s.rotation || 0) % 180 !== 0 && (
-                        <div className="pt-1 flex items-center justify-between text-[11px] text-amber-300 bg-amber-950/30 p-2 rounded-lg border border-amber-500/20">
-                          <span>Ảnh đang xoay dọc. Bấm để tự phóng to phủ kín 100% không để lộ viền:</span>
-                          <button
-                            type="button"
-                            onClick={handleAutoFitRotation}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded cursor-pointer shadow"
-                          >
-                            Khớp Phủ Kín
-                          </button>
-                        </div>
-                      )}
                     </div>
 
                     {/* HÀNG CĂN CHỈNH KHUNG (FIT) & THU PHÓNG (SCALE) & LẬT ẢNH */}
@@ -1008,28 +1001,35 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                 {/* Lớp ảnh nền sân khấu */}
                 {stageBgType === 'image' && stageBgImage && (
                   <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-                    <img
-                      src={stageBgImage}
-                      alt="Stage Preview"
-                      className="pointer-events-none select-none max-w-none transition-transform duration-75"
+                    <div
+                      className="relative flex items-center justify-center shrink-0 pointer-events-none"
                       style={{
-                        width: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
-                        height: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
-                        objectFit: s.fit === 'original' ? 'none' : s.fit,
-                        transform: `
-                          translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)
-                          rotate(${s.rotation || 0}deg)
-                          scale(${((s.scale || 100) / 100) * (s.flipX ? -1 : 1)}, ${((s.scale || 100) / 100) * (s.flipY ? -1 : 1)})
-                        `,
-                        opacity: (s.opacity ?? 100) / 100,
-                        filter: `
-                          brightness(${s.brightness ?? 100}%)
-                          contrast(${s.contrast ?? 100}%)
-                          blur(${s.blur || 0}px)
-                          grayscale(${s.grayscale || 0}%)
-                        `
+                        width: previewMode === 'portrait' ? '210px' : '270px',
+                        height: previewMode === 'portrait' ? '370px' : '480px',
+                        transform: `rotate(${(previewMode === 'portrait' ? 0 : -90) + (s.rotation || 0)}deg)`,
+                        transformOrigin: 'center center'
                       }}
-                    />
+                    >
+                      <img
+                        src={stageBgImage}
+                        alt="Stage Preview"
+                        className="w-full h-full pointer-events-none select-none max-w-none transition-transform duration-75"
+                        style={{
+                          objectFit: s.fit === 'original' ? 'none' : s.fit,
+                          transform: `
+                            translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)
+                            scale(${((s.scale || 100) / 100) * (s.flipX ? -1 : 1)}, ${((s.scale || 100) / 100) * (s.flipY ? -1 : 1)})
+                          `,
+                          opacity: (s.opacity ?? 100) / 100,
+                          filter: `
+                            brightness(${s.brightness ?? 100}%)
+                            contrast(${s.contrast ?? 100}%)
+                            blur(${s.blur || 0}px)
+                            grayscale(${s.grayscale || 0}%)
+                          `
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1047,7 +1047,13 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
 
                 {/* MẪU BÓNG NHÂN VẬT & ĐÈN PIN ĐỂ QUAN SÁT TƯƠNG PHẢN */}
                 {showGhostCharacter && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div 
+                    className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                    style={{
+                      transform: previewMode === 'landscape' ? 'rotate(-90deg)' : 'none',
+                      transformOrigin: 'center center'
+                    }}
+                  >
                     {/* Vệt sáng đèn pin mô phỏng */}
                     <div className="absolute w-28 h-28 rounded-full border-2 border-yellow-400/60 bg-yellow-400/10 shadow-[0_0_25px_rgba(250,204,21,0.3)] animate-pulse" />
                     {/* Bóng nhân vật tượng trưng */}

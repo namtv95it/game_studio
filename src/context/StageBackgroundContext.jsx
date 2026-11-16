@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { saveLocalImage, loadLocalImage, removeLocalImage, getLocalImageSync } from '../utils/localImageStorage';
 import { STAGE_BG_IMAGE_PRESETS } from '../constants/stageImagePresets';
 
@@ -1761,40 +1761,83 @@ export function StageBackgroundOverlay({ className = '' }) {
     patternOpacity 
   } = useStageBackground();
 
+  const containerRef = useRef(null);
+  const [dims, setDims] = useState(() => ({
+    w: typeof window !== 'undefined' ? 960 : 960,
+    h: typeof window !== 'undefined' ? 540 : 540
+  }));
+
+  useLayoutEffect(() => {
+    if (!containerRef.current) return;
+    const updateSize = () => {
+      const el = containerRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width && rect.height) {
+          setDims({ w: rect.width, h: rect.height });
+        }
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   const isDarkBg = stageBgColor === '#0f172a';
   const showImage = stageBgType === 'image' && !!stageBgImage;
   const s = stageBgImageSettings || DEFAULT_BG_IMAGE_SETTINGS;
 
+  // Tự động đồng bộ chiều xoay với Canvas trò chơi:
+  // Vì các Canvas game đều được thiết kế dạng 9:16 (540x960) và xoay rotate(-90deg) để hiển thị nằm ngang (960x540),
+  // Các ảnh nền (941x1672) khi ở khung ngang cũng cần xoay -90deg để đầu-chân nhân vật khớp đúng hướng với nền trời-mặt đất!
+  const isLandscape = dims.w >= dims.h;
+  const baseRotation = isLandscape ? -90 : 0;
+  const totalRotation = baseRotation + (s.rotation || 0);
+
+  // Kích thước khung ảnh trước khi xoay:
+  // Nếu nằm ngang: khung ảnh có chiều rộng = dims.h và chiều cao = dims.w, khi xoay -90deg sẽ khít tuyệt đối với (dims.w x dims.h) mà không bị méo hay hở mép
+  const boxW = isLandscape ? dims.h : dims.w;
+  const boxH = isLandscape ? dims.w : dims.h;
+
   return (
     <div 
+      ref={containerRef}
       className={`absolute inset-0 pointer-events-none overflow-hidden transition-all duration-300 ${className}`}
       style={{ backgroundColor: stageBgColor }}
     >
       {/* LỚP HÌNH ẢNH NỀN SÂN KHẤU (KÈM XOAY, BIẾN ĐỔI & BỘ LỌC) */}
       {showImage && (
         <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-          <img
-            src={stageBgImage}
-            alt="Stage Background"
-            className="pointer-events-none select-none max-w-none transition-transform duration-75"
+          <div
+            className="relative flex items-center justify-center shrink-0 pointer-events-none"
             style={{
-              width: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
-              height: s.fit === 'fill' ? '100%' : (s.fit === 'contain' ? '100%' : (s.fit === 'cover' ? '100%' : 'auto')),
-              objectFit: s.fit === 'original' ? 'none' : s.fit,
-              transform: `
-                translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)
-                rotate(${s.rotation || 0}deg)
-                scale(${((s.scale || 100) / 100) * (s.flipX ? -1 : 1)}, ${((s.scale || 100) / 100) * (s.flipY ? -1 : 1)})
-              `,
-              opacity: (s.opacity ?? 100) / 100,
-              filter: `
-                brightness(${s.brightness ?? 100}%)
-                contrast(${s.contrast ?? 100}%)
-                blur(${s.blur || 0}px)
-                grayscale(${s.grayscale || 0}%)
-              `
+              width: `${Math.round(boxW)}px`,
+              height: `${Math.round(boxH)}px`,
+              transform: `rotate(${totalRotation}deg)`,
+              transformOrigin: 'center center'
             }}
-          />
+          >
+            <img
+              src={stageBgImage}
+              alt="Stage Background"
+              className="w-full h-full pointer-events-none select-none max-w-none transition-transform duration-75"
+              style={{
+                objectFit: s.fit === 'original' ? 'none' : s.fit,
+                transform: `
+                  translate(${s.offsetX || 0}px, ${s.offsetY || 0}px)
+                  scale(${((s.scale || 100) / 100) * (s.flipX ? -1 : 1)}, ${((s.scale || 100) / 100) * (s.flipY ? -1 : 1)})
+                `,
+                opacity: (s.opacity ?? 100) / 100,
+                filter: `
+                  brightness(${s.brightness ?? 100}%)
+                  contrast(${s.contrast ?? 100}%)
+                  blur(${s.blur || 0}px)
+                  grayscale(${s.grayscale || 0}%)
+                `
+              }}
+            />
+          </div>
         </div>
       )}
 
