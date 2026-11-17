@@ -6,6 +6,8 @@
 // Danh mục phân loại ảnh nền sân khấu
 export const STAGE_BG_CATEGORIES = [
   { id: 'all', name: 'Tất Cả', icon: '🌟' },
+  { id: 'the-thao', name: 'Thể Thao', icon: '⚽' },
+  { id: 'xmas', name: 'Giáng Sinh', icon: '🎄' },
   { id: 'main', name: 'Bộ Nền Chính', icon: '🎨' },
   { id: 'series-1', name: 'Bộ Sưu Tập 1', icon: '🏙️' },
   { id: 'series-2', name: 'Bộ Sưu Tập 2', icon: '🏞️' },
@@ -30,7 +32,13 @@ export const STAGE_BG_IMAGE_PRESETS = bgPaths.map((p, idx) => {
   // Xác định phân loại dựa trên tiền tố file
   let category = 'main';
   let catPrefix = 'Chính';
-  if (fullName.startsWith('000-bg')) {
+  if (fullName.startsWith('0000-the-thao')) {
+    category = 'the-thao';
+    catPrefix = 'Thể Thao';
+  } else if (fullName.startsWith('0000-xmas')) {
+    category = 'xmas';
+    catPrefix = 'Noel';
+  } else if (fullName.startsWith('000-bg')) {
     category = 'series-1';
     catPrefix = 'Bộ 1';
   } else if (fullName.startsWith('0001-bg')) {
@@ -41,7 +49,7 @@ export const STAGE_BG_IMAGE_PRESETS = bgPaths.map((p, idx) => {
     catPrefix = 'Bộ 3';
   }
 
-  // Chuẩn hóa tên hiển thị: ví dụ 'bg (1)' -> 'Nền 1', '000-bg (5)' -> 'Bộ 1 - Số 5'
+  // Chuẩn hóa tên hiển thị: ví dụ 'bg (1)' -> 'Nền 1', '0000-the-thao (3)' -> 'Thể Thao #3', '0000-xmas (2)' -> 'Noel #2'
   const numberMatch = fullName.match(/\((\d+)\)/);
   const num = numberMatch ? numberMatch[1] : `${idx + 1}`;
   const displayName = category === 'main' ? `Nền ${num}` : `${catPrefix} #${num}`;
