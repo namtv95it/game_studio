@@ -134,25 +134,7 @@ export default function App() {
           )}
         </main>
 
-        {/* BANNER THÔNG TIN KHI ĐANG Ở CHẾ ĐỘ KHỞI CHẠY */}
-        {/* {is916Mode && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-950/85 backdrop-blur-md border border-slate-700/80 px-4 py-1.5 rounded-full shadow-2xl text-xs pointer-events-auto">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-slate-200 font-semibold">Chế độ Khởi Chạy (Nhấn ESC để thoát)</span>
-          <button
-            type="button"
-            onClick={() => {
-              setIs916Mode(false);
-              setBgModalTab('image');
-              setIsBgModalOpen(true);
-            }}
-            className="ml-2 px-2.5 py-0.5 bg-purple-600 hover:bg-purple-500 text-white rounded-full text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow"
-            title="Quay lại bảng tùy chỉnh ảnh nền sân khấu"
-          >
-            <ImageIcon size={12} /> Chỉnh Lại Nền
-          </button>
-        </div>
-      )} */}
+        {/* BANNER THÔNG TIN KHI ĐANG Ở CHẾ ĐỘ KHỞI CHẠY (Đã ẩn theo yêu cầu) */}
 
         {/* POPUP MODAL KHO TÍNH NĂNG */}
         <FeatureModal

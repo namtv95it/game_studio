@@ -11,7 +11,7 @@ import {
   STAGE_PATTERN_OPTIONS,
   DEFAULT_BG_IMAGE_SETTINGS
 } from '../context/StageBackgroundContext';
-import { STAGE_BG_IMAGE_PRESETS } from '../constants/stageImagePresets';
+import { STAGE_BG_IMAGE_PRESETS, STAGE_BG_CATEGORIES } from '../constants/stageImagePresets';
 import NumberInput from './NumberInput';
 
 export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 'colors', onLaunchPreview }) {
@@ -41,6 +41,7 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
 
   const [activeTab, setActiveTab] = useState(initialTab || 'colors');
   const [patternCategoryFilter, setPatternCategoryFilter] = useState('all');
+  const [bgImageCategoryFilter, setBgImageCategoryFilter] = useState('all');
   const [previewMode, setPreviewMode] = useState('landscape'); // 'landscape' (16:9) | 'portrait' (9:16)
   const [showGhostCharacter, setShowGhostCharacter] = useState(true);
   const [moveStep, setMoveStep] = useState(10);
@@ -508,48 +509,90 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                     </label>
                   </div>
 
-                  {/* Danh sách mẫu ảnh nền có sẵn */}
+                  {/* Danh sách mẫu ảnh nền có sẵn (Phân nhóm & Nạp thumbnail siêu nhẹ) */}
                   <div className="pt-2">
-                    <div className="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
-                      <span>Mẫu ảnh nền từ thư mục ({STAGE_BG_IMAGE_PRESETS.length}):</span>
-                      <span className="text-[10px] text-purple-400">src/assets/background</span>
+                    <div className="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-slate-200 font-bold">
+                        <ImageIcon size={13} className="text-purple-400" />
+                        Kho Ảnh Nền Mẫu ({STAGE_BG_IMAGE_PRESETS.length} ảnh):
+                      </span>
+                      <span className="text-[10px] text-purple-300 font-mono bg-purple-950/70 border border-purple-800/60 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Sparkles size={10} className="text-purple-400" />
+                        Đã nén WebP siêu tốc
+                      </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-2">
-                      {STAGE_BG_IMAGE_PRESETS.map((preset) => {
-                        const isCurrent = stageBgImage === preset.url && stageBgType === 'image';
+
+                    {/* Thanh lọc theo nhóm / danh mục */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 mb-2.5 custom-scrollbar">
+                      {STAGE_BG_CATEGORIES.map(cat => {
+                        const count = cat.id === 'all'
+                          ? STAGE_BG_IMAGE_PRESETS.length
+                          : STAGE_BG_IMAGE_PRESETS.filter(p => p.category === cat.id).length;
+                        const isActive = bgImageCategoryFilter === cat.id;
                         return (
-                          <div
-                            key={preset.id}
-                            onClick={() => handleSelectPresetBgImage(preset.url)}
-                            className={`group relative rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${
-                              isCurrent
-                                ? 'border-purple-400 ring-2 ring-purple-400/30 shadow-lg shadow-purple-500/20'
-                                : 'border-slate-750 hover:border-purple-400/60 bg-slate-800'
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setBgImageCategoryFilter(cat.id)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isActive
+                                ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400/40'
+                                : 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-750 border border-slate-700/60'
                             }`}
-                            title={`${preset.name}: ${preset.desc}`}
                           >
-                            <div className="w-full h-14 bg-slate-950 overflow-hidden relative">
-                              <img 
-                                src={preset.url} 
-                                alt={preset.name} 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                              />
-                              {isCurrent && (
-                                <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
-                                  <div className="w-5 h-5 rounded-full bg-purple-500 text-white flex items-center justify-center shadow">
-                                    <Check size={12} strokeWidth={3} />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            <div className="p-1 bg-slate-850 text-center truncate">
-                              <span className="text-[10px] font-semibold text-slate-300 group-hover:text-white truncate block">
-                                {preset.name}
-                              </span>
-                            </div>
-                          </div>
+                            <span>{cat.icon}</span>
+                            <span>{cat.name}</span>
+                            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                              isActive ? 'bg-purple-700 text-purple-100' : 'bg-slate-900/70 text-purple-300'
+                            }`}>
+                              {count}
+                            </span>
+                          </button>
                         );
                       })}
+                    </div>
+
+                    {/* Lưới hiển thị ảnh (Cuộn mượt mà với ảnh thumbnail nhỏ 20KB) */}
+                    <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                      {STAGE_BG_IMAGE_PRESETS
+                        .filter(preset => bgImageCategoryFilter === 'all' || preset.category === bgImageCategoryFilter)
+                        .map((preset) => {
+                          const isCurrent = stageBgImage === preset.url && stageBgType === 'image';
+                          return (
+                            <div
+                              key={preset.id}
+                              onClick={() => handleSelectPresetBgImage(preset.url)}
+                              className={`group relative rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${
+                                isCurrent
+                                  ? 'border-purple-400 ring-2 ring-purple-400/30 shadow-lg shadow-purple-500/20'
+                                  : 'border-slate-750 hover:border-purple-400/60 bg-slate-800'
+                              }`}
+                              title={`${preset.name}: ${preset.desc}`}
+                            >
+                              <div className="w-full h-16 bg-slate-950 overflow-hidden relative">
+                                <img 
+                                  src={preset.thumbUrl || preset.url} 
+                                  alt={preset.name} 
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                />
+                                {isCurrent && (
+                                  <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
+                                    <div className="w-5 h-5 rounded-full bg-purple-500 text-white flex items-center justify-center shadow">
+                                      <Check size={12} strokeWidth={3} />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-1 bg-slate-850 text-center truncate">
+                                <span className="text-[10px] font-semibold text-slate-300 group-hover:text-white truncate block">
+                                  {preset.name}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 </div>
