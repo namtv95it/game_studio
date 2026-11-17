@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { saveLocalImage, loadLocalImage, removeLocalImage, getLocalImageSync } from '../utils/localImageStorage';
 import { STAGE_BG_IMAGE_PRESETS } from '../constants/stageImagePresets';
+import StageAnimatedBackground, { STAGE_ANIMATED_EFFECTS, DEFAULT_ANIMATED_SETTINGS } from '../components/StageAnimatedBackground';
+
+export { STAGE_ANIMATED_EFFECTS, DEFAULT_ANIMATED_SETTINGS };
 
 // Danh sách các bảng màu nền pastel nhã nhặn, rõ ràng, không bị trùng màu hay quá chói
 export const SUBTLE_COLOR_PALETTES = [
@@ -1543,6 +1546,8 @@ const STORAGE_FAVORITES_KEY = 'game_studio_stage_bg_favorites_v1';
 const STORAGE_BG_TYPE_KEY = 'game_studio_stage_bg_type_v2'; // 'pattern' | 'image'
 const STORAGE_BG_IMAGE_SETTINGS_KEY = 'game_studio_stage_bg_image_settings_v2';
 const STORAGE_CUSTOM_IMAGE_KEY = 'stage_background_image';
+const STORAGE_BG_ANIMATED_EFFECT_KEY = 'game_studio_stage_bg_animated_effect_v1';
+const STORAGE_BG_ANIMATED_SETTINGS_KEY = 'game_studio_stage_bg_animated_settings_v1';
 
 const StageBackgroundContext = createContext({
   stageBgColor: '#ffffff',
@@ -1567,7 +1572,14 @@ const StageBackgroundContext = createContext({
   handleUploadStageBgImage: () => {},
   handleSelectPresetBgImage: () => {},
   handleClearStageBgImage: () => {},
-  handleResetStageBgImageSettings: () => {}
+  handleResetStageBgImageSettings: () => {},
+  // Tùy chọn Hiệu Ứng Nền Động (Mưa rơi, Bong bóng, Trái tim, Lá thu...)
+  stageBgAnimatedEffect: 'none',
+  setStageBgAnimatedEffect: () => {},
+  stageBgAnimatedSettings: DEFAULT_ANIMATED_SETTINGS,
+  setStageBgAnimatedSettings: () => {},
+  updateStageBgAnimatedSetting: () => {},
+  handleClearStageBgAnimatedEffect: () => {}
 });
 
 export function StageBackgroundProvider({ children }) {
@@ -1705,12 +1717,50 @@ export function StageBackgroundProvider({ children }) {
 
   const isFavoritePattern = (patternId) => favoritePatternIds.includes(patternId);
 
-  // Reset về trắng hoàn toàn (Không hoa văn & Không ảnh)
+  // Hiệu ứng nền động (Mưa rơi, Bong bóng, Trái tim, Lá thu, Tuyết...)
+  const [stageBgAnimatedEffect, setStageBgAnimatedEffect] = useState(() => {
+    return localStorage.getItem(STORAGE_BG_ANIMATED_EFFECT_KEY) || 'none';
+  });
+
+  const [stageBgAnimatedSettings, setStageBgAnimatedSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_BG_ANIMATED_SETTINGS_KEY);
+      return saved ? { ...DEFAULT_ANIMATED_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_ANIMATED_SETTINGS };
+    } catch {
+      return { ...DEFAULT_ANIMATED_SETTINGS };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_BG_ANIMATED_EFFECT_KEY, stageBgAnimatedEffect);
+  }, [stageBgAnimatedEffect]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_BG_ANIMATED_SETTINGS_KEY, JSON.stringify(stageBgAnimatedSettings));
+    } catch (e) {
+      console.warn('Lỗi lưu cài đặt nền động:', e);
+    }
+  }, [stageBgAnimatedSettings]);
+
+  const updateStageBgAnimatedSetting = (key, value) => {
+    setStageBgAnimatedSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleClearStageBgAnimatedEffect = () => {
+    setStageBgAnimatedEffect('none');
+  };
+
+  // Reset về trắng hoàn toàn (Không hoa văn, không ảnh, không hiệu ứng động)
   const handleResetToWhite = () => {
     setStageBgColor('#ffffff');
     setSelectedPatternId('none');
     setPatternOpacity(50);
     setStageBgType('pattern');
+    setStageBgAnimatedEffect('none');
   };
 
   return (
@@ -1736,7 +1786,14 @@ export function StageBackgroundProvider({ children }) {
       handleUploadStageBgImage,
       handleSelectPresetBgImage,
       handleClearStageBgImage,
-      handleResetStageBgImageSettings
+      handleResetStageBgImageSettings,
+      // Hiệu ứng nền động
+      stageBgAnimatedEffect,
+      setStageBgAnimatedEffect,
+      stageBgAnimatedSettings,
+      setStageBgAnimatedSettings,
+      updateStageBgAnimatedSetting,
+      handleClearStageBgAnimatedEffect
     }}>
       {children}
     </StageBackgroundContext.Provider>
@@ -1749,7 +1806,7 @@ export function useStageBackground() {
 
 /**
  * Component render lớp phủ nền sân khấu
- * Tự động áp dụng cả màu nền, hoa văn CSS hoặc hình ảnh nền đã chỉnh sửa
+ * Tự động áp dụng cả màu nền, hoa văn CSS, hình ảnh nền và hiệu ứng động
  */
 export function StageBackgroundOverlay({ className = '' }) {
   const { 
@@ -1758,7 +1815,9 @@ export function StageBackgroundOverlay({ className = '' }) {
     stageBgImage, 
     stageBgImageSettings,
     currentPattern, 
-    patternOpacity 
+    patternOpacity,
+    stageBgAnimatedEffect,
+    stageBgAnimatedSettings
   } = useStageBackground();
 
   const containerRef = useRef(null);
@@ -1788,17 +1847,16 @@ export function StageBackgroundOverlay({ className = '' }) {
   const showImage = stageBgType === 'image' && !!stageBgImage;
   const s = stageBgImageSettings || DEFAULT_BG_IMAGE_SETTINGS;
 
-  // Tự động đồng bộ chiều xoay với Canvas trò chơi:
-  // Vì các Canvas game đều được thiết kế dạng 9:16 (540x960) và xoay rotate(-90deg) để hiển thị nằm ngang (960x540),
-  // Các ảnh nền (941x1672) khi ở khung ngang cũng cần xoay -90deg để đầu-chân nhân vật khớp đúng hướng với nền trời-mặt đất!
+  // Tự động đồng bộ chiều xoay với Canvas trò chơi
   const isLandscape = dims.w >= dims.h;
   const baseRotation = isLandscape ? -90 : 0;
   const totalRotation = baseRotation + (s.rotation || 0);
 
-  // Kích thước khung ảnh trước khi xoay:
-  // Nếu nằm ngang: khung ảnh có chiều rộng = dims.h và chiều cao = dims.w, khi xoay -90deg sẽ khít tuyệt đối với (dims.w x dims.h) mà không bị méo hay hở mép
   const boxW = isLandscape ? dims.h : dims.w;
   const boxH = isLandscape ? dims.w : dims.h;
+
+  const animDirection = stageBgAnimatedSettings?.direction || 0;
+  const animTotalRotation = baseRotation + (s.rotation || 0) + animDirection;
 
   return (
     <div 
@@ -1851,6 +1909,26 @@ export function StageBackgroundOverlay({ className = '' }) {
             filter: isDarkBg ? 'invert(1) brightness(0.6)' : 'none'
           }}
         />
+      )}
+
+      {/* LỚP HIỆU ỨNG NỀN ĐỘNG (XOAY ĐỒNG BỘ THEO SÂN KHẤU & HƯỚNG CHUYỂN ĐỘNG) */}
+      {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden pointer-events-none z-10">
+          <div
+            className="relative flex items-center justify-center shrink-0 pointer-events-none"
+            style={{
+              width: `${Math.round(boxW)}px`,
+              height: `${Math.round(boxH)}px`,
+              transform: `rotate(${animTotalRotation}deg)`,
+              transformOrigin: 'center center'
+            }}
+          >
+            <StageAnimatedBackground
+              effect={stageBgAnimatedEffect}
+              settings={stageBgAnimatedSettings}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

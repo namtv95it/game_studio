@@ -9,9 +9,12 @@ import {
   useStageBackground, 
   SUBTLE_COLOR_PALETTES, 
   STAGE_PATTERN_OPTIONS,
-  DEFAULT_BG_IMAGE_SETTINGS
+  DEFAULT_BG_IMAGE_SETTINGS,
+  STAGE_ANIMATED_EFFECTS,
+  DEFAULT_ANIMATED_SETTINGS
 } from '../context/StageBackgroundContext';
 import { STAGE_BG_IMAGE_PRESETS, STAGE_BG_CATEGORIES } from '../constants/stageImagePresets';
+import StageAnimatedBackground from './StageAnimatedBackground';
 import NumberInput from './NumberInput';
 
 export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 'colors', onLaunchPreview }) {
@@ -36,7 +39,12 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
     handleUploadStageBgImage,
     handleSelectPresetBgImage,
     handleClearStageBgImage,
-    handleResetStageBgImageSettings
+    handleResetStageBgImageSettings,
+    stageBgAnimatedEffect,
+    setStageBgAnimatedEffect,
+    stageBgAnimatedSettings,
+    updateStageBgAnimatedSetting,
+    handleClearStageBgAnimatedEffect
   } = useStageBackground();
 
   const [activeTab, setActiveTab] = useState(initialTab || 'colors');
@@ -55,6 +63,7 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
 
   const currentPattern = STAGE_PATTERN_OPTIONS.find(p => p.id === selectedPatternId) || STAGE_PATTERN_OPTIONS[0];
   const s = stageBgImageSettings || DEFAULT_BG_IMAGE_SETTINGS;
+  const animS = stageBgAnimatedSettings || DEFAULT_ANIMATED_SETTINGS;
 
   // Tính năng tự động scale để vừa vặn khi xoay 90° hoặc 270°
   const handleAutoFitRotation = () => {
@@ -91,9 +100,15 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                     Đang Dùng Ảnh Nền
                   </span>
                 )}
+                {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 font-semibold px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.icon} {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.name}
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-slate-400">
-                Lựa chọn màu sắc, hoa văn CSS hoặc tải hình ảnh làm nền kèm công cụ xoay, chỉnh sửa và xem trước.
+                Lựa chọn màu sắc, hoa văn CSS, hình ảnh nền và hiệu ứng động (mưa, bóng, lá thu, trái tim...).
               </p>
             </div>
           </div>
@@ -101,7 +116,7 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
             <button
               onClick={handleResetToWhite}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow"
-              title="Đặt lại nền trắng tinh khiết không hoa văn"
+              title="Đặt lại nền trắng tinh khiết không hoa văn và tắt hiệu ứng"
             >
               <RotateCcw size={13} className="text-amber-400" />
               <span className="hidden sm:inline">Về Nền Trắng</span>
@@ -119,39 +134,52 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
         <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
           {/* CỘT TRÁI: ĐIỀU KHIỂN & CÀI ĐẶT */}
           <div className="lg:col-span-7 flex flex-col p-5 border-b lg:border-b-0 lg:border-r border-slate-800 overflow-hidden bg-slate-900/60">
-            {/* 3 TAB ĐIỀU HƯỚNG */}
-            <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-800 shrink-0">
+            {/* 4 TAB ĐIỀU HƯỚNG */}
+            <div className="grid grid-cols-4 gap-1.5 pb-3 mb-3 border-b border-slate-800 shrink-0">
               <button
                 onClick={() => setActiveTab('colors')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'colors'
                     ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 ring-2 ring-sky-400/30'
                     : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
                 }`}
               >
-                <Droplet size={14} /> 1. Màu Nền
+                <Droplet size={13} /> 1. Màu Nền
               </button>
               <button
                 onClick={() => setActiveTab('patterns')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'patterns'
                     ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25 ring-2 ring-sky-400/30'
                     : 'bg-slate-800/90 text-slate-400 hover:text-slate-200 hover:bg-slate-750'
                 }`}
               >
-                <Sliders size={14} /> 2. Hoa Văn ({STAGE_PATTERN_OPTIONS.length})
+                <Sliders size={13} /> 2. Hoa Văn
               </button>
               <button
                 onClick={() => setActiveTab('image')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
                   activeTab === 'image'
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 ring-2 ring-purple-400/30'
                     : 'bg-slate-800/90 text-purple-300 hover:text-white hover:bg-slate-750 border border-purple-500/30'
                 }`}
               >
-                <ImageIcon size={14} /> 3. Hình Ảnh Nền
+                <ImageIcon size={13} /> 3. Ảnh Nền
                 {stageBgImage && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 absolute top-1.5 right-1.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 absolute top-1.5 right-1.5" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('animated')}
+                className={`flex items-center justify-center gap-1 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
+                  activeTab === 'animated'
+                    ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg shadow-amber-500/25 ring-2 ring-amber-400/30'
+                    : 'bg-slate-800/90 text-amber-300 hover:text-white hover:bg-slate-750 border border-amber-500/30'
+                }`}
+              >
+                <Sparkles size={13} /> 4. Nền Động
+                {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse absolute top-1.5 right-1.5" />
                 )}
               </button>
             </div>
@@ -994,6 +1022,225 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                 )}
               </div>
             )}
+
+            {/* TAB 4: CHỌN HIỆU ỨNG NỀN ĐỘNG (ANIMATED BACKGROUNDS) */}
+            {activeTab === 'animated' && (
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar">
+                {/* Banner giới thiệu & Nút tắt nhanh */}
+                <div className="p-3 bg-gradient-to-r from-amber-950/40 via-purple-950/30 to-slate-900 border border-amber-500/30 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-400" />
+                      Hiệu Ứng Nền Động (60 FPS Mượt Mà)
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Phủ các hiệu ứng động như mưa rơi, bong bóng, trái tim, lá mùa thu... lên nền sân khấu.
+                    </p>
+                  </div>
+                  {stageBgAnimatedEffect !== 'none' && (
+                    <button
+                      type="button"
+                      onClick={handleClearStageBgAnimatedEffect}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1 shrink-0 shadow-sm"
+                      title="Tắt toàn bộ hiệu ứng động"
+                    >
+                      <RotateCcw size={11} className="text-amber-400" /> Tắt Hiệu Ứng
+                    </button>
+                  )}
+                </div>
+
+                {/* Danh sách các kiểu hiệu ứng động */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    Chọn Kiểu Hiệu Ứng Động ({STAGE_ANIMATED_EFFECTS.length}):
+                  </span>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {STAGE_ANIMATED_EFFECTS.map((eff) => {
+                      const isActive = stageBgAnimatedEffect === eff.id;
+                      return (
+                        <div
+                          key={eff.id}
+                          onClick={() => setStageBgAnimatedEffect(eff.id)}
+                          className={`group relative p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center text-center ${
+                            isActive
+                              ? 'bg-gradient-to-b from-amber-950/50 to-slate-900 border-amber-400 ring-2 ring-amber-400/30 shadow-lg shadow-amber-500/20'
+                              : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/80 hover:border-amber-400/50'
+                          }`}
+                        >
+                          <span className="text-2xl mb-1 select-none group-hover:scale-110 transition-transform">
+                            {eff.icon}
+                          </span>
+                          <span className={`text-xs font-bold ${isActive ? 'text-amber-300' : 'text-slate-200 group-hover:text-white'}`}>
+                            {eff.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5 line-clamp-2 leading-tight">
+                            {eff.desc}
+                          </span>
+                          {isActive && (
+                            <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shadow">
+                              <Check size={10} strokeWidth={3} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* BẢNG ĐIỀU CHỈNH THÔNG SỐ HIỆU ỨNG ĐỘNG (CHỈ HIỂN THỊ KHI ĐANG BẬT HIỆU ỨNG) */}
+                {stageBgAnimatedEffect !== 'none' && (
+                  <div className="p-3.5 bg-slate-950/60 rounded-2xl border border-slate-800 space-y-3.5">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <Sliders size={13} /> Tinh Chỉnh Thông Số: {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateStageBgAnimatedSetting('speed', DEFAULT_ANIMATED_SETTINGS.speed);
+                          updateStageBgAnimatedSetting('density', DEFAULT_ANIMATED_SETTINGS.density);
+                          updateStageBgAnimatedSetting('opacity', DEFAULT_ANIMATED_SETTINGS.opacity);
+                          updateStageBgAnimatedSetting('size', DEFAULT_ANIMATED_SETTINGS.size);
+                        }}
+                        className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                        title="Khôi phục thông số mặc định"
+                      >
+                        <RotateCcw size={11} /> Mặc định
+                      </button>
+                    </div>
+
+                    {/* 1. Tốc độ chuyển động (Speed) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">Tốc Độ Rơi / Bay:</span>
+                        <div className="flex items-center gap-1">
+                          {[
+                            { label: 'Chậm', val: 0.6 },
+                            { label: 'Vừa', val: 1.0 },
+                            { label: 'Nhanh', val: 1.8 }
+                          ].map(opt => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => updateStageBgAnimatedSetting('speed', opt.val)}
+                              className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
+                                Math.abs((animS.speed || 1) - opt.val) < 0.1
+                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-xs'
+                                  : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.3"
+                        max="2.5"
+                        step="0.1"
+                        value={animS.speed || 1}
+                        onChange={(e) => updateStageBgAnimatedSetting('speed', Number(e.target.value))}
+                        className="w-full accent-amber-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+
+                    {/* 2. Mật độ / Số lượng hạt (Density) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">Mật Độ Hạt:</span>
+                        <span className="text-[11px] font-mono text-amber-300">
+                          {(animS.density || 1) <= 0.6 ? 'Thưa thớt' : (animS.density || 1) >= 1.5 ? 'Dày đặc' : 'Vừa phải'} ({animS.density || 1}x)
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.4"
+                        max="2.2"
+                        step="0.1"
+                        value={animS.density || 1}
+                        onChange={(e) => updateStageBgAnimatedSetting('density', Number(e.target.value))}
+                        className="w-full accent-amber-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+
+                    {/* 3. Độ rõ nét / Trong suốt (Opacity) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">Độ Rõ Nét (Trong Suốt):</span>
+                        <span className="text-[11px] font-mono text-amber-300">{animS.opacity ?? 85}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="20"
+                        max="100"
+                        value={animS.opacity ?? 85}
+                        onChange={(e) => updateStageBgAnimatedSetting('opacity', Number(e.target.value))}
+                        className="w-full accent-amber-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+
+                    {/* 4. Kích thước hạt (Size) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300">Kích Thước Hạt:</span>
+                        <span className="text-[11px] font-mono text-amber-300">{animS.size ?? 100}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="180"
+                        value={animS.size ?? 100}
+                        onChange={(e) => updateStageBgAnimatedSetting('size', Number(e.target.value))}
+                        className="w-full accent-amber-400 cursor-pointer h-1.5"
+                      />
+                    </div>
+
+                    {/* 5. Hướng rơi / Di chuyển (Direction) */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                          <RotateCw size={12} className="text-amber-400" /> Hướng Di Chuyển:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentDir = animS.direction || 0;
+                            updateStageBgAnimatedSetting('direction', (currentDir + 90) % 360);
+                          }}
+                          className="text-[10px] text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
+                          title="Xoay hướng 90 độ"
+                        >
+                          <RotateCw size={11} /> Xoay 90°
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { dir: 0, label: 'Mặc định', icon: '⬇️', desc: 'Theo nhân vật' },
+                          { dir: 90, label: 'Ngang 90°', icon: '➡️', desc: 'Vuông góc' },
+                          { dir: 180, label: 'Đảo ngược', icon: '⬆️', desc: 'Ngược chiều' },
+                          { dir: 270, label: 'Ngang 270°', icon: '⬅️', desc: 'Góc đối' },
+                        ].map(item => (
+                          <button
+                            key={item.dir}
+                            type="button"
+                            onClick={() => updateStageBgAnimatedSetting('direction', item.dir)}
+                            className={`p-1.5 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                              (animS.direction || 0) === item.dir
+                                ? 'bg-amber-500/25 border-amber-400 text-amber-300 shadow-xs'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                            }`}
+                          >
+                            <span className="text-sm select-none">{item.icon}</span>
+                            <span className="text-[10px] font-bold">{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* CỘT PHẢI: XEM TRƯỚC SÂN KHẤU THỜI GIAN THỰC (KÈM NÚT KHỞI CHẠY) */}
@@ -1088,6 +1335,26 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                   />
                 )}
 
+                {/* LỚP HIỆU ỨNG NỀN ĐỘNG (XEM TRƯỚC THỜI GIAN THỰC) */}
+                {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center overflow-hidden pointer-events-none z-10">
+                    <div
+                      className="relative flex items-center justify-center shrink-0 pointer-events-none"
+                      style={{
+                        width: previewMode === 'portrait' ? '210px' : '270px',
+                        height: previewMode === 'portrait' ? '370px' : '480px',
+                        transform: `rotate(${(previewMode === 'portrait' ? 0 : -90) + (s.rotation || 0) + (animS.direction || 0)}deg)`,
+                        transformOrigin: 'center center'
+                      }}
+                    >
+                      <StageAnimatedBackground
+                        effect={stageBgAnimatedEffect}
+                        settings={stageBgAnimatedSettings}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* MẪU BÓNG NHÂN VẬT & ĐÈN PIN ĐỂ QUAN SÁT TƯƠNG PHẢN */}
                 {showGhostCharacter && (
                   <div 
@@ -1125,6 +1392,15 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
                     <span className="text-sky-300 truncate">
                       {stageBgType === 'image' ? `${s.rotation || 0}° • Zoom ${s.scale || 100}%` : currentPattern.name}
                     </span>
+                    {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+                      <>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-amber-300 flex items-center gap-1 shrink-0 font-semibold">
+                          {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.icon}
+                          {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.name}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1169,6 +1445,11 @@ export default function BackgroundSelectorModal({ isOpen, onClose, initialTab = 
             <span>Cài đặt nền tự động lưu trữ trên máy.</span>
             {stageBgType === 'image' && stageBgImage && (
               <span className="text-purple-300 font-semibold">• Đang áp dụng nền hình ảnh</span>
+            )}
+            {stageBgAnimatedEffect && stageBgAnimatedEffect !== 'none' && (
+              <span className="text-amber-300 font-semibold">
+                • Hiệu ứng động: {STAGE_ANIMATED_EFFECTS.find(e => e.id === stageBgAnimatedEffect)?.name}
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2">
